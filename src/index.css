@@ -1535,12 +1535,25 @@ html.dark .sheet-grabber-pill {
   line-height: 1.45;
 }
 
+.ios-sheet.ios-cheatsheet-panel {
+  height: calc(100dvh - 44px) !important;
+  max-height: calc(100dvh - 44px) !important;
+  border-radius: 36px 36px 0 0 !important;
+  padding: 6px 16px calc(env(safe-area-inset-bottom, 0px) + 20px) 16px !important;
+}
+
+.ios-sheet.ios-cheatsheet-panel .cheat-reader {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding-bottom: 28px;
+}
+
 .cheat-card {
   background: var(--ios-sheet-inner-card-grad);
   border: 0.5px solid var(--ios-glass-border);
   border-radius: 20px;
   padding: 13px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   box-shadow: var(--ios-glass-inner-glow);
 }
 
@@ -1556,9 +1569,15 @@ html.dark .sheet-grabber-pill {
 
 .cheat-subbox {
   background: var(--ios-bg-secondary);
-  border-radius: 14px;
-  padding: 9px 11px;
-  margin-bottom: 8px;
+  border: 0.5px solid var(--ios-card-border);
+  border-radius: 16px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.cheat-subbox .p-2\.5 {
+  border: 0.5px solid var(--ios-card-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .cheat-subbox-title {

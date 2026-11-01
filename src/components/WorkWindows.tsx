@@ -1221,6 +1221,63 @@ export function parseStructuredExplanation(
         }
       }
     }
+
+    // Color shade compound adjectives
+    const isColorShade = (token: string) => {
+      const clean = token.toLowerCase().replace(/[-()]/g, '').replace(/ё/g, 'е');
+      const colorPrefixes = ['темно', 'светло', 'ярко', 'бледно', 'тускло', 'густо', 'иссиня', 'изжелта', 'золотисто', 'серебристо', 'молочно', 'дымчато', 'сизо', 'пепельно', 'розово', 'буро', 'лилово', 'русо', 'желто', 'сине', 'красно', 'зелено', 'серо', 'бело', 'черно'];
+      const colorRoots = ['коричнев', 'син', 'красн', 'желт', 'зелен', 'сер', 'голуб', 'бел', 'черн', 'розов', 'фиолет', 'оранж', 'свинцов', 'стальн', 'лилов', 'бур', 'вишнев', 'малинов', 'каштан', 'золот', 'бордов', 'рыж'];
+      for (const cp of colorPrefixes) {
+        if (clean.startsWith(cp)) {
+          const rem = clean.slice(cp.length);
+          for (const cr of colorRoots) {
+            if (rem.includes(cr)) {
+              if (['снежн', 'мрамор', 'кочан', 'лоб', 'глаз', 'волос', 'груд', 'влас', 'бров', 'крыл', 'рук', 'ног', 'хвост', 'кож'].some(exc => clean.includes(exc))) {
+                return false;
+              }
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    const targetRaw = targetWord || '';
+    if (isColorShade(targetRaw) || /оттенок цвета/i.test(ruleNote)) {
+      orthogramType = 'Сложные прилагательные (оттенки цветов)';
+      steps = steps.filter((s) => !/наречие,\s*производный\s*предлог|пишется\s+СЛИТНО/i.test(s));
+      const cleanTarget = targetRaw.replace(/[()]/g, '').toUpperCase();
+      const hyphenTarget = cleanTarget.includes('-') ? cleanTarget : cleanTarget.replace(/^([А-ЯЁ]+?)(?=[А-ЯЁ]+$)/, '$1-');
+      if (!steps.some((s) => /оттенок цвета/i.test(s))) {
+        steps.unshift(`Слово «${hyphenTarget}» — сложное прилагательное, обозначающее оттенок цвета.`);
+      }
+      if (!steps.some((s) => /через\s+дефис/i.test(s))) {
+        steps.push(`По орфографическому правилу сложные прилагательные, обозначающие оттенки цветов, пишутся через дефис.`);
+        steps.push(`Поэтому пишется ЧЕРЕЗ ДЕФИС — «${hyphenTarget}».`);
+      }
+    }
+
+    // КАК БУДТО
+    if (/как\s*будто/i.test(targetRaw) || /как\s*будто/i.test(ruleNote)) {
+      orthogramType = 'Устойчивые сочетания (раздельно)';
+      steps = steps.filter((s) => !/через\s+дефис|пишется\s+СЛИТНО/i.test(s));
+      if (!steps.some((s) => /пишется\s+РАЗДЕЛЬНО/i.test(s))) {
+        steps = [
+          'Сравнительный союз «КАК БУДТО».',
+          'Сравнительный союз «как будто» всегда пишется раздельно в два слова без дефиса.',
+          'Поэтому пишется РАЗДЕЛЬНО — «КАК БУДТО».'
+        ];
+      }
+    }
+
+    // Postfixed words with -ТО, -ЛИБО, -НИБУДЬ, -КА, -ТАКИ, КОЕ-
+    const hasPostfix = /(?:-|\()(?:то|либо|нибудь|ка|таки)\)?$/i.test(targetRaw) || /(?:-|\()(?:то|либо|нибудь|ка|таки)\)?$/i.test(ruleNote);
+    const hasKoe = /^кое[-()]/i.test(targetRaw) || /^кое/i.test(targetRaw);
+    if ((hasPostfix || hasKoe) && !['будто', 'вместо', 'зато', 'что', 'это'].includes(targetRaw.toLowerCase().replace(/[-()]/g, ''))) {
+      orthogramType = 'Неопределённые местоимения и наречия (через дефис)';
+      steps = steps.filter((s) => !/пишется\s+СЛИТНО/i.test(s));
+    }
   }
 
   // Deduplicate identical steps
@@ -1330,39 +1387,54 @@ export const StructuredErrorCard: React.FC<StructuredErrorCardProps> = React.mem
       className="ios-inset-group ios-scroll-item p-3.5 !mb-0 ios-stagger-card cursor-pointer active:scale-[0.985] hover:border-[var(--ios-blue)]/50 hover:shadow-sm select-none transition-[border-color,box-shadow,background-color] duration-200"
       style={{ animationDelay: `${Math.min(staggerIndex * 35, 180)}ms` }}
     >
-      {/* Top Row: Task Badge + Topic + Collapse Toggle + Structured "Правило ?" Trigger (Responsive flex-wrap, 0 overlap) */}
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 mb-2">
-        <div className="flex items-start gap-1.5 min-w-0 flex-1 basis-[160px]">
+      {/* Top Row: Task Badge + Topic (left) | Rule pill + Circular Chevron toggle (right) */}
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span
-            className="w-5 h-5 rounded-md text-[11px] font-extrabold flex items-center justify-center text-white shrink-0 mt-0.5"
+            className="w-5 h-5 rounded-md text-[10.5px] font-black flex items-center justify-center text-white shrink-0 shadow-xs"
             style={{ background: TASK_META[task].gradient }}
           >
             {task}
           </span>
           <span
-            className="text-[12px] font-extrabold leading-snug break-words [overflow-wrap:anywhere] min-w-0 flex-1"
+            className="text-[12px] font-extrabold truncate"
             style={{ color: 'var(--ios-blue)' }}
           >
             {topic}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onInspectRule();
+            }}
+            className="px-2 py-0.5 rounded-full text-[11px] font-bold cursor-pointer transition-transform active:scale-95 flex items-center gap-0.5"
+            style={{
+              background: 'var(--ios-blue-soft)',
+              color: 'var(--ios-blue)',
+            }}
+            title="Открыть справочник по этому правилу"
+          >
+            <span>Правило</span>
+            <span className="opacity-70">?</span>
+          </button>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               setUserOverride((prev) => (prev !== null ? !prev : !isCollapsed));
             }}
-            aria-label={isCollapsed ? 'Развернуть карточку' : 'Свернуть карточку'}
-            className="liquid-pill-btn text-[11px] font-bold px-2.5 py-0.5 rounded-full cursor-pointer flex items-center gap-1 transition-colors"
+            className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer transition-transform active:scale-95"
             style={{
-              background: isCollapsed ? 'var(--ios-blue-soft)' : undefined,
-              color: isCollapsed ? 'var(--ios-blue)' : undefined,
+              background: isCollapsed ? 'var(--ios-bg-secondary)' : 'var(--ios-blue-soft)',
+              color: isCollapsed ? 'var(--ios-label-sec)' : 'var(--ios-blue)',
             }}
+            aria-label={isCollapsed ? 'Развернуть' : 'Свернуть'}
           >
-            <span>{isCollapsed ? 'Развернуть' : 'Свернуть'}</span>
             <svg
-              className={`w-3.5 h-3.5 ios-accordion-arrow ${isCollapsed ? 'rotated' : ''}`}
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`}
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -1370,55 +1442,48 @@ export const StructuredErrorCard: React.FC<StructuredErrorCardProps> = React.mem
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <polyline points="18 15 12 9 6 15" />
+              <polyline points="6 9 12 15 18 9" />
             </svg>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onInspectRule();
-            }}
-            className="liquid-pill-btn text-[11.5px] font-bold px-2.5 py-1 rounded-full cursor-pointer flex items-center gap-1"
-          >
-            <span>Правило ?</span>
           </button>
         </div>
       </div>
 
-      {/* Middle Row: Word / Task Title + User vs Correct Answer Pills (wraps cleanly on mobile) */}
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 mb-1.5">
-        <div className="min-w-0 flex-1 basis-[160px]">
-          <div className="text-[15px] font-extrabold leading-snug break-words">
+      {/* Middle Row: Word + Context (left) | Clean Comparison Pill [Вы: X] -> [Верно: Y] (right) */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-black tracking-tight leading-snug truncate">
             {isFipi5Row ? `Задание № ${task} · ФИПИ` : wordTitle}
           </div>
           {context && !isFipi5Row && (
             <div
-              className="text-[11.5px] font-medium leading-snug break-words mt-0.5"
+              className="text-[11.5px] font-medium leading-tight mt-0.5 truncate"
               style={{ color: 'var(--ios-label-sec)' }}
             >
               {context}
             </div>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-extrabold">
           <span
-            className="px-2 py-0.5 rounded-lg text-[11px] font-extrabold whitespace-nowrap"
+            className="px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-xs"
             style={{
               background: 'var(--ios-red-soft)',
               color: 'var(--ios-red)',
             }}
           >
-            Вы: {userChoice}
+            <span className="opacity-75 text-[10px]">Вы:</span>
+            <span className="line-through decoration-1.5">{userChoice}</span>
           </span>
+          <span className="text-[11px] opacity-40 font-bold">→</span>
           <span
-            className="px-2 py-0.5 rounded-lg text-[11px] font-extrabold whitespace-nowrap"
+            className="px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-xs"
             style={{
               background: 'var(--ios-green-soft)',
               color: 'var(--ios-green)',
             }}
           >
-            Верно: {correctChoice}
+            <span className="opacity-75 text-[10px]">Верно:</span>
+            <span>{correctChoice}</span>
           </span>
         </div>
       </div>
@@ -1426,150 +1491,180 @@ export const StructuredErrorCard: React.FC<StructuredErrorCardProps> = React.mem
       {/* Collapsible Section with 120 FPS CSS Grid Spring Fold Animation */}
       <div className={`ios-accordion-grid ${!isCollapsed ? 'open' : ''}`}>
         <div className="ios-accordion-content">
-          <div className="pt-1.5 flex flex-col gap-1.5">
-              {/* Bottom Structured Breakdown (Zero Wall-of-Text!) */}
-              {question && question.kind === 'fipi' ? (
-                <div className="flex flex-col gap-1">
-                  {question.rows.map((r, rIdx) => {
-                    const rowNum = rIdx + 1;
-                    const userPicked = userChoice.includes(String(rowNum));
-                    return (
-                      <div
-                        key={rowNum}
-                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl text-[11.5px]"
-                        style={{
-                          background: r.isCorrectRow
-                            ? 'var(--ios-green-soft)'
-                            : userPicked
-                            ? 'var(--ios-red-soft)'
-                            : 'var(--ios-bg-secondary)',
-                        }}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span
-                            className="w-4 h-4 rounded-full text-[10px] font-extrabold flex items-center justify-center shrink-0"
-                            style={{
-                              background: r.isCorrectRow
-                                ? 'var(--ios-green)'
-                                : userPicked
-                                ? 'var(--ios-red)'
-                                : 'var(--ios-bg-tertiary)',
-                              color: r.isCorrectRow || userPicked ? '#FFFFFF' : 'var(--ios-label-sec)',
-                            }}
-                          >
-                            {rowNum}
-                          </span>
-                          <span className="font-bold truncate">
-                            {r.solvedWords.join(', ')}
-                          </span>
-                        </div>
+          <div className="pt-2 flex flex-col gap-2">
+            {/* Bottom Structured Breakdown (Zero Wall-of-Text!) */}
+            {question && question.kind === 'fipi' ? (
+              <div className="rounded-2xl p-2.5 flex flex-col gap-1.5" style={{ background: 'var(--ios-bg-secondary)', border: '1px solid var(--ios-card-border)' }}>
+                {question.rows.map((r, rIdx) => {
+                  const rowNum = rIdx + 1;
+                  const userPicked = userChoice.includes(String(rowNum));
+                  return (
+                    <div
+                      key={rowNum}
+                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl text-[11.5px]"
+                      style={{
+                        background: r.isCorrectRow
+                          ? 'var(--ios-green-soft)'
+                          : userPicked
+                          ? 'var(--ios-red-soft)'
+                          : 'var(--ios-bg-tertiary)',
+                      }}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <span
-                          className="text-[10.5px] font-extrabold shrink-0 whitespace-nowrap"
+                          className="w-4 h-4 rounded-full text-[10px] font-extrabold flex items-center justify-center shrink-0"
                           style={{
-                            color: r.isCorrectRow
+                            background: r.isCorrectRow
                               ? 'var(--ios-green)'
                               : userPicked
                               ? 'var(--ios-red)'
-                              : 'var(--ios-label-sec)',
+                              : 'var(--ios-bg-tertiary)',
+                            color: r.isCorrectRow || userPicked ? '#FFFFFF' : 'var(--ios-label-sec)',
                           }}
                         >
-                          {r.isCorrectRow ? `Буква ${r.letter}` : 'Разные'}
+                          {rowNum}
+                        </span>
+                        <span className="font-bold truncate">
+                          {r.solvedWords.join(', ')}
                         </span>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : isFipi5Row ? (
-                <div className="flex flex-col gap-1">
-                  {cleanExpl
-                    .split(/\s*(?:\||;)\s*/)
-                    .filter(Boolean)
-                    .map((part, pIdx) => (
-                      <div
-                        key={pIdx}
-                        className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold flex items-center gap-2"
-                        style={{ background: 'var(--ios-bg-secondary)' }}
-                      >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full shrink-0"
-                          style={{ background: 'var(--ios-green)' }}
-                        />
-                        <span className="truncate">{part}</span>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {parsedCardExpl?.checkWord && (task === '9' || task === '12') && (
-                    <div
-                      className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-extrabold flex items-center gap-1.5"
-                      style={{
-                        background: 'var(--ios-green-soft)',
-                        color: 'var(--ios-green)',
-                      }}
-                    >
-                      <span>🔍 Проверочное слово:</span>
-                      <span className="font-black underline decoration-2 underline-offset-2">
-                        {parsedCardExpl.checkWord}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Clean Sequential Word Explanation Bar */}
-                  <div
-                    className="p-2 rounded-xl flex items-start justify-between gap-2"
-                    style={{ background: 'var(--ios-bg-secondary)' }}
-                  >
-                    <div className="flex items-start gap-1.5 min-w-0 flex-1 text-[11.5px] font-semibold leading-snug">
                       <span
-                        className="px-2 py-0.5 rounded-md text-[10px] font-extrabold shrink-0 mt-0.5"
+                        className="text-[10.5px] font-extrabold shrink-0 whitespace-nowrap"
                         style={{
-                          background: 'var(--ios-blue-soft)',
-                          color: 'var(--ios-blue)',
+                          color: r.isCorrectRow
+                            ? 'var(--ios-green)'
+                            : userPicked
+                            ? 'var(--ios-red)'
+                            : 'var(--ios-label-sec)',
                         }}
                       >
-                        Разбор
-                      </span>
-                      <span
-                        className="line-clamp-2 font-semibold"
-                        style={{ color: 'var(--ios-label)' }}
-                      >
-                        {parsedCardExpl?.ruleNote || formula.tail || shortRule}
+                        {r.isCorrectRow ? `Буква ${r.letter}` : 'Разные'}
                       </span>
                     </div>
-                  </div>
-
-                  {/* Concise 1-Line Core Rule Pill */}
+                  );
+                })}
+                <div className="flex items-center justify-between pt-1 mt-0.5 border-t border-[var(--ios-separator)]/40 text-[11px]">
+                  <span className="text-[11px] font-semibold truncate" style={{ color: 'var(--ios-label-sec)' }}>
+                    {shortRule}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onInspectRule();
+                    }}
+                    className="shrink-0 flex items-center gap-0.5 font-bold active:opacity-60 transition-opacity ml-2"
+                    style={{ color: 'var(--ios-blue)' }}
+                  >
+                    <span>Подробнее</span>
+                    <span className="text-[13px] leading-none">›</span>
+                  </button>
+                </div>
+              </div>
+            ) : isFipi5Row ? (
+              <div
+                className="rounded-2xl p-2.5 flex flex-col gap-1.5"
+                style={{
+                  background: 'var(--ios-bg-secondary)',
+                  border: '1px solid var(--ios-card-border)',
+                }}
+              >
+                {cleanExpl
+                  .split(/\s*(?:\||;)\s*/)
+                  .filter(Boolean)
+                  .map((part, pIdx) => (
+                    <div
+                      key={pIdx}
+                      className="text-[11.5px] font-semibold flex items-center gap-2"
+                      style={{ color: 'var(--ios-label)' }}
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ background: 'var(--ios-green)' }}
+                      />
+                      <span className="truncate">{part}</span>
+                    </div>
+                  ))}
+                <div
+                  className="flex items-center justify-between text-[11px] pt-1.5 mt-0.5 border-t border-[var(--ios-separator)]/40"
+                >
+                  <span className="text-[11px] font-semibold truncate" style={{ color: 'var(--ios-label-sec)' }}>
+                    {shortRule}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onInspectRule();
+                    }}
+                    className="shrink-0 flex items-center gap-0.5 text-[11px] font-bold active:opacity-60 transition-opacity ml-2"
+                    style={{ color: 'var(--ios-blue)' }}
+                  >
+                    <span>Подробнее</span>
+                    <span className="text-[13px] leading-none">›</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="rounded-2xl p-2.5 flex flex-col gap-2"
+                style={{
+                  background: 'var(--ios-bg-secondary)',
+                  border: '1px solid var(--ios-card-border)',
+                }}
+              >
+                {parsedCardExpl?.checkWord && (task === '9' || task === '12') && (
                   <div
-                    className="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold flex items-center gap-1.5"
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5"
                     style={{
-                      background: 'var(--ios-bg-secondary)',
-                      color: 'var(--ios-label-sec)',
+                      background: 'var(--ios-green-soft)',
+                      color: 'var(--ios-green)',
                     }}
                   >
-                    <span
-                      className="font-extrabold shrink-0"
-                      style={{ color: 'var(--ios-purple)' }}
-                    >
-                      Орфограмма:
+                    <span className="opacity-80">🔍 Проверка:</span>
+                    <span className="font-extrabold underline decoration-1.5 underline-offset-2">
+                      {parsedCardExpl.checkWord}
                     </span>
-                    <span className="truncate">{shortRule}</span>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Tap hint footer */}
-              <div
-                className="flex items-center justify-between text-[11px] font-bold mt-1 pt-1.5 border-t border-[var(--ios-separator)]/60 opacity-80"
-                style={{ color: 'var(--ios-blue)' }}
-              >
-                <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3 shrink-0"><use href="#sf-sparkles" /></svg>
-                  <span>Нажмите на карточку для полного объяснения</span>
-                </span>
-                <span className="text-[14px] leading-none font-extrabold">›</span>
+                <div className="text-[11.5px] leading-relaxed font-medium" style={{ color: 'var(--ios-label)' }}>
+                  {parsedCardExpl?.ruleNote || formula.tail || cleanExpl || shortRule}
+                </div>
+
+                <div
+                  className="flex items-center justify-between text-[11px] pt-1.5 border-t border-[var(--ios-separator)]/40"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <span
+                      className="font-extrabold shrink-0 text-[9.5px] px-1.5 py-0.5 rounded-md"
+                      style={{
+                        background: 'var(--ios-purple-soft)',
+                        color: 'var(--ios-purple)',
+                      }}
+                    >
+                      Орфограмма
+                    </span>
+                    <span className="truncate text-[11px] font-semibold" style={{ color: 'var(--ios-label-sec)' }}>
+                      {shortRule}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onInspectRule();
+                    }}
+                    className="shrink-0 flex items-center gap-0.5 text-[11px] font-bold active:opacity-60 transition-opacity ml-2"
+                    style={{ color: 'var(--ios-blue)' }}
+                  >
+                    <span>Подробнее</span>
+                    <span className="text-[13px] leading-none">›</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
+          </div>
           </div>
         </div>
       </div>

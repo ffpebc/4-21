@@ -1736,6 +1736,7 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
       onClose={onClose}
       ariaLabel="Полный конспект-шпаргалка ЕГЭ 9–15"
       handleAriaLabel="Потяните вниз, чтобы закрыть шпаргалку"
+      sheetClassName="ios-cheatsheet-panel"
       sheetStyle={{ '--cheat-font-scale': fontScale } as React.CSSProperties}
     >
       <div className="flex items-center justify-between gap-2 mb-2 shrink-0">
@@ -1824,17 +1825,20 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
             или номер задания.
           </div>
         ) : (
-          visibleSections.map((sec) => (
-            <article key={sec.task} className="cheat-card" data-cheat-section={sec.task}>
-              <div className="cheat-title">
-                <span style={{ color: sec.accentVar }}>{sec.title}</span>
-                <span className="text-[12px] font-medium" style={{ color: 'var(--ios-label-sec)' }}>
-                  {sec.pages}
-                </span>
-              </div>
-              {sec.content}
-            </article>
-          ))
+          <>
+            {visibleSections.map((sec) => (
+              <article key={sec.task} className="cheat-card" data-cheat-section={sec.task}>
+                <div className="cheat-title">
+                  <span style={{ color: sec.accentVar }}>{sec.title}</span>
+                  <span className="text-[12px] font-medium" style={{ color: 'var(--ios-label-sec)' }}>
+                    {sec.pages}
+                  </span>
+                </div>
+                {sec.content}
+              </article>
+            ))}
+            <div className="h-10 shrink-0" aria-hidden="true" />
+          </>
         )}
       </div>
     </SwipeableSheet>
