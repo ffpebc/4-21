@@ -411,6 +411,41 @@ export default function App() {
     [state.quantities]
   );
 
+  const isScrollLocked = useMemo(() => {
+    if (activeTab === 'workout') {
+      if (workoutView === 'builder' || workoutView === 'active') return true;
+      if (workoutView === 'summary') {
+        return !showSessionErrorsDrawer || sessionMistakes.length === 0;
+      }
+    }
+    if (activeTab === 'sprint') {
+      return true;
+    }
+    if (activeTab === 'lab') {
+      if (labSubMode === 'flashcards' || labSubMode === 'pairs') return true;
+      return false;
+    }
+    if (activeTab === 'errors') {
+      return state.errorBank.length <= 1;
+    }
+    if (activeTab === 'stats') {
+      if (statSubMode === 'overview' || statSubMode === 'cloud') return true;
+      if (statSubMode === 'journal') {
+        return !state.sessionJournal || state.sessionJournal.length <= 2;
+      }
+    }
+    return false;
+  }, [
+    activeTab,
+    workoutView,
+    showSessionErrorsDrawer,
+    sessionMistakes.length,
+    labSubMode,
+    statSubMode,
+    state.errorBank.length,
+    state.sessionJournal,
+  ]);
+
   // Filtered and balanced pool for Quick Sprint
   const sprintPool = useMemo(() => {
     const filtered =
@@ -996,8 +1031,8 @@ export default function App() {
       </header>
 
       {/* Main Viewport Scroll Container */}
-      <div id="app-scroll-container" className="ios-viewport-scroll">
-        <main className="max-w-[600px] mx-auto px-3.5 pt-0.5 relative overflow-x-hidden min-h-full flex flex-col w-full flex-grow flex-shrink-0">
+      <div id="app-scroll-container" className={`ios-viewport-scroll ${isScrollLocked ? 'ios-scroll-locked' : ''}`}>
+        <main className={`max-w-[600px] mx-auto px-3.5 pt-0.5 relative overflow-x-hidden ${isScrollLocked ? 'h-full min-h-0' : 'min-h-full'} flex flex-col w-full flex-grow flex-shrink-0`}>
           <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
             {/* ======================================================================
                 TAB 1: WORKOUT BUILDER, ACTIVE WORKOUT & POST-SESSION SUMMARY
@@ -1221,7 +1256,6 @@ export default function App() {
                       </span>
                     </button>
                   </div>
-                  <div className="ios-bottom-clearance" aria-hidden="true" />
                 </motion.div>
               )}
 
@@ -1593,7 +1627,9 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                  <div className="ios-bottom-clearance" aria-hidden="true" />
+                  {showSessionErrorsDrawer && sessionMistakes.length > 0 && (
+                    <div className="ios-bottom-clearance" aria-hidden="true" />
+                  )}
                 </motion.div>
               )}
                 </AnimatePresence>
@@ -1747,7 +1783,6 @@ export default function App() {
                     />
                   </div>
                 )}
-                <div className="ios-bottom-clearance" aria-hidden="true" />
               </div>
               </motion.section>
             )}
@@ -2503,7 +2538,9 @@ export default function App() {
                   </motion.div>
                 )}
                   </AnimatePresence>
-                  <div className="ios-bottom-clearance" aria-hidden="true" />
+                  {labSubMode === 'kim' && (
+                    <div className="ios-bottom-clearance" aria-hidden="true" />
+                  )}
                 </div>
               </motion.section>
             )}
@@ -2664,7 +2701,9 @@ export default function App() {
                     </span>
                   </button>
                 </div>
-                <div className="ios-bottom-clearance" aria-hidden="true" />
+                {state.errorBank.length > 1 && (
+                  <div className="ios-bottom-clearance" aria-hidden="true" />
+                )}
               </div>
               </motion.section>
             )}
@@ -3041,7 +3080,9 @@ export default function App() {
                   )}
                     </AnimatePresence>
                   </div>
-                  <div className="ios-bottom-clearance" aria-hidden="true" />
+                  {statSubMode === 'journal' && (
+                    <div className="ios-bottom-clearance" aria-hidden="true" />
+                  )}
                 </div>
               </motion.section>
             )}

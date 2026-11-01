@@ -218,15 +218,24 @@ body::before {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 56px);
-  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  overscroll-behavior-y: none;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 52px);
+  padding-bottom: calc(64px + max(10px, calc(env(safe-area-inset-bottom, 0px) - 14px)));
 }
 
-/* Dedicated Physical Bottom Clearance Spacer (prevents WebKit flex padding collapse & TabBar overlap) */
+/* Dedicated Lock for Screens that fit 100% on iPhone 16 */
+.ios-viewport-scroll.ios-scroll-locked {
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: pan-x !important;
+}
+
+/* Dedicated Physical Bottom Clearance Spacer for Truly Scrollable Long Views */
 .ios-bottom-clearance {
   width: 100%;
-  height: calc(84px + max(16px, env(safe-area-inset-bottom, 0px)));
-  min-height: calc(84px + max(16px, env(safe-area-inset-bottom, 0px)));
+  height: 24px;
+  min-height: 24px;
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -234,11 +243,18 @@ body::before {
 /* Screen Stack tuned for iPhone 16 (393 x 852 pt) — Controlled by Framer Motion Spring Slide */
 .ios-screen-stack {
   min-height: 100%;
-  flex: 1 0 auto;
+  height: 100%;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
+}
+
+.ios-screen-stack.is-scrollable {
+  height: auto !important;
+  min-height: 100% !important;
+  flex: 1 0 auto !important;
 }
 
 /* ============================================================================
@@ -577,8 +593,8 @@ html.dark .ios-word-stage {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 10px;
-  min-height: 52px;
+  padding: 6.5px 10px;
+  min-height: 44px;
   position: relative;
   gap: 6px;
 }
