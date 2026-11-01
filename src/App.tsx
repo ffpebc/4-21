@@ -1238,7 +1238,7 @@ export default function App() {
                   </div>
 
                   {/* Ergonomic Action Bar: Primary Start CTA Positioned Comfortably Above TabBar */}
-                  <div className="mt-3.5 mb-2">
+                  <div className="mt-auto pt-2 pb-1">
                     <button
                       type="button"
                       id="start-workout-btn"
