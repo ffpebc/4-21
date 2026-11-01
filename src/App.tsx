@@ -399,6 +399,13 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const el = document.getElementById('app-scroll-container');
+    if (el) {
+      el.scrollTop = 0;
+    }
+  }, [activeTab, workoutView]);
+
   const totalPlanned = useMemo(
     () => calculateTotalPlanned(state.quantities),
     [state.quantities]
@@ -990,7 +997,7 @@ export default function App() {
 
       {/* Main Viewport Scroll Container */}
       <div id="app-scroll-container" className="ios-viewport-scroll">
-        <main className="max-w-[600px] mx-auto px-3.5 pt-0.5 relative overflow-x-clip min-h-full flex flex-col w-full flex-grow flex-shrink-0">
+        <main className="max-w-[600px] mx-auto px-3.5 pt-0.5 relative overflow-x-hidden min-h-full flex flex-col w-full flex-grow flex-shrink-0">
           <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
             {/* ======================================================================
                 TAB 1: WORKOUT BUILDER, ACTIVE WORKOUT & POST-SESSION SUMMARY
@@ -1195,8 +1202,8 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Bottom Ergonomic Thumb-Zone: Primary Start CTA Docked at Bottom */}
-                  <div className="mt-auto pt-2 pb-1">
+                  {/* Ergonomic Action Bar: Primary Start CTA Positioned Comfortably Above TabBar */}
+                  <div className="mt-3.5 mb-2">
                     <button
                       type="button"
                       id="start-workout-btn"
@@ -3039,7 +3046,6 @@ export default function App() {
               </motion.section>
             )}
           </AnimatePresence>
-          <div className="ios-bottom-clearance" aria-hidden="true" />
         </main>
       </div>
 

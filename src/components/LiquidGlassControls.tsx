@@ -406,9 +406,9 @@ function LiquidGlassTabBarInner<T extends string>({
 
   return (
     <nav
-      className={`ios-tabbar select-none touch-none ${
-        isLiquidActive ? 'is-scrubbing' : ''
-      }`}
+      className={`ios-tabbar select-none ${
+        isDragging ? 'touch-none' : 'touch-pan-y'
+      } ${isLiquidActive ? 'is-scrubbing' : ''}`}
       role="tablist"
       aria-label="Основная навигация"
     >

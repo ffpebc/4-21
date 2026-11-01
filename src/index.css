@@ -218,17 +218,15 @@ body::before {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
   padding-top: calc(env(safe-area-inset-top, 0px) + 56px);
-  padding-bottom: calc(max(16px, env(safe-area-inset-bottom, 0px)) + 92px);
-  transform: translateZ(0);
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
 }
 
-/* Dedicated Physical Bottom Clearance Spacer (prevents WebKit flex padding collapse) */
+/* Dedicated Physical Bottom Clearance Spacer (prevents WebKit flex padding collapse & TabBar overlap) */
 .ios-bottom-clearance {
   width: 100%;
-  height: calc(max(16px, env(safe-area-inset-bottom, 0px)) + 78px);
-  min-height: calc(max(16px, env(safe-area-inset-bottom, 0px)) + 78px);
+  height: calc(84px + max(16px, env(safe-area-inset-bottom, 0px)));
+  min-height: calc(84px + max(16px, env(safe-area-inset-bottom, 0px)));
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -239,7 +237,6 @@ body::before {
   flex: 1 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   gap: 8px;
   width: 100%;
 }
@@ -1664,8 +1661,6 @@ button,
 
 /* Promote interactive glass surfaces to dedicated GPU layers */
 .ios-screen-stack {
-  contain: layout style;
-  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
