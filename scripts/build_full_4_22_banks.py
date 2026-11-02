@@ -403,23 +403,44 @@ def parse_task_5(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
 
     opts = find_paronym_distractors(primary_ans, caps_words)
     sprint_items = []
-    err_sent = sent_lines[err_idx - 1]
-    err_cw = caps_words[err_idx - 1]
-    if err_cw and err_cw.lower() != primary_ans:
-        masked_sent = err_sent.replace(err_cw, "[..]")
-        sprint_items.append({
-            "word": primary_ans,
-            "wordGap": masked_sent[:90],
-            "prefix": f"Пароним: ({err_cw.lower()} / {primary_ans})",
-            "suffix": "",
-            "answer": primary_ans,
-            "options": [primary_ans, err_cw.lower()],
-            "context": err_sent,
-            "explanation": sol_text[:280],
-            "rule": DEFAULT_INSTRUCTIONS["5"],
-            "topic": "Паронимы ФИПИ",
-            "source": source_label,
-        })
+    for i, s in enumerate(sent_lines):
+        is_err = (i + 1) == err_idx
+        cw = caps_words[i]
+        if not cw:
+            continue
+        if is_err and cw.lower() != primary_ans:
+            masked_sent = s.replace(cw, "[..]")
+            sprint_items.append({
+                "word": primary_ans,
+                "wordGap": masked_sent[:90],
+                "prefix": f"Пароним: ({cw.lower()} / {primary_ans})",
+                "suffix": "",
+                "answer": primary_ans,
+                "options": [primary_ans, cw.lower()],
+                "context": s,
+                "explanation": sol_text[:280],
+                "rule": DEFAULT_INSTRUCTIONS["5"],
+                "topic": "Паронимы ФИПИ (Замена ошибки)",
+                "source": source_label,
+            })
+        elif not is_err:
+            cw_low = cw.lower()
+            alt_list = find_paronym_distractors(cw_low, caps_words)
+            alt_w = next((x for x in alt_list if x != cw_low), cw_low + "ный")
+            masked_sent = s.replace(cw, "[..]")
+            sprint_items.append({
+                "word": cw_low,
+                "wordGap": masked_sent[:90],
+                "prefix": f"Пароним в контексте: ({cw_low} / {alt_w})",
+                "suffix": "",
+                "answer": cw_low,
+                "options": [cw_low, alt_w],
+                "context": s,
+                "explanation": f"В предложении «{s}» пароним «{cw}» употреблён ВЕРНО.",
+                "rule": DEFAULT_INSTRUCTIONS["5"],
+                "topic": "Паронимы ФИПИ (Контекст)",
+                "source": source_label,
+            })
 
     fipi_q = {
         "id": qid,
@@ -572,20 +593,37 @@ def parse_task_7(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
             choice_options.append(cw.lower())
 
     sprint_items = []
-    if err_cw and err_cw.lower() != primary_ans:
-        sprint_items.append({
-            "word": primary_ans,
-            "wordGap": err_phrase,
-            "prefix": err_phrase.replace(err_cw, "").strip() or "Норма формы:",
-            "suffix": "",
-            "answer": primary_ans,
-            "options": [primary_ans, err_cw.lower()],
-            "context": f"Исправьте форму в сочетании: «{err_phrase}»",
-            "explanation": sol_text[:280] or f"Правильная форма: {primary_ans}",
-            "rule": DEFAULT_INSTRUCTIONS["7"],
-            "topic": "Морфологические нормы (Формы слов)",
-            "source": source_label,
-        })
+    for i, ph in enumerate(phrase_lines):
+        is_err = (i + 1) == err_idx
+        cw = caps_words[i]
+        if is_err and cw and cw.lower() != primary_ans:
+            sprint_items.append({
+                "word": primary_ans,
+                "wordGap": ph,
+                "prefix": ph.replace(cw, "").strip() or "Норма формы:",
+                "suffix": "",
+                "answer": primary_ans,
+                "options": [primary_ans, cw.lower()],
+                "context": f"Исправьте форму в сочетании: «{ph}»",
+                "explanation": sol_text[:280] or f"Правильная форма: {primary_ans}",
+                "rule": DEFAULT_INSTRUCTIONS["7"],
+                "topic": "Морфологические нормы (Исправление ошибки)",
+                "source": source_label,
+            })
+        elif not is_err and cw:
+            sprint_items.append({
+                "word": cw.lower(),
+                "wordGap": ph,
+                "prefix": f"Морфологическая форма «{ph}»:",
+                "suffix": "",
+                "answer": "ВЕРНО",
+                "options": ["ВЕРНО", "ОШИБКА"],
+                "context": f"Оцените грамматическую форму в сочетании: «{ph}»",
+                "explanation": f"Сочетание «{ph}» образовано ВЕРНО по морфологическим нормам.",
+                "rule": DEFAULT_INSTRUCTIONS["7"],
+                "topic": "Морфологические нормы (Проверка формы)",
+                "source": source_label,
+            })
 
     fipi_q = {
         "id": qid,
@@ -674,48 +712,49 @@ def parse_task_8_or_22(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_an
             "explanation": f"Соответствует букве {matched_lbl}: {letters_map.get(matched_lbl, '')}" if matched_lbl else "Не содержит искомой позиции.",
         })
 
-    # Create sprint micro-card from Letter A and Letter Б
+    # Create sprint micro-cards from all 5 letters А, Б, В, Г, Д
     sprint_items = []
-    if len(matching_letters) >= 2:
-        l0 = matching_letters[0]
-        l1 = matching_letters[1]
-        d0 = l0["correctDigit"]
-        if d0 in num_map:
-            if task_num == "8":
-                short_err0 = l0["text"][:48]
-                short_err1 = l1["text"][:48]
-                if short_err0 != short_err1:
-                    sprint_items.append({
-                        "word": short_err0,
-                        "wordGap": num_map[d0][:110],
-                        "prefix": "Грамматическая ошибка:",
-                        "suffix": num_map[d0][:85],
-                        "answer": short_err0,
-                        "options": [short_err0, short_err1],
-                        "context": num_map[d0],
-                        "explanation": f"В этом предложении допущена ошибка: {l0['text']}.",
-                        "rule": DEFAULT_INSTRUCTIONS["8"],
-                        "topic": "Синтаксические нормы (Задание 8)",
-                        "source": source_label,
-                    })
-            else:
-                term0 = num_map[d0].split("(")[0].strip().capitalize()[:45]
-                d1 = l1["correctDigit"]
-                term1 = num_map.get(d1, "метафора").split("(")[0].strip().capitalize()[:45]
-                if term0 != term1:
-                    sprint_items.append({
-                        "word": term0,
-                        "wordGap": l0["text"][:110],
-                        "prefix": "Средство выразительности:",
-                        "suffix": l0["text"][:85],
-                        "answer": term0,
-                        "options": [term0, term1],
-                        "context": l0["text"],
-                        "explanation": f"Правильный термин: {num_map[d0]}. {sol_text[:180]}",
-                        "rule": DEFAULT_INSTRUCTIONS["22"],
-                        "topic": "Тропы и фигуры речи (Задание 22)",
-                        "source": source_label,
-                    })
+    if len(matching_letters) >= 5:
+        for idx_l in range(len(matching_letters)):
+            l0 = matching_letters[idx_l]
+            l1 = matching_letters[(idx_l + 1) % len(matching_letters)]
+            d0 = l0["correctDigit"]
+            if d0 in num_map:
+                if task_num == "8":
+                    short_err0 = l0["text"][:48]
+                    short_err1 = l1["text"][:48]
+                    if short_err0 != short_err1:
+                        sprint_items.append({
+                            "word": short_err0,
+                            "wordGap": num_map[d0][:110],
+                            "prefix": f"Грамматическая ошибка ({l0['label']}):",
+                            "suffix": num_map[d0][:85],
+                            "answer": short_err0,
+                            "options": [short_err0, short_err1],
+                            "context": num_map[d0],
+                            "explanation": f"В этом предложении допущена ошибка: {l0['text']}.",
+                            "rule": DEFAULT_INSTRUCTIONS["8"],
+                            "topic": "Синтаксические нормы (Задание 8)",
+                            "source": source_label,
+                        })
+                else:
+                    term0 = num_map[d0].split("(")[0].strip().capitalize()[:45]
+                    d1 = l1["correctDigit"]
+                    term1 = num_map.get(d1, "метафора").split("(")[0].strip().capitalize()[:45]
+                    if term0 != term1:
+                        sprint_items.append({
+                            "word": term0,
+                            "wordGap": l0["text"][:110],
+                            "prefix": f"Средство выразительности ({l0['label']}):",
+                            "suffix": l0["text"][:85],
+                            "answer": term0,
+                            "options": [term0, term1],
+                            "context": l0["text"],
+                            "explanation": f"Правильный термин: {num_map[d0]}. {sol_text[:180]}",
+                            "rule": DEFAULT_INSTRUCTIONS["22"],
+                            "topic": "Тропы и фигуры речи (Задание 22)",
+                            "source": source_label,
+                        })
 
     fipi_q = {
         "id": qid,
@@ -773,21 +812,20 @@ def parse_task_16(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source
             "isCorrectRow": is_ok,
             "explanation": sol_exp or ("Ставится ровно ОДНА запятая." if is_ok else "Запятая не нужна или ставится больше одной запятой."),
         })
-        if idx <= 2:
-            ans_label = "ОДНА ЗАПЯТАЯ" if is_ok else "БЕЗ / НЕСКОЛЬКО"
-            sprint_items.append({
-                "word": ans_label,
-                "wordGap": sent[:105],
-                "prefix": "Пунктуация в ССП/ОЧП:",
-                "suffix": sent[:85],
-                "answer": ans_label,
-                "options": ["ОДНА ЗАПЯТАЯ", "БЕЗ / НЕСКОЛЬКО"],
-                "context": sent,
-                "explanation": sol_exp or ("В этом предложении ставится ровно одна запятая." if is_ok else "В этом предложении либо не нужна запятая, либо нужно несколько запятых."),
-                "rule": DEFAULT_INSTRUCTIONS["16"],
-                "topic": "ССП и однородные члены (Задание 16)",
-                "source": source_label,
-            })
+        ans_label = "ОДНА ЗАПЯТАЯ" if is_ok else "БЕЗ / НЕСКОЛЬКО"
+        sprint_items.append({
+            "word": ans_label,
+            "wordGap": sent[:105],
+            "prefix": "Пунктуация в ССП/ОЧП:",
+            "suffix": sent[:85],
+            "answer": ans_label,
+            "options": ["ОДНА ЗАПЯТАЯ", "БЕЗ / НЕСКОЛЬКО"],
+            "context": sent,
+            "explanation": sol_exp or ("В этом предложении ставится ровно одна запятая." if is_ok else "В этом предложении либо не нужна запятая, либо нужно несколько запятых."),
+            "rule": DEFAULT_INSTRUCTIONS["16"],
+            "topic": "ССП и однородные члены (Задание 16)",
+            "source": source_label,
+        })
 
     fipi_q = {
         "id": qid,
@@ -841,22 +879,22 @@ def parse_task_17_20(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_ans:
         })
 
     sprint_items = []
-    d1 = found_digits[0]
-    is_c1 = d1 in correct_indices
-    ans_lbl = "ЗАПЯТАЯ НУЖНА" if is_c1 else "БЕЗ ЗАПЯТОЙ"
-    sprint_items.append({
-        "word": ans_lbl,
-        "wordGap": sentence[:105],
-        "prefix": f"Нужна ли запятая на месте ({d1})?",
-        "suffix": "",
-        "answer": ans_lbl,
-        "options": ["ЗАПЯТАЯ НУЖНА", "БЕЗ ЗАПЯТОЙ"],
-        "context": sentence,
-        "explanation": f"Правильные цифры для всего предложения: {''.join(map(str, correct_indices))}. {sol_text[:200]}",
-        "rule": DEFAULT_INSTRUCTIONS[task_num],
-        "topic": TASK_TITLES[task_num],
-        "source": source_label,
-    })
+    for d1 in found_digits:
+        is_c1 = d1 in correct_indices
+        ans_lbl = "ЗАПЯТАЯ НУЖНА" if is_c1 else "БЕЗ ЗАПЯТОЙ"
+        sprint_items.append({
+            "word": f"({d1}): {ans_lbl}",
+            "wordGap": sentence[:105],
+            "prefix": f"Нужна ли запятая на месте ({d1})?",
+            "suffix": "",
+            "answer": ans_lbl,
+            "options": ["ЗАПЯТАЯ НУЖНА", "БЕЗ ЗАПЯТОЙ"],
+            "context": f"[Позиция ({d1})] {sentence}",
+            "explanation": f"Позиция ({d1}) — {'запятая ставится' if is_c1 else 'запятая не нужна'}. Все цифры в предложении: {''.join(map(str, correct_indices))}. {sol_text[:200]}",
+            "rule": DEFAULT_INSTRUCTIONS[task_num],
+            "topic": TASK_TITLES[task_num],
+            "source": source_label,
+        })
 
     fipi_q = {
         "id": qid,
@@ -920,17 +958,18 @@ def parse_task_21(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source
     sign_name = "ТИРЕ" if "тире" in instr_str.lower() else ("ДВОЕТОЧИЕ" if "двоеточ" in instr_str.lower() else "ЗАПЯТАЯ")
 
     sprint_items = []
-    c_first = correct_indices[0]
-    if c_first in sent_map:
+    for n_sent in sorted(sent_map.keys()):
+        is_in_ans = n_sent in correct_indices
+        ans_lbl = "ВХОДИТ В ОТВЕТ" if is_in_ans else "ДРУГОЕ ПРАВИЛО"
         sprint_items.append({
-            "word": sign_name,
-            "wordGap": sent_map[c_first][:105],
+            "word": f"({n_sent}) {sign_name}",
+            "wordGap": sent_map[n_sent][:105],
             "prefix": f"Пунктуационный анализ ({sign_name}):",
-            "suffix": sent_map[c_first][:80],
-            "answer": "ВХОДИТ В ОТВЕТ",
+            "suffix": sent_map[n_sent][:80],
+            "answer": ans_lbl,
             "options": ["ВХОДИТ В ОТВЕТ", "ДРУГОЕ ПРАВИЛО"],
-            "context": f"({c_first}) {sent_map[c_first]}",
-            "explanation": sol_text[:260],
+            "context": f"({n_sent}) {sent_map[n_sent]}",
+            "explanation": sol_text[:260] if is_in_ans else f"Предложение ({n_sent}) не входит в основную группу ответа ({''.join(map(str, correct_indices))}).",
             "rule": instr_str,
             "topic": f"Задание 21 ({sign_name})",
             "source": source_label,
