@@ -102,14 +102,14 @@ refreshMaps();
 // Очищаем устаревший кэш с урезанной или поврежденной базой
 if (typeof window !== 'undefined' && 'caches' in window) {
   try {
-    for (let v = 1; v <= 16; v++) {
+    for (let v = 1; v <= 18; v++) {
       window.caches.delete(`ege-bank-cache-v${v}`);
     }
   } catch {}
 }
 
 async function fetchJsonWithCache(url: string, fallbackUrls: string[] = []): Promise<any> {
-  const cacheName = 'ege-bank-cache-v17';
+  const cacheName = 'ege-bank-cache-v19';
   let cache: Cache | null = null;
   if (typeof window !== 'undefined' && 'caches' in window) {
     try {
@@ -158,7 +158,7 @@ export async function loadFullDataBank(): Promise<boolean> {
     const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
     const cdnBase = 'https://cdn.jsdelivr.net/gh/ffpebc/9-15@data/public/data';
-    const vParam = '?v=17';
+    const vParam = '?v=19';
     const [allWordsData, fipiData, sprintData] = await Promise.all([
       fetchJsonWithCache(`${localBase}/allWordsBank9_15.json${vParam}`, [
         `${rawGithubBase}/allWordsBank9_15.json${vParam}`,
