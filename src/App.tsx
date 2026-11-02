@@ -32,6 +32,7 @@ import {
   decodeBackupCode,
   cleanWord,
   cleanExplanation,
+  resolveTask15Sentence,
 } from './utils/trainerLogic';
 import {
   loadInitialStateSync,
@@ -2583,11 +2584,7 @@ export default function App() {
                                 Предложение задания:
                               </div>
                               <Task15SentenceView
-                                sentence={
-                                  currentKimTaskQuestion.instruction ||
-                                  (currentKimTaskQuestion as any).sentence ||
-                                  ''
-                                }
+                                sentence={resolveTask15Sentence(currentKimTaskQuestion)}
                                 rows={currentKimTaskQuestion.rows}
                                 selectedDigits={(kimAnswers[kimActiveTask] || '')
                                   .split('')

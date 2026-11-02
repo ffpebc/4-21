@@ -2045,6 +2045,14 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
 
   const task = (activeError?.task || activeQuestion?.task || '9') as TaskId;
   const meta = TASK_META[task];
+  const ruleHeading =
+    meta?.block === 'punct'
+      ? 'Правило пунктуации ФИПИ:'
+      : meta?.block === 'speech'
+      ? 'Норма речи ФИПИ:'
+      : meta?.block === 'expressive'
+      ? 'Средство выразительности ФИПИ:'
+      : 'Правило орфографии ФИПИ:';
   const topic = activeError?.topic || activeQuestion?.topic || 'Орфография';
   const steps = TASK_STRUCTURED_STEPS[task] || [];
   const comparison = TASK_RULE_COMPARISON[task];
@@ -2071,7 +2079,11 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
             activeQuestion.suffix,
             activeQuestion.answer
           )
-        : `${activeQuestion.prefix}${activeQuestion.answer.toLowerCase()}${activeQuestion.suffix}`
+        : ['9', '10', '11', '12', '15'].includes(activeQuestion.task)
+        ? `${activeQuestion.prefix}${activeQuestion.answer.toLowerCase()}${activeQuestion.suffix}`
+        : ['4', '5', '6', '7'].includes(activeQuestion.task)
+        ? activeQuestion.answer
+        : activeQuestion.suffix || activeQuestion.context || activeQuestion.answer
       : null;
 
   const rawExplanation = cleanDisplayText(
@@ -2187,19 +2199,40 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
     : cleanDisplayText(activeError?.rule || activeQuestion?.rule || '');
   const isExamInstruction =
     /^(?:Укажите|Расставьте|Найдите|В одном из|Отредактируйте|Установите)/i.test(rawRuleCandidate);
-  const displayRule =
-    rawRuleCandidate &&
-    !isExamInstruction &&
-    rawRuleCandidate !== parsedExplanation.ruleNote
-      ? rawRuleCandidate
-      : '';
-
+  const generalRule = rawRuleCandidate && !isExamInstruction ? rawRuleCandidate : '';
   const wordSteps =
     parsedExplanation.steps && parsedExplanation.steps.length > 0
       ? parsedExplanation.steps
-      : displayRule
-      ? [displayRule]
       : [];
+
+  const itemTypeLabel = solvedWordPreview
+    ? ['16', '17', '18', '19', '20', '21'].includes(task)
+      ? 'Предложение из задания'
+      : task === '8'
+      ? 'Предложение из задания'
+      : task === '22'
+      ? 'Фрагмент из задания'
+      : task === '4'
+      ? 'Слово с верным ударением'
+      : task === '5'
+      ? 'Пароним из задания'
+      : task === '6'
+      ? 'Лексическая норма'
+      : task === '7'
+      ? 'Морфологическая форма'
+      : 'Слово из задания'
+    : 'Разбор задания ФИПИ';
+
+  const stepBoxHeading =
+    meta?.block === 'punct'
+      ? 'Пунктуационный анализ:'
+      : task === '8'
+      ? 'Грамматический анализ:'
+      : meta?.block === 'speech'
+      ? 'Нормативный разбор:'
+      : meta?.block === 'expressive'
+      ? 'Анализ средств выразительности:'
+      : 'Пошаговый разбор слова:';
 
   return (
     <SwipeableSheet
@@ -2236,6 +2269,7 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
           type="button"
           onClick={onClose}
           className="liquid-pill-btn px-3.5 py-1.5 rounded-full text-[13px] font-bold cursor-pointer shrink-0"
+          aria-label="Закрыть разбор правила"
         >
           Понятно
         </button>
@@ -2249,7 +2283,7 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
               className="text-[10px] font-extrabold uppercase tracking-wider"
               style={{ color: 'var(--ios-blue)' }}
             >
-              {solvedWordPreview ? 'Слово из задания' : 'Разбор задания ФИПИ'}
+              {itemTypeLabel}
             </span>
             {(userChoice || correctChoice) && (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -2307,7 +2341,7 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
                   style={{ color: 'var(--ios-blue)' }}
                 >
                   <svg className="w-3.5 h-3.5 shrink-0"><use href="#sf-sparkles" /></svg>
-                  <span>Пошаговый разбор слова:</span>
+                  <span>{stepBoxHeading}</span>
                 </div>
                 {(parsedExplanation.orthogramType || displayTopic) && (
                   <span
@@ -2379,8 +2413,8 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
             </div>
           )}
 
-          {/* Full Rule Box (shown only if it adds general rule context beyond wordSteps) */}
-          {displayRule && wordSteps[0] !== displayRule && (
+          {/* Full Rule Box */}
+          {generalRule && (
             <div
               className="p-3 rounded-2xl flex flex-col gap-1.5 mt-2 border border-[var(--ios-separator)]/60"
               style={{ background: 'var(--ios-bg-secondary)' }}
@@ -2392,13 +2426,13 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
                 <svg className="w-3.5 h-3.5 shrink-0">
                   <use href="#sf-book-fill" />
                 </svg>
-                <span>Правило орфографии ФИПИ:</span>
+                <span>{ruleHeading}</span>
               </div>
               <div
                 className="text-[13px] sm:text-[13.5px] font-semibold leading-relaxed break-words"
                 style={{ color: 'var(--ios-label)' }}
               >
-                {displayRule}
+                {generalRule}
               </div>
             </div>
           )}
@@ -2450,7 +2484,13 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
                         color: row.isCorrectRow ? '#FFFFFF' : 'var(--ios-label-sec)',
                       }}
                     >
-                      {row.isCorrectRow ? `Подходит · Буква ${row.letter}` : 'Разные буквы'}
+                      {row.isCorrectRow
+                        ? ['13', '14', '15'].includes(task)
+                          ? `Подходит · ${row.letter}`
+                          : `Подходит · Буква ${row.letter}`
+                        : ['13', '14', '15'].includes(task)
+                        ? `Не подходит · ${row.letter}`
+                        : 'Разные буквы'}
                     </span>
                   </div>
 

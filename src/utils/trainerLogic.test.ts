@@ -19,6 +19,7 @@ import {
   cleanQuestionRule,
   resolveTask15Sentence,
   checkFipiQuestionAnswer,
+  formatTask14SolvedWord,
   TASK_IDS,
   TASK_BLOCKS,
 } from './trainerLogic.ts';
@@ -822,6 +823,252 @@ test('All 19 tasks (4-22) have Sprint and FIPI questions, 4 official blocks, and
   assert.equal(grade8Partial.pointsEarned, 1);
   assert.equal(grade8Partial.maxPoints, 2);
 });
+
+test('Task 14 and Task 15 linguistic classification, zero scraper placeholders, and verified FIPI indices', () => {
+  const bank = getTrainerBank();
+
+  // 1. Task 15: participles like притворённые, заплаканное, вырезанный are NOT classified as Стык основы
+  const pritvor = classifyWordSubtopicAndException('15', 'притворё', 'ые', 'НН', '');
+  assert.equal(pritvor.topic, 'Причастия и отглагольные прилагательные (две буквы НН)');
+
+  const zaplak = classifyWordSubtopicAndException('15', 'заплака', 'ое', 'НН', '');
+  assert.equal(zaplak.topic, 'Причастия и отглагольные прилагательные (две буквы НН)');
+
+  const vyrez = classifyWordSubtopicAndException('15', 'выреза', 'ый', 'НН', '');
+  assert.equal(vyrez.topic, 'Причастия и отглагольные прилагательные (две буквы НН)');
+
+  // 2. Task 15: short passive participles like удостоены are classified as Краткие причастия (1 Н)
+  const udost = classifyWordSubtopicAndException('15', 'удостое', 'ы', 'Н', '');
+  assert.equal(udost.topic, 'Краткие страдательные причастия (одна буква Н)');
+
+  // 3. Task 15: genuine stem on -Н (туманный, осенний, старинный)
+  const tuman = classifyWordSubtopicAndException('15', 'тума', 'ый', 'НН', '');
+  assert.equal(tuman.topic, 'Стык основы на -Н- и суффикса -Н- (две буквы НН)');
+
+  // 4. Task 15: denominal adjectives with -ЕНН-/-ОНН- (утренний, соломенный)
+  const utren = classifyWordSubtopicAndException('15', 'утре', 'ий', 'НН', '');
+  assert.equal(utren.topic, 'Суффиксы -ЕНН-, -ОНН- в прилагательных (две буквы НН)');
+
+  // 5. Task 15: nouns with НН (путешественники, ценность)
+  const cennost = classifyWordSubtopicAndException('15', 'це', 'ость', 'НН', '');
+  assert.equal(cennost.topic, 'Существительные с двумя буквами НН');
+
+  // 6. Task 14: glued words are fixed in database
+  const dump = JSON.stringify(bank);
+  assert.equal(dump.includes('ДРУГДРУГУ'), false);
+  assert.equal(dump.includes('КВЕЧЕРУ'), false);
+  assert.equal(dump.includes('ИВСЁЖЕ'), false);
+
+  // 7. Task 14: verified FIPI tasks have accurate indices
+  const q30 = bank.fipiQuestions.find((q) => q.id === 'fipi-14-shkolkovo-14-130930');
+  if (q30) {
+    assert.deepEqual(q30.correctIndices, [1, 2]);
+  }
+  const q44 = bank.fipiQuestions.find((q) => q.id === 'fipi-14-shkolkovo-14-130944');
+  if (q44) {
+    assert.deepEqual(q44.correctIndices, [3, 4]);
+  }
+  const q830 = bank.fipiQuestions.find((q) => q.id === 'fipi-14-neofamily-14-49830');
+  if (q830) {
+    assert.deepEqual(q830.correctIndices, [2, 5]);
+  }
+  const q946 = bank.fipiQuestions.find((q) => q.id === 'fipi-14-neofamily-14-73946');
+  if (q946) {
+    assert.deepEqual(q946.correctIndices, [2, 5]);
+  }
+  const q984 = bank.fipiQuestions.find((q) => q.id === 'fipi-14-neofamily-14-36984');
+  if (q984) {
+    assert.deepEqual(q984.correctIndices, [2, 3, 4]);
+  }
+
+  // 8. Zero placeholder scraper artifacts across all sprint and FIPI questions
+  for (const s of bank.sprintQuestions) {
+    const expl = s.explanation || '';
+    assert.equal(expl.includes('либо полное причастие'), false, `Placeholder found in sprint ${s.id}`);
+    assert.equal(expl.includes('наречие или производный предлог'), false, `Slashed template in sprint ${s.id}`);
+    assert.equal(expl.includes('устойчивое сочетание / производный предлог'), false, `Slashed template in sprint ${s.id}`);
+  }
+  for (const f of bank.fipiQuestions) {
+    for (const r of f.rows || []) {
+      const expl = r.explanation || '';
+      assert.equal(expl.includes('либо полное причастие'), false, `Placeholder found in FIPI row ${f.id}`);
+      assert.equal(expl.includes('наречие или производный предлог'), false, `Slashed template in FIPI row ${f.id}`);
+      assert.equal(expl.includes('устойчивое сочетание / производный предлог'), false, `Slashed template in FIPI row ${f.id}`);
+    }
+  }
+});
+
+test('Cross-task integrity: zero HTML entities, exact isCorrectRow alignment, healed Task 8/15/17/18/21/22', () => {
+  const bank = getTrainerBank();
+  const dump = JSON.stringify(bank);
+
+  // 1. Zero HTML entities
+  assert.equal(dump.includes('&shy;'), false, 'Found &shy; in bank dump');
+  assert.equal(dump.includes('&ldquo;'), false, 'Found &ldquo; in bank dump');
+  assert.equal(dump.includes('&rdquo;'), false, 'Found &rdquo; in bank dump');
+  assert.equal(dump.includes('&yacute;'), false, 'Found &yacute; in bank dump');
+
+  // 2. Exact isCorrectRow and correctIndices alignment
+  for (const f of bank.fipiQuestions) {
+    for (let r = 0; r < (f.rows || []).length; r++) {
+      const isExpected = f.correctIndices.includes(r + 1);
+      assert.equal(
+        f.rows[r].isCorrectRow,
+        isExpected,
+        `Task ${f.task} question ${f.id} row ${r + 1} isCorrectRow mismatch`
+      );
+    }
+  }
+
+  // 3. Verified fixed questions
+  const q17 = bank.fipiQuestions.find((q) => q.id === 'nf-17-37438');
+  if (q17) {
+    assert.equal(q17.rows.length, 4);
+    assert.deepEqual(q17.correctIndices, [1, 2, 3]);
+    assert.equal(q17.sentence?.includes('(З)'), false);
+  }
+
+  const q18_1 = bank.fipiQuestions.find((q) => q.id === 'nf-18-37581');
+  if (q18_1) {
+    assert.equal(q18_1.rows.length, 4);
+    assert.deepEqual(q18_1.correctIndices, [1, 2, 3, 4]);
+  }
+
+  const q18_2 = bank.fipiQuestions.find((q) => q.id === 'nf-18-37494');
+  if (q18_2) {
+    assert.equal(q18_2.rows.length, 4);
+    assert.deepEqual(q18_2.correctIndices, [1, 2, 3, 4]);
+  }
+
+  const q8 = bank.fipiQuestions.find((q) => q.id === 'nf-8-36795');
+  if (q8) {
+    assert.equal(q8.rows.length, 9);
+    assert.deepEqual(q8.correctIndices, [2, 6, 7, 3, 5]);
+  }
+
+  const q21_1 = bank.fipiQuestions.find((q) => q.id === 'nf-21-78423');
+  if (q21_1) {
+    assert.equal(q21_1.rows.length, 5);
+    assert.deepEqual(q21_1.correctIndices, [1, 2, 4]);
+  }
+
+  const q21_2 = bank.fipiQuestions.find((q) => q.id === 'nf-21-37275');
+  if (q21_2) {
+    assert.equal(q21_2.rows.length, 7);
+    assert.deepEqual(q21_2.correctIndices, [3, 5]);
+  }
+
+  const q15_inv = bank.fipiQuestions.find((q) => q.id === 'fipi-15-neofamily-15-50705');
+  if (q15_inv) {
+    assert.deepEqual(q15_inv.correctIndices, [4, 5]);
+    assert.equal(q15_inv.rows[3].isCorrectRow, true);
+    assert.equal(q15_inv.rows[4].isCorrectRow, true);
+  }
+});
+
+test('Task 14 deep pedagogy: zero glued words, exact part-of-speech topics, and zero OCR Ze defects', () => {
+  const bank = getTrainerBank();
+
+  // 1. classifyWordSubtopicAndException produces exact subtopics for Task 14 separate words
+  const c1 = classifyWordSubtopicAndException('14', '(В)', 'ТЕЧЕНИЕ', 'РАЗДЕЛЬНО', '');
+  assert.equal(c1.topic, 'Производные предлоги и сочетания (раздельно)');
+
+  const c2 = classifyWordSubtopicAndException('14', '(ТАК)', 'КАК', 'РАЗДЕЛЬНО', '');
+  assert.equal(c2.topic, 'Составной союз «так как» (раздельно)');
+
+  const c3 = classifyWordSubtopicAndException('14', '(КАК)', 'БУДТО', 'РАЗДЕЛЬНО', '');
+  assert.equal(c3.topic, 'Сравнительный союз «как будто» (раздельно)');
+
+  const c4 = classifyWordSubtopicAndException('14', '(ЕДВА)', 'ЛИ', 'РАЗДЕЛЬНО', '');
+  assert.equal(c4.topic, 'Частица ЛИ со словами (раздельно)');
+
+  const c5 = classifyWordSubtopicAndException('14', '(ВСЁ)', 'ЖЕ', 'РАЗДЕЛЬНО', '');
+  assert.equal(c5.topic, 'Частица ЖЕ со словами (раздельно)');
+
+  const c6 = classifyWordSubtopicAndException('14', '(ОТ)', 'ЭТОГО', 'РАЗДЕЛЬНО', '');
+  assert.equal(c6.topic, 'Местоимения с предлогами (раздельно)');
+
+  const c7 = classifyWordSubtopicAndException('14', '(С)', 'РАЗБЕГУ', 'РАЗДЕЛЬНО', '');
+  assert.equal(c7.topic, 'Наречные сочетания существительных с предлогами (раздельно)');
+
+  // 2. Zero unspaced words in РАЗДЕЛЬНО explanations across all sprint questions
+  for (const s of bank.sprintQuestions) {
+    if (s.task === '14' && s.answer === 'РАЗДЕЛЬНО' && s.explanation) {
+      const match = s.explanation.match(/поэтому пишется РАЗДЕЛЬНО\s*[-—]\s*«([^»]+)»/);
+      if (match) {
+        assert.ok(
+          match[1].includes(' ') || match[1].includes('-'),
+          `Sprint item ${s.id} has unspaced separate word: ${match[1]}`
+        );
+      }
+    }
+  }
+
+  // 3. Zero mislabeled conjunctions/particles/prepositions in Task 14
+  for (const s of bank.sprintQuestions) {
+    if (s.task === '14' && s.answer === 'РАЗДЕЛЬНО' && s.explanation) {
+      if (/«([^»]+)»\s*—\s*наречное сочетание существительного с предлогом/i.test(s.explanation)) {
+        const m = s.explanation.match(/«([^»]+)»/);
+        const term = m ? m[1].toUpperCase() : '';
+        const forbidden = [
+          'ТАК КАК', 'КАК БУДТО', 'ТО ЕСТЬ', 'ВСЁ ЖЕ', 'ВСЕ ЖЕ', 'ЕСЛИ БЫ', 'ЕДВА ЛИ',
+          'В ТЕЧЕНИЕ', 'В ПРОДОЛЖЕНИЕ', 'В ЗАКЛЮЧЕНИЕ', 'ВО ИЗБЕЖАНИЕ', 'В ВИДЕ', 'В СВЯЗИ',
+          'НА ПРОТЯЖЕНИИ', 'ОТ ЭТОГО', 'ПРИ ЭТОМ', 'ДРУГ ДРУГУ'
+        ];
+        assert.equal(forbidden.includes(term), false, `Term ${term} misclassified as prepositional noun in ${s.id}`);
+      }
+    }
+  }
+
+  // 4. Zero OCR Ze (З) in all question sentences
+  for (const f of bank.fipiQuestions) {
+    if (f.sentence) {
+      assert.equal(/\([Зз]\)/.test(f.sentence), false, `Cyrillic Ze found in sentence of ${f.id}`);
+    }
+  }
+});
+
+test('RuleInspector and sprint word formatting across all official EGE tasks (4-22)', () => {
+  const bank = getTrainerBank();
+
+  for (const s of bank.sprintQuestions) {
+    const task = s.task;
+
+    // Resolved word preview logic as implemented in RuleInspectorModal
+    const preview =
+      s.task === '13'
+        ? `${s.prefix.replace(/[()]/g, '')}${s.answer === 'СЛИТНО' ? '' : ' '}${s.suffix}`
+        : s.task === '14'
+        ? formatTask14SolvedWord(s.prefix, s.suffix, s.answer)
+        : ['9', '10', '11', '12', '15'].includes(s.task)
+        ? `${s.prefix}${s.answer.toLowerCase()}${s.suffix}`
+        : ['4', '5', '6', '7'].includes(s.task)
+        ? s.answer
+        : s.suffix || s.context || s.answer;
+
+    assert.ok(preview && preview.length > 0, `Empty preview for sprint item ${s.id} in task ${task}`);
+
+    // Task 4: preview must be the stressed word, strictly matching answer
+    if (task === '4') {
+      assert.equal(preview, s.answer);
+      assert.notEqual(preview.toLowerCase(), `${s.prefix.toLowerCase()}${s.prefix.toLowerCase()}`, `Duplicated word detected in Task 4: ${preview}`);
+    }
+
+    // Task 5, 6, 7: must not contain prompt prefix
+    if (['5', '6', '7'].includes(task)) {
+      assert.equal(preview.includes('Пароним:'), false, `Preview contains prompt prefix in ${s.id}`);
+      assert.equal(preview.includes('Исключите'), false, `Preview contains prompt prefix in ${s.id}`);
+      assert.equal(preview.includes('Морфологическая'), false, `Preview contains prompt prefix in ${s.id}`);
+    }
+
+    // Task 16-21: must be clean sentence/fragment, not starting with lowercase glued answer
+    if (['16', '17', '18', '19', '20', '21'].includes(task)) {
+      assert.equal(/^[а-яё]+(?:одна запятая|запятая нужна|входит в ответ)/.test(preview), false, `Glued answer in sentence preview: ${preview}`);
+    }
+  }
+});
+
+
 
 
 

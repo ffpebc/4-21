@@ -93,8 +93,8 @@ async function run() {
     await client.send('Page.enable');
     await client.send('Runtime.enable');
 
-    console.log('[CDP] Navigating to http://127.0.0.1:4173/ ...');
-    await client.send('Page.navigate', { url: 'http://127.0.0.1:4173/' });
+    console.log('[CDP] Navigating to http://127.0.0.1:3000/ ...');
+    await client.send('Page.navigate', { url: 'http://127.0.0.1:3000/' });
     await wait(2500);
 
     // Filter to ONLY Task 13 in the UI
