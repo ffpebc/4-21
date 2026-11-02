@@ -145,7 +145,7 @@ def resolve_t14_token(raw_token: str, context: str):
         return word, "ДЕФИСНО", rule, "Частица -КА (через дефис)", "Сложные слова с дефисными частицами"
 
     # Check -ТО, -ЛИБО, -НИБУДЬ
-    if (any(token.upper().endswith(suf) for suf in ('-ТО', '-ЛИБО', '-НИБУДЬ', '(ТО)', '(ЛИБО)', '(НИБУДЬ)')) and clean_u not in ('ТО', 'ЭТО', 'ЧТО')) or \
+    if (any(token.upper().endswith(suf) for suf in ('-ТО', '-ЛИБО', '-НИБУДЬ', '(ТО)', '(ЛИБО)', '(НИБУДЬ)', 'ЛИБО', 'НИБУДЬ')) and clean_u not in ('ТО', 'ЭТО', 'ЧТО', 'ЛИБО', 'НИБУДЬ')) or \
        token.upper().endswith('ТО') and len(token) > 4 and clean_u not in ('ВМЕСТО', 'ЧУТЬЧУТЬ', 'БУДТО', 'ЧТОБЫ', 'БРУТТО', 'НЕТТО', 'ЛОТО', 'ТОЖЕ', 'ТОЕСТЬ', 'ТО', 'ЭТО', 'ЧТО'):
         if clean_u not in ('ПОТОМУ', 'ОТТОГО', 'ЗАТО', 'БУДТО', 'КАКБУДТО', 'ЧТОБЫ', 'ВМЕСТО', 'ТОЖЕ', 'ТОЕСТЬ', 'ТО', 'ЭТО', 'ЧТО'):
             base = re.sub(r'[()]', '', token).upper()
