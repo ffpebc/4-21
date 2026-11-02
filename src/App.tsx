@@ -1377,110 +1377,94 @@ export default function App() {
                   animate="center"
                   exit="exit"
                 >
-                  <div className="ios-inset-group p-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div className="ios-inset-group p-3 text-center !mb-1 shrink-0">
+                    <div
+                      id="summary-percent-badge"
+                      className="text-[30px] font-black leading-none mb-0.5"
+                      style={{
+                        color:
+                          sessionAccuracy >= 80
+                            ? 'var(--ios-green)'
+                            : sessionAccuracy >= 50
+                            ? 'var(--ios-orange)'
+                            : 'var(--ios-red)',
+                      }}
+                    >
+                      {sessionAccuracy}%
+                    </div>
+                    <h2
+                      id="summary-headline"
+                      className="text-[18px] font-extrabold tracking-tight leading-tight mb-0.5"
+                    >
+                      {sessionAccuracy >= 85
+                        ? 'Отличный результат!'
+                        : sessionAccuracy >= 60
+                        ? 'Хорошая тренировка!'
+                        : 'Есть над чем поработать'}
+                    </h2>
+                    <p
+                      id="summary-subline"
+                      className="text-[12px] font-medium leading-tight mb-2"
+                      style={{ color: 'var(--ios-label-sec)' }}
+                    >
+                      Выполнено: {sessionTotalAnswered} · Правильных: {sessionCorrect} · Ошибок:{' '}
+                      {sessionWrong}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
                       <div
-                        id="summary-percent-badge"
-                        className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 shadow-sm"
+                        className="py-1.5 px-3 rounded-xl flex flex-col items-center justify-center"
                         style={{
-                          background:
-                            sessionAccuracy >= 80
-                              ? 'var(--ios-green-soft)'
-                              : sessionAccuracy >= 50
-                              ? 'var(--ios-orange-soft)'
-                              : 'var(--ios-red-soft)',
-                          color:
-                            sessionAccuracy >= 80
-                              ? 'var(--ios-green)'
-                              : sessionAccuracy >= 50
-                              ? 'var(--ios-orange)'
-                              : 'var(--ios-red)',
+                          background: 'var(--ios-green-soft)',
+                          color: 'var(--ios-green)',
                         }}
                       >
-                        <span className="text-[22px] font-black leading-none">{sessionAccuracy}%</span>
-                        <span className="text-[9px] font-extrabold uppercase mt-0.5 opacity-80">Итог</span>
+                        <div className="text-[19px] font-black leading-none">{sessionCorrect}</div>
+                        <div className="text-[11px] font-bold mt-0.5">Правильно</div>
                       </div>
-
-                      <div className="min-w-0 flex-1">
-                        <h2
-                          id="summary-headline"
-                          className="text-[17px] font-extrabold tracking-tight leading-snug truncate"
-                        >
-                          {sessionAccuracy >= 85
-                            ? 'Отличный результат!'
-                            : sessionAccuracy >= 60
-                            ? 'Хорошая тренировка!'
-                            : 'Есть над чем поработать'}
-                        </h2>
-                        <p
-                          id="summary-subline"
-                          className="text-[12px] font-medium leading-tight mt-0.5 truncate"
-                          style={{ color: 'var(--ios-label-sec)' }}
-                        >
-                          Выполнено: {sessionTotalAnswered} · Заданий: {sessionQueue.length}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1 shrink-0 text-[11px] font-extrabold">
-                      <span
-                        className="px-2 py-0.5 rounded-full flex items-center gap-1"
-                        style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
+                      <div
+                        className="py-1.5 px-3 rounded-xl flex flex-col items-center justify-center"
+                        style={{
+                          background: 'var(--ios-red-soft)',
+                          color: 'var(--ios-red)',
+                        }}
                       >
-                        <span>✓</span>
-                        <span>{sessionCorrect}</span>
-                      </span>
-                      {sessionWrong > 0 && (
-                        <span
-                          className="px-2 py-0.5 rounded-full flex items-center gap-1"
-                          style={{ background: 'var(--ios-red-soft)', color: 'var(--ios-red)' }}
-                        >
-                          <span>✕</span>
-                          <span>{sessionWrong}</span>
-                        </span>
-                      )}
+                        <div className="text-[19px] font-black leading-none">{sessionWrong}</div>
+                        <div className="text-[11px] font-bold mt-0.5">Ошибок</div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="ios-section-header !mt-1 !mb-1.5 flex items-center justify-between">
-                    <span>Точность по заданиям</span>
-                    <span className="text-[11px] font-semibold" style={{ color: 'var(--ios-label-ter)' }}>
-                      {TASK_IDS.filter((t) => (sessionTaskTallies[t]?.solved || 0) > 0).length} тем
-                    </span>
+                  <div className="ios-section-header !mt-0.5 !mb-1 text-[11px] font-bold uppercase tracking-wider shrink-0">
+                    Точность по заданиям в занятии
                   </div>
 
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="ios-inset-group !mb-1.5 shrink-0">
                     {TASK_IDS.map((taskId) => {
                       const tally = sessionTaskTallies[taskId] || { solved: 0, correct: 0 };
                       if (tally.solved === 0) return null;
                       const acc = calculateAccuracyPercent(tally.correct, tally.solved);
-                      const meta = TASK_META[taskId];
-                      const shortTitle = meta.title
-                        .replace('Правописание ', '')
-                        .replace('Спряжения и причастия', 'Глаголы/прич.');
                       return (
-                        <div
-                          key={taskId}
-                          className="ios-inset-group !p-2 !mb-0 flex items-center justify-between gap-1.5"
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                            <div
-                              className="w-5 h-5 rounded-md text-[10.5px] font-black flex items-center justify-center text-white shrink-0"
-                              style={{ background: meta.gradient }}
-                            >
-                              {taskId}
+                        <div key={taskId} className="ios-cell !py-1 !min-h-[32px]">
+                          <div
+                            className="ios-row-icon !w-5 !h-5 !rounded-md !text-[10px] !font-black"
+                            style={{ background: TASK_META[taskId].gradient }}
+                          >
+                            {taskId}
+                          </div>
+                          <div className="flex-1 min-w-0 pr-2">
+                            <div className="text-[12.5px] font-bold truncate leading-tight">
+                              {TASK_META[taskId].title}
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-[11.5px] font-bold truncate leading-tight">
-                                {shortTitle}
-                              </div>
-                              <div className="text-[10px] leading-none mt-0.5" style={{ color: 'var(--ios-label-ter)' }}>
-                                {tally.correct} из {tally.solved}
-                              </div>
+                            <div
+                              className="text-[10px] leading-tight"
+                              style={{ color: 'var(--ios-label-sec)' }}
+                            >
+                              Верно {tally.correct} из {tally.solved}
                             </div>
                           </div>
                           <div
-                            className="text-[12px] font-extrabold shrink-0"
+                            className="text-[13px] font-extrabold shrink-0"
                             style={{
                               color:
                                 acc >= 80
@@ -1497,22 +1481,22 @@ export default function App() {
                     })}
                   </div>
 
-                  <div className="mt-auto pt-2 pb-1 flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5 mt-auto pb-1 shrink-0">
                     {sessionMistakes.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2">
+                      <>
                         <button
                           type="button"
                           onClick={() => setShowSessionErrorsDrawer((v) => !v)}
-                          className="ios-btn-primary !text-[12px] !py-2.5 !min-h-[42px] whitespace-nowrap"
+                          className="ios-btn-primary !min-h-[38px] !py-2 !text-[13px]"
                           style={{ background: 'var(--ios-orange)' }}
                         >
                           <svg className="w-4 h-4 shrink-0">
                             <use href="#sf-warning-fill" />
                           </svg>
-                          <span className="truncate">
+                          <span>
                             {showSessionErrorsDrawer
-                              ? 'Скрыть разбор'
-                              : `Разбор (${sessionMistakes.length})`}
+                              ? 'Скрыть разбор ошибок'
+                              : `Ошибки (${sessionMistakes.length}) — открыть разбор`}
                           </span>
                         </button>
 
@@ -1521,39 +1505,37 @@ export default function App() {
                           onClick={() =>
                             startSessionWithQueue(sessionMistakes.map((m) => m.question))
                           }
-                          className="ios-btn-primary !text-[12px] !py-2.5 !min-h-[42px] whitespace-nowrap"
+                          className="ios-btn-primary !min-h-[38px] !py-2 !text-[13px]"
                           style={{ background: 'var(--ios-indigo)' }}
                         >
                           <svg className="w-4 h-4 shrink-0">
                             <use href="#sf-refresh" />
                           </svg>
-                          <span className="truncate">Отработать ошибки</span>
+                          <span>Отработать ошибки этого занятия</span>
                         </button>
-                      </div>
+                      </>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        id="summary-repeat-random-btn"
-                        onClick={handleStartPlannedWorkout}
-                        className="ios-btn-primary !text-[12px] !py-2.5 !min-h-[42px] whitespace-nowrap"
-                      >
-                        <svg className="w-4 h-4 shrink-0">
-                          <use href="#sf-sparkles" />
-                        </svg>
-                        <span className="truncate">Новый вариант ({totalPlanned})</span>
-                      </button>
+                    <button
+                      type="button"
+                      id="summary-repeat-random-btn"
+                      onClick={handleStartPlannedWorkout}
+                      className="ios-btn-primary !min-h-[38px] !py-2 !text-[13px]"
+                    >
+                      <svg className="w-4 h-4 shrink-0">
+                        <use href="#sf-sparkles" />
+                      </svg>
+                      <span>Новый случайный вариант ({totalPlanned} зад.)</span>
+                    </button>
 
-                      <button
-                        type="button"
-                        id="back-to-builder-btn"
-                        onClick={() => setWorkoutView('builder')}
-                        className="ios-btn-glass-secondary !text-[12px] !py-2.5 !min-h-[42px] whitespace-nowrap"
-                      >
-                        <span className="truncate">В конструктор</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      id="back-to-builder-btn"
+                      onClick={() => setWorkoutView('builder')}
+                      className="ios-btn-glass-secondary !min-h-[38px] !py-2 !text-[13px]"
+                    >
+                      <span>Настроить конструктор</span>
+                    </button>
                   </div>
 
                   <div className={`ios-accordion-grid ${showSessionErrorsDrawer && sessionMistakes.length > 0 ? 'open' : ''} mt-3 mb-4`}>
