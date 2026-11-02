@@ -568,13 +568,13 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
   return (
     <div
       key={fipiQ.instanceId || fipiQ.id}
-      className={`flex-1 flex flex-col justify-between gap-2.5 word-stage-animate ${
+      className={`flex-1 min-h-0 flex flex-col justify-between gap-1.5 sm:gap-2 word-stage-animate ${
         isExiting ? 'word-stage-exit' : ''
       }`}
     >
       {/* Top Meta Bar */}
       <div
-        className="flex items-center justify-between gap-2 text-[11.5px] font-bold"
+        className="flex items-center justify-between gap-2 text-[11px] font-bold"
         style={{ color: 'var(--ios-label-sec)' }}
       >
         <span
@@ -591,10 +591,10 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
       {/* Official Instruction Box */}
       <div
-        className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-left border border-[var(--ios-separator)] shadow-xs"
+        className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-left border border-[var(--ios-separator)] shadow-xs"
         style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label)' }}
       >
-        <div className="text-[14px] sm:text-[15.5px] font-semibold leading-relaxed">
+        <div className="text-[12.5px] sm:text-[13.5px] font-semibold leading-snug">
           <FormattedInstruction rule={fipiQ.rule} task={fipiQ.task} />
         </div>
       </div>
@@ -603,16 +603,16 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       {/* MODE 1: Numbered Gaps in Sentence (Tasks 15, 17, 18, 19, 20)       */}
       {/* ================================================================== */}
       {effectiveKind === 'numbered_gaps' && (
-        <div className="flex flex-col gap-2 my-auto">
+        <div className="flex flex-col gap-1.5 my-auto flex-1 min-h-0 overflow-y-auto pr-0.5 no-scrollbar">
           <div
-            className="p-3.5 sm:p-4 rounded-2xl text-left border border-[var(--ios-separator)] shadow-xs"
+            className="p-3 sm:p-3.5 rounded-xl text-left border border-[var(--ios-separator)] shadow-xs"
             style={{
               background: 'var(--ios-bg-secondary)',
               color: 'var(--ios-label)',
             }}
           >
             <div
-              className="text-[10px] font-extrabold uppercase tracking-wider mb-1.5 opacity-70"
+              className="text-[10px] font-extrabold uppercase tracking-wider mb-1 opacity-70"
               style={{ color: 'var(--ios-blue)' }}
             >
               {fipiQ.task === '15' ? 'Предложение задания:' : 'Нажмите на цифры в предложении, где нужна запятая:'}
@@ -626,20 +626,20 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
             />
           </div>
 
-          <div className="flex flex-col gap-2 my-1">
+          <div className="flex flex-col gap-1.5 my-1">
             <div
-              className="text-[11px] font-bold text-center uppercase tracking-wider opacity-65"
+              className="text-[10.5px] font-bold text-center uppercase tracking-wider opacity-65"
               style={{ color: 'var(--ios-label-sec)' }}
             >
               {fipiSubmitted ? 'Результат по номерам:' : 'Выберите цифры ответа:'}
             </div>
 
-            <div className="flex items-center justify-center flex-wrap gap-2 sm:gap-3 my-1 w-full mx-auto">
+            <div className="flex items-center justify-center flex-wrap gap-2 sm:gap-2.5 my-0.5 w-full mx-auto">
               {fipiQ.rows.map((row, idx) => {
                 const digit = idx + 1;
                 const isSelected = fipiSelectedRows.includes(digit);
                 let circleClass =
-                  'w-10 h-10 sm:w-12 sm:h-12 rounded-full text-[17px] sm:text-[19px] font-black flex items-center justify-center transition-all select-none shadow-xs active:scale-95 cursor-pointer';
+                  'w-9 h-9 sm:w-10 sm:h-10 rounded-full text-[15px] sm:text-[17px] font-black flex items-center justify-center transition-all select-none shadow-xs active:scale-95 cursor-pointer';
                 let circleStyle: React.CSSProperties = {
                   background: 'var(--ios-bg-secondary)',
                   color: 'var(--ios-label)',
@@ -1008,7 +1008,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       {/* MODE 4: Multi-Row Selection (Tasks 4, 9–14, 16, 21)                */}
       {/* ================================================================== */}
       {effectiveKind === 'rows' && (
-        <div className="flex flex-col gap-1.5 my-auto max-h-[380px] overflow-y-auto pr-0.5">
+        <div className="flex flex-col gap-1 sm:gap-1.5 my-auto flex-1 min-h-0 overflow-y-auto pr-0.5 no-scrollbar">
           {fipiQ.rows.map((row, idx) => {
             const rowNum = idx + 1;
             const isSelected = fipiSelectedRows.includes(rowNum);
@@ -1028,7 +1028,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                 className={`fipi-row-cell ${rowState}`}
               >
                 <span
-                  className="w-6 h-6 rounded-full text-[12px] font-extrabold flex items-center justify-center shrink-0"
+                  className="w-5 h-5 rounded-full text-[11px] font-extrabold flex items-center justify-center shrink-0"
                   style={{
                     background: isSelected ? 'var(--ios-blue)' : 'var(--ios-bg-tertiary)',
                     color: isSelected ? '#FFFFFF' : 'var(--ios-label)',
@@ -1037,14 +1037,14 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                   {rowNum}
                 </span>
                 <div className="flex-1 min-w-0 text-left">
-                  <div className="text-[13px] font-bold leading-snug">
+                  <div className="text-[12.5px] sm:text-[13px] font-bold leading-tight">
                     {(fipiSubmitted ? row.solvedWords : row.words)
                       .map((w) => (['9', '10', '11', '12', '13', '14', '15'].includes(fipiQ.task) ? cleanWord(w) : w))
                       .join(', ')}
                   </div>
                   {fipiSubmitted && (
                     <div
-                      className="text-[11px] mt-0.5 truncate font-semibold"
+                      className="text-[10.5px] mt-0.5 truncate font-semibold"
                       style={{
                         color: row.isCorrectRow
                           ? 'var(--ios-green)'
@@ -1056,7 +1056,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                   )}
                   {fipiSubmitted && row.explanation && (
                     <div
-                      className="text-[10.5px] mt-0.5 line-clamp-2 opacity-85 leading-tight"
+                      className="text-[10px] mt-0.5 line-clamp-2 opacity-85 leading-tight"
                       style={{ color: 'var(--ios-label-sec)' }}
                     >
                       {cleanExplanation(row.explanation)}
@@ -1070,9 +1070,9 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       )}
 
       {/* Submission & Next Action Banner */}
-      <div className="mt-auto pt-1 flex flex-col gap-2">
+      <div className="mt-auto pt-1 flex flex-col gap-1.5 shrink-0">
         {fipiSubmitted ? (
-          <div className="flex flex-col gap-2 ios-feedback-pop">
+          <div className="flex flex-col gap-1.5 ios-feedback-pop">
             <div
               className="px-3.5 py-2 rounded-xl text-[12px] font-bold text-center"
               style={{

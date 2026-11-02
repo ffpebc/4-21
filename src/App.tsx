@@ -426,10 +426,8 @@ export default function App() {
   const isScrollLocked = useMemo(() => {
     if (activeTab === 'workout') {
       if (workoutView === 'builder') return false;
-      if (workoutView === 'active') return false;
-      if (workoutView === 'summary') {
-        return !showSessionErrorsDrawer || sessionMistakes.length === 0;
-      }
+      if (workoutView === 'active') return true;
+      if (workoutView === 'summary') return true;
     }
     if (activeTab === 'sprint') {
       return true;
@@ -439,7 +437,7 @@ export default function App() {
       return false;
     }
     if (activeTab === 'errors') {
-      return state.errorBank.length <= 1;
+      return state.errorBank.length <= 3;
     }
     if (activeTab === 'stats') {
       if (statSubMode === 'cloud') return true;
@@ -1092,11 +1090,12 @@ export default function App() {
                 setRulesInitialSection('all');
                 setIsRulesOpen(true);
               }}
-              className="flex items-center gap-1 text-[12px] font-bold whitespace-nowrap shrink-0 cursor-pointer py-1.5 px-2.5 rounded-full active:scale-95 transition-transform"
+              className="flex items-center gap-1 text-[12px] font-bold whitespace-nowrap shrink-0 cursor-pointer py-2 px-3 min-h-[36px] rounded-full active:scale-95 transition-transform"
               style={{
                 background: 'var(--ios-blue-soft)',
                 color: 'var(--ios-blue)',
               }}
+              aria-label="Шпаргалка правил ФИПИ"
             >
               <svg className="w-3.5 h-3.5 shrink-0">
                 <use href="#sf-book-fill" />
@@ -1107,7 +1106,7 @@ export default function App() {
               id="nav-dict-btn"
               type="button"
               onClick={() => setIsDictionaryOpen(true)}
-              className="flex items-center gap-1 text-[12px] font-bold px-2.5 py-1.5 rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
+              className="flex items-center gap-1 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
               style={{
                 background: 'var(--ios-purple-soft)',
                 color: 'var(--ios-purple)',
@@ -1123,7 +1122,7 @@ export default function App() {
               id="nav-sync-btn"
               type="button"
               onClick={() => setIsSyncOpen(true)}
-              className="flex items-center gap-1 text-[12px] font-bold px-2.5 py-1.5 rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
+              className="flex items-center gap-1 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
               style={{ background: 'var(--ios-blue-soft)', color: 'var(--ios-blue)' }}
               aria-label="Память и сохранение"
             >
@@ -1138,7 +1137,7 @@ export default function App() {
               id="nav-appearance-btn"
               type="button"
               onClick={() => setIsAppearanceOpen(true)}
-              className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 cursor-pointer active:scale-95 transition-transform"
+              className="flex items-center justify-center w-9 h-9 min-w-[36px] min-h-[36px] rounded-full shrink-0 cursor-pointer active:scale-95 transition-transform"
               style={{ background: 'var(--ios-bg-tertiary)', color: 'var(--ios-blue)' }}
               aria-label="Настройки Liquid Glass и темы"
             >
@@ -1194,11 +1193,12 @@ export default function App() {
                           type="button"
                           id="quick-start-kim-btn"
                           onClick={handleStartRealKimWorkout}
-                          className="liquid-pill-btn flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer shrink-0"
+                          className="liquid-pill-btn flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-full text-[11.5px] font-bold cursor-pointer shrink-0"
                           style={{ color: 'var(--ios-blue)', background: 'var(--ios-blue-soft)' }}
                           title="Реальный экзаменационный КИМ ЕГЭ (задания 4–22 ФИПИ)"
+                          aria-label="Быстрый запуск: КИМ 4–22"
                         >
-                          <svg className="w-3 h-3 shrink-0">
+                          <svg className="w-3.5 h-3.5 shrink-0">
                             <use href="#sf-sparkles" />
                           </svg>
                           <span>КИМ 4–22</span>
@@ -1207,9 +1207,10 @@ export default function App() {
                           type="button"
                           id="open-presets-modal-btn"
                           onClick={() => setIsPresetsOpen(true)}
-                          className="liquid-pill-btn flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold cursor-pointer shrink-0"
+                          className="liquid-pill-btn flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-full text-[11.5px] font-bold cursor-pointer shrink-0"
+                          aria-label="Шаблоны тренировок"
                         >
-                          <svg className="w-3 h-3 shrink-0">
+                          <svg className="w-3.5 h-3.5 shrink-0">
                             <use href="#sf-sliders" />
                           </svg>
                           <span>Шаблоны</span>
@@ -1301,13 +1302,15 @@ export default function App() {
                           <div className="flex items-center justify-between gap-2 px-1 mb-1 min-w-0">
                             <button
                               type="button"
+                              aria-expanded={!isBlockCollapsed}
+                              aria-label={`${block.title} (${block.badge}), ${activeCountInBlock} из ${block.tasks.length} заданий выбрано. Нажмите чтобы ${isBlockCollapsed ? 'развернуть' : 'свернуть'}`}
                               onClick={() =>
                                 setCollapsedBlocks((prev) => ({
                                   ...prev,
                                   [block.id]: !prev[block.id],
                                 }))
                               }
-                              className="flex items-center gap-1.5 text-left cursor-pointer min-w-0 flex-1 overflow-hidden"
+                              className="flex items-center gap-1.5 text-left cursor-pointer min-w-0 flex-1 overflow-hidden py-1.5 min-h-[36px]"
                             >
                               <span className="ios-section-header !m-0 !p-0 truncate min-w-0">
                                 {block.title} ({block.badge})
@@ -1470,7 +1473,6 @@ export default function App() {
                       </span>
                     </button>
                   </div>
-                  <div className="ios-bottom-clearance" aria-hidden="true" />
                 </motion.div>
               )}
 
@@ -1478,16 +1480,16 @@ export default function App() {
                 <motion.div
                   key="workout-active"
                   id="workout-active-view"
-                  className="ios-screen-stack is-scrollable"
+                  className="ios-screen-stack"
                   custom={workoutDirection}
                   variants={iosScreenSlideVariants}
                   initial="enter"
                   animate="center"
                   exit="exit"
                 >
-                  <div className="ios-inset-group p-3.5 !mb-0">
-                    <div className="flex items-center justify-between gap-1.5 mb-2 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-[13px] font-semibold whitespace-nowrap shrink-0">
+                  <div className="ios-inset-group px-3 py-1.5 !mb-0 shrink-0">
+                    <div className="flex items-center justify-between gap-1.5 mb-1 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap shrink-0">
                         <span style={{ color: 'var(--ios-blue)' }} className="font-extrabold">
                           Задание {sessionQueue[sessionIndex].task}
                         </span>
@@ -1496,12 +1498,12 @@ export default function App() {
                           {sessionIndex + 1} из {sessionQueue.length}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
                           type="button"
                           id="open-rule-inspector-btn"
                           onClick={() => openRuleInspector(sessionQueue[sessionIndex], null)}
-                          className="text-[11.5px] font-bold px-2.5 py-1 rounded-full cursor-pointer whitespace-nowrap shrink-0"
+                          className="text-[10.5px] font-bold px-2 py-0.5 rounded-full cursor-pointer whitespace-nowrap shrink-0"
                           style={{
                             background: 'var(--ios-blue-soft)',
                             color: 'var(--ios-blue)',
@@ -1513,7 +1515,7 @@ export default function App() {
                           type="button"
                           id="abort-workout-btn"
                           onClick={handleAbortWorkout}
-                          className="text-[11.5px] font-bold px-2.5 py-1 rounded-full cursor-pointer whitespace-nowrap shrink-0"
+                          className="text-[10.5px] font-bold px-2 py-0.5 rounded-full cursor-pointer whitespace-nowrap shrink-0"
                           style={{
                             background: 'var(--ios-red-soft)',
                             color: 'var(--ios-red)',
@@ -1525,7 +1527,7 @@ export default function App() {
                     </div>
 
                     <div
-                      className="w-full h-2 rounded-full overflow-hidden mb-2.5"
+                      className="w-full h-1.5 rounded-full overflow-hidden mb-1.5"
                       style={{ background: 'var(--ios-bg-tertiary)' }}
                     >
                       <div
@@ -1542,16 +1544,16 @@ export default function App() {
                     </div>
 
                     <div className="flex items-center justify-between gap-2">
-                      <div id="live-correct-pill" className="score-pill-correct flex-1 justify-center">
-                        <svg className="w-4 h-4 shrink-0">
+                      <div id="live-correct-pill" className="score-pill-correct flex-1 justify-center py-1 text-[11px]">
+                        <svg className="w-3.5 h-3.5 shrink-0">
                           <use href="#sf-check-circle-fill" />
                         </svg>
                         <span>
                           Верно: <strong id="live-correct-val">{sessionCorrect}</strong>
                         </span>
                       </div>
-                      <div id="live-wrong-pill" className="score-pill-wrong flex-1 justify-center">
-                        <svg className="w-4 h-4 shrink-0">
+                      <div id="live-wrong-pill" className="score-pill-wrong flex-1 justify-center py-1 text-[11px]">
+                        <svg className="w-3.5 h-3.5 shrink-0">
                           <use href="#sf-xmark-circle-fill" />
                         </svg>
                         <span>
@@ -1567,7 +1569,7 @@ export default function App() {
                       `${sessionIndex}-${sessionQueue[sessionIndex]?.id}`
                     }
                     id="session-question-card"
-                    className="ios-inset-group p-4 !mb-0 flex-1 flex flex-col justify-between ios-subview-animate"
+                    className="ios-inset-group px-3 py-2 sm:px-3.5 sm:py-2.5 !mb-0 flex-1 min-h-0 flex flex-col justify-between ios-subview-animate"
                   >
                     <QuestionCardView
                       key={
@@ -1578,7 +1580,6 @@ export default function App() {
                       onAnswer={handleSessionAnswer}
                     />
                   </div>
-                  <div className="ios-bottom-clearance" aria-hidden="true" />
                 </motion.div>
               )}
 
@@ -1846,9 +1847,6 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                  {showSessionErrorsDrawer && sessionMistakes.length > 0 && (
-                    <div className="ios-bottom-clearance" aria-hidden="true" />
-                  )}
                 </motion.div>
               )}
                 </AnimatePresence>
@@ -2838,9 +2836,6 @@ export default function App() {
                   </motion.div>
                 )}
                   </AnimatePresence>
-                  {labSubMode === 'kim' && (
-                    <div className="ios-bottom-clearance" aria-hidden="true" />
-                  )}
                 </div>
               </motion.section>
             )}
@@ -3001,9 +2996,6 @@ export default function App() {
                     </span>
                   </button>
                 </div>
-                {state.errorBank.length > 1 && (
-                  <div className="ios-bottom-clearance" aria-hidden="true" />
-                )}
               </div>
               </motion.section>
             )}
@@ -3380,9 +3372,6 @@ export default function App() {
                   )}
                     </AnimatePresence>
                   </div>
-                  {statSubMode === 'journal' && (
-                    <div className="ios-bottom-clearance" aria-hidden="true" />
-                  )}
                 </div>
               </motion.section>
             )}
