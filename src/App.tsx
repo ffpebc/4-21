@@ -413,7 +413,8 @@ export default function App() {
 
   const isScrollLocked = useMemo(() => {
     if (activeTab === 'workout') {
-      if (workoutView === 'builder' || workoutView === 'active') return true;
+      if (workoutView === 'builder') return true;
+      if (workoutView === 'active') return false;
       if (workoutView === 'summary') {
         return !showSessionErrorsDrawer || sessionMistakes.length === 0;
       }
@@ -1263,7 +1264,7 @@ export default function App() {
                 <motion.div
                   key="workout-active"
                   id="workout-active-view"
-                  className="ios-screen-stack"
+                  className="ios-screen-stack is-scrollable"
                   custom={workoutDirection}
                   variants={iosScreenSlideVariants}
                   initial="enter"
@@ -1363,6 +1364,7 @@ export default function App() {
                       onAnswer={handleSessionAnswer}
                     />
                   </div>
+                  <div className="ios-bottom-clearance" aria-hidden="true" />
                 </motion.div>
               )}
 
