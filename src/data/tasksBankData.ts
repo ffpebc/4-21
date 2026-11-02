@@ -99,14 +99,14 @@ refreshMaps();
 // Очищаем устаревший кэш с урезанной или поврежденной базой
 if (typeof window !== 'undefined' && 'caches' in window) {
   try {
-    for (let v = 1; v <= 19; v++) {
+    for (let v = 1; v <= 20; v++) {
       window.caches.delete(`ege-bank-cache-v${v}`);
     }
   } catch {}
 }
 
 async function fetchJsonWithCache(url: string, fallbackUrls: string[] = []): Promise<any> {
-  const cacheName = 'ege-bank-cache-v20';
+  const cacheName = 'ege-bank-cache-v21';
   let cache: Cache | null = null;
   if (typeof window !== 'undefined' && 'caches' in window) {
     try {
