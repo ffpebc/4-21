@@ -1,16 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   TrainerQuestion,
-  cleanQuestionRule,
+  FipiQuestion,
   resolveTask15Sentence,
   cleanWord,
   cleanExplanation,
+  checkFipiQuestionAnswer,
 } from '../utils/trainerLogic';
 import { classifyWordSubtopicAndException } from '../utils/wordClassifier';
 import { Task15SentenceView } from './Task15SentenceView';
 import { FormattedInstruction } from './FormattedInstruction';
 
 const SHORT_MORPHEME_BY_TASK: Record<TrainerQuestion['task'], string> = {
+  '4': 'Ударения',
+  '5': 'Паронимы',
+  '6': 'Лексические нормы',
+  '7': 'Морфолог. нормы',
+  '8': 'Синтаксич. нормы',
   '9': 'Корень слова',
   '10': 'Приставка',
   '11': 'Суффикс',
@@ -18,6 +24,13 @@ const SHORT_MORPHEME_BY_TASK: Record<TrainerQuestion['task'], string> = {
   '13': 'Слитно / раздельно',
   '14': 'Слитно / дефис / разд.',
   '15': 'Правописание Н / НН',
+  '16': 'Однородные / ССП',
+  '17': 'Обособление',
+  '18': 'Вводные / обращения',
+  '19': 'СПП (запятые)',
+  '20': 'Стык союзов',
+  '21': 'Пунктуац. анализ',
+  '22': 'Средства выразит.',
 };
 
 interface QuestionCardViewProps {
@@ -33,6 +46,9 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const [fipiSelectedRows, setFipiSelectedRows] = useState<number[]>([]);
+  const [fipiWordInput, setFipiWordInput] = useState<string>('');
+  const [fipiMatchingDigits, setFipiMatchingDigits] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [activeMatchSlot, setActiveMatchSlot] = useState<number>(0);
   const [fipiSubmitted, setFipiSubmitted] = useState(false);
   const [fipiResultOk, setFipiResultOk] = useState<boolean | null>(null);
 
@@ -51,6 +67,9 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     setSelectedChoice(null);
     setIsExiting(false);
     setFipiSelectedRows([]);
+    setFipiWordInput('');
+    setFipiMatchingDigits([0, 0, 0, 0, 0]);
+    setActiveMatchSlot(0);
     setFipiSubmitted(false);
     setFipiResultOk(null);
 
@@ -60,7 +79,11 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
   if (question.kind === 'sprint') {
     const isAnswered = selectedChoice !== null;
     const isCorrect = selectedChoice === question.answer;
-    const isWordMode = question.task === '13' || question.task === '14';
+    const isOrthographySlotTask = ['9', '10', '11', '12', '15'].includes(question.task);
+    const isWordMode =
+      question.task === '13' ||
+      question.task === '14' ||
+      !isOrthographySlotTask;
 
     const liveMeta = classifyWordSubtopicAndException(
       question.task,
@@ -97,8 +120,6 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       setSelectedChoice(opt);
       const ok = opt === question.answer;
 
-      // On correct: comfortable 460ms feedback then advance
-      // On incorrect: give 980ms so user can see rule explanation, but allow instant tap on "Дальше"
       const exitTime = ok ? 360 : 840;
       const advanceTime = ok ? 480 : 980;
 
@@ -113,6 +134,29 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
     const renderWordWithSlot = () => {
       const slotStateClass = !isAnswered ? '' : isCorrect ? 'ok' : 'bad';
+
+      // Non-orthography tasks (4–8, 16–22): show prompt/statement cleanly
+      if (!['9', '10', '11', '12', '13', '14', '15'].includes(question.task)) {
+        const promptTitle = question.prefix.trim();
+        const promptBody = question.suffix.trim();
+        return (
+          <div className="my-2 flex flex-col items-center justify-center gap-1.5 px-1">
+            {promptTitle && (
+              <div className="text-[16px] sm:text-[18px] font-extrabold tracking-tight leading-snug text-center">
+                {promptTitle}
+              </div>
+            )}
+            {promptBody && (
+              <div
+                className="text-[14px] sm:text-[15.5px] font-semibold leading-snug text-center px-2.5 py-1.5 rounded-xl border border-[var(--ios-separator)]"
+                style={{ background: 'var(--ios-bg-primary)', color: 'var(--ios-label)' }}
+              >
+                {promptBody}
+              </div>
+            )}
+          </div>
+        );
+      }
 
       // Task 13: (НЕ) with word
       if (question.task === '13') {
@@ -224,6 +268,39 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       );
     };
 
+    const getSprintStageSubtitle = () => {
+      if (isExceptionWord) return 'Внимание: слово-исключение';
+      switch (question.task) {
+        case '4':
+          return 'Орфоэпическая норма (ударение)';
+        case '5':
+          return 'Выберите верный пароним';
+        case '6':
+          return 'Лексическая сочетаемость';
+        case '7':
+          return 'Морфологическая форма слова';
+        case '8':
+          return 'Тип синтаксической ошибки';
+        case '13':
+          return 'Слитное или раздельное написание';
+        case '14':
+          return 'Слитное, дефисное или раздельное';
+        case '15':
+          return 'Правописание Н или НН';
+        case '16':
+        case '17':
+        case '18':
+        case '19':
+        case '20':
+        case '21':
+          return 'Пунктуационная норма';
+        case '22':
+          return 'Средство выразительности';
+        default:
+          return 'Вставьте пропущенную букву';
+      }
+    };
+
     return (
       <div
         key={question.instanceId || question.id}
@@ -274,25 +351,19 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
             className="text-[11px] font-bold uppercase tracking-wide mb-1 whitespace-nowrap truncate"
             style={{ color: isExceptionWord ? 'var(--ios-orange)' : 'var(--ios-label-sec)' }}
           >
-            {isExceptionWord
-              ? 'Внимание: слово-исключение'
-              : question.task === '13'
-                ? 'Слитное или раздельное написание'
-                : question.task === '14'
-                  ? 'Слитное, дефисное или раздельное'
-                  : question.task === '15'
-                    ? 'Правописание Н или НН'
-                    : 'Вставьте пропущенную букву'}
+            {getSprintStageSubtitle()}
           </div>
 
           {renderWordWithSlot()}
 
-          <div
-            className="text-[13.5px] font-medium mt-1 leading-snug px-1 text-center"
-            style={{ color: 'var(--ios-label-sec)' }}
-          >
-            {question.context}
-          </div>
+          {question.context && (
+            <div
+              className="text-[13.5px] font-medium mt-1 leading-snug px-1 text-center"
+              style={{ color: 'var(--ios-label-sec)' }}
+            >
+              {question.context}
+            </div>
+          )}
 
           {/* Structured Feedback Area */}
           <div className="min-h-[42px] flex items-center justify-center mt-2">
@@ -379,8 +450,19 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
   }
 
   // ==========================================================================
-  // 5-Row FIPI Format (EГЭ Realistic Mode)
+  // FIPI Format (EГЭ Realistic Mode for Tasks 4–22)
   // ==========================================================================
+  const fipiQ: FipiQuestion = question;
+  const effectiveKind: NonNullable<FipiQuestion['questionKind']> =
+    fipiQ.questionKind ||
+    (['5', '6', '7'].includes(fipiQ.task)
+      ? 'word_input'
+      : ['8', '22'].includes(fipiQ.task)
+        ? 'matching_grid'
+        : ['15', '17', '18', '19', '20'].includes(fipiQ.task)
+          ? 'numbered_gaps'
+          : 'rows');
+
   const toggleRow = (rowIdx1Based: number) => {
     if (fipiSubmitted) return;
     setFipiSelectedRows((prev) =>
@@ -390,34 +472,102 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     );
   };
 
+  const assignMatchingDigit = (digit: number) => {
+    if (fipiSubmitted) return;
+    setFipiMatchingDigits((prev) => {
+      const next = [...prev];
+      // If digit is already used in another slot, clear that slot first
+      const existingSlot = next.indexOf(digit);
+      if (existingSlot !== -1 && existingSlot !== activeMatchSlot) {
+        next[existingSlot] = 0;
+      }
+      next[activeMatchSlot] = next[activeMatchSlot] === digit ? 0 : digit;
+      return next;
+    });
+    // Advance active slot to next empty slot
+    setActiveMatchSlot((prevSlot) => {
+      for (let offset = 1; offset <= 5; offset++) {
+        const cand = (prevSlot + offset) % 5;
+        if (cand !== prevSlot && fipiMatchingDigits[cand] === 0) {
+          return cand;
+        }
+      }
+      return Math.min(4, prevSlot + 1);
+    });
+  };
+
+  const getUserAnswerPayload = (): string => {
+    if (effectiveKind === 'word_input') {
+      return fipiWordInput.trim();
+    }
+    if (effectiveKind === 'matching_grid') {
+      return fipiMatchingDigits.map((d) => (d > 0 ? String(d) : '')).join('');
+    }
+    return fipiSelectedRows.slice().sort((a, b) => a - b).join('');
+  };
+
+  const canSubmitFipi = (): boolean => {
+    if (fipiSubmitted) return false;
+    if (effectiveKind === 'word_input') {
+      return fipiWordInput.trim().length > 0;
+    }
+    if (effectiveKind === 'matching_grid') {
+      return fipiMatchingDigits.every((d) => d >= 1 && d <= 9);
+    }
+    return fipiSelectedRows.length > 0;
+  };
+
+  const checkResult = checkFipiQuestionAnswer(fipiQ, getUserAnswerPayload());
+  const correctStr = checkResult.correctAnswerDisplay;
+  const userStr = getUserAnswerPayload();
+
   const handleCheckFipi = () => {
-    if (fipiSubmitted || fipiSelectedRows.length === 0) return;
+    if (!canSubmitFipi()) return;
     setFipiSubmitted(true);
-    const userStr = fipiSelectedRows.slice().sort((a, b) => a - b).join('');
-    const correctStr = question.correctIndices.slice().sort((a, b) => a - b).join('');
-    const ok = userStr === correctStr;
-    setFipiResultOk(ok);
+    setFipiResultOk(checkResult.isCorrect);
   };
 
   const handleProceedFipi = () => {
-    const userStr = fipiSelectedRows.slice().sort((a, b) => a - b).join('');
-    const correctStr = question.correctIndices.slice().sort((a, b) => a - b).join('');
-    const ok = userStr === correctStr;
+    const ok = checkResult.isCorrect;
     setIsExiting(true);
     setTimeout(() => {
       onAnswer(ok, userStr || '—');
     }, 180);
   };
 
-  const correctStr = question.correctIndices.slice().sort((a, b) => a - b).join('');
-  const userStr = fipiSelectedRows.slice().sort((a, b) => a - b).join('');
-  const fipiHasExceptions = question.rows.some((r) =>
+  const fipiHasExceptions = fipiQ.rows.some((r) =>
     /исключен|искл\./i.test(r.explanation || '')
   );
 
+  const renderTopInstructionHint = () => {
+    if (fipiSubmitted) return `Ответ: ${correctStr}`;
+    if (effectiveKind === 'word_input') return 'Запишите слово';
+    if (effectiveKind === 'matching_grid') return 'А Б В Г Д (2 балла)';
+    if (effectiveKind === 'numbered_gaps') return 'Укажите цифры';
+    return 'Укажите номера ответов';
+  };
+
+  const getRowFeedbackLabel = (row: FipiQuestion['rows'][number]): string => {
+    if (fipiQ.task === '4') {
+      return row.isCorrectRow ? `Верное ударение: ${row.letter}` : `Неверно (норма: ${row.letter})`;
+    }
+    if (fipiQ.task === '16') {
+      return row.isCorrectRow ? 'Подходит: одна запятая' : `Не подходит (${row.letter})`;
+    }
+    if (fipiQ.task === '21') {
+      return row.isCorrectRow ? `Входит в ответ (${row.letter})` : row.letter || 'Не входит в ответ';
+    }
+    if (fipiQ.task === '13' || fipiQ.task === '14') {
+      return row.isCorrectRow ? `Подходит: ${row.letter}` : `Не подходит: ${row.letter}`;
+    }
+    return row.isCorrectRow
+      ? `Подходит: одна и та же буква «${row.letter}»`
+      : 'Разные буквы в ряду';
+  };
+
   return (
     <div
-      key={question.instanceId || question.id}
+      key={fipiQ.instanceId || fipiQ.id}
       className={`flex-1 flex flex-col justify-between gap-2.5 word-stage-animate ${
         isExiting ? 'word-stage-exit' : ''
       }`}
@@ -431,32 +581,29 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
           className="truncate"
           style={{ color: fipiHasExceptions ? 'var(--ios-orange)' : 'var(--ios-blue)' }}
         >
-          № {question.task} · {question.topic}
+          № {fipiQ.task} · {fipiQ.topic}
           {fipiHasExceptions ? ' (есть исключения)' : ''}
         </span>
         <span className="shrink-0 text-right" style={{ color: 'var(--ios-label-sec)' }}>
-          {fipiSubmitted
-            ? `Ответ: ${correctStr}`
-            : question.task === '15'
-            ? 'Укажите цифры'
-            : 'Укажите 2–4 цифры'}
+          {renderTopInstructionHint()}
         </span>
       </div>
 
-      {/* Official Instruction Box (especially for Task 13 and Task 15) */}
+      {/* Official Instruction Box */}
       <div
         className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-left border border-[var(--ios-separator)] shadow-xs"
         style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label)' }}
       >
-        <div className="text-[14.5px] sm:text-[16px] font-semibold leading-relaxed">
-          <FormattedInstruction rule={question.rule} task={question.task} />
+        <div className="text-[14px] sm:text-[15.5px] font-semibold leading-relaxed">
+          <FormattedInstruction rule={fipiQ.rule} task={fipiQ.task} />
         </div>
       </div>
 
-      {/* Task 15 Authentic Sentence + Word Grid OR Tasks 9-14 5-Row List */}
-      {question.task === '15' ? (
+      {/* ================================================================== */}
+      {/* MODE 1: Numbered Gaps in Sentence (Tasks 15, 17, 18, 19, 20)       */}
+      {/* ================================================================== */}
+      {effectiveKind === 'numbered_gaps' && (
         <div className="flex flex-col gap-2 my-auto">
-          {/* Authentic Full Sentence Stage */}
           <div
             className="p-3.5 sm:p-4 rounded-2xl text-left border border-[var(--ios-separator)] shadow-xs"
             style={{
@@ -468,31 +615,31 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               className="text-[10px] font-extrabold uppercase tracking-wider mb-1.5 opacity-70"
               style={{ color: 'var(--ios-blue)' }}
             >
-              Предложение задания:
+              {fipiQ.task === '15' ? 'Предложение задания:' : 'Нажмите на цифры в предложении, где нужна запятая:'}
             </div>
             <Task15SentenceView
-              sentence={resolveTask15Sentence(question)}
-              rows={question.rows}
+              sentence={resolveTask15Sentence(fipiQ)}
+              rows={fipiQ.rows}
               selectedDigits={fipiSelectedRows}
               isSubmitted={fipiSubmitted}
               onToggleDigit={toggleRow}
             />
           </div>
 
-          {/* Task 15 Pure Digits (Round Circular Buttons 1, 2, 3, 4, 5 without words) */}
           <div className="flex flex-col gap-2 my-1">
             <div
               className="text-[11px] font-bold text-center uppercase tracking-wider opacity-65"
               style={{ color: 'var(--ios-label-sec)' }}
             >
-              {fipiSubmitted ? 'Результат по номерам пропусков:' : 'Выберите цифры ответа:'}
+              {fipiSubmitted ? 'Результат по номерам:' : 'Выберите цифры ответа:'}
             </div>
 
-            <div className="flex items-center justify-center gap-3 sm:gap-4 my-1 w-full max-w-sm mx-auto">
-              {question.rows.map((row, idx) => {
+            <div className="flex items-center justify-center flex-wrap gap-2 sm:gap-3 my-1 w-full mx-auto">
+              {fipiQ.rows.map((row, idx) => {
                 const digit = idx + 1;
                 const isSelected = fipiSelectedRows.includes(digit);
-                let circleClass = 'w-12 h-12 sm:w-14 sm:h-14 rounded-full text-[19px] sm:text-[21px] font-black flex items-center justify-center transition-all select-none shadow-xs active:scale-95 cursor-pointer';
+                let circleClass =
+                  'w-10 h-10 sm:w-12 sm:h-12 rounded-full text-[17px] sm:text-[19px] font-black flex items-center justify-center transition-all select-none shadow-xs active:scale-95 cursor-pointer';
                 let circleStyle: React.CSSProperties = {
                   background: 'var(--ios-bg-secondary)',
                   color: 'var(--ios-label)',
@@ -553,10 +700,9 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               })}
             </div>
 
-            {/* Explanations shown only AFTER answer submission */}
             {fipiSubmitted && (
-              <div className="flex flex-col gap-1.5 mt-2 text-left">
-                {question.rows.map((row, idx) => {
+              <div className="flex flex-col gap-1.5 mt-2 text-left max-h-[220px] overflow-y-auto pr-1">
+                {fipiQ.rows.map((row, idx) => {
                   const digit = idx + 1;
                   const solvedWord = cleanWord(row.solvedWords[0] || row.words[0]);
                   return (
@@ -582,7 +728,11 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                           className="text-[11px] ml-auto font-semibold"
                           style={{ color: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-label-sec)' }}
                         >
-                          {`пишется «${row.letter}»`}
+                          {fipiQ.task === '15'
+                            ? `пишется «${row.letter}»`
+                            : row.isCorrectRow
+                              ? 'запятая ставится'
+                              : 'без запятой'}
                         </span>
                       </div>
                       {row.explanation && (
@@ -597,10 +747,269 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
             )}
           </div>
         </div>
-      ) : (
-        /* Standard 5 Rows for Tasks 9, 10, 11, 12, 13, 14 */
-        <div className="flex flex-col gap-1.5 my-auto">
-          {question.rows.map((row, idx) => {
+      )}
+
+      {/* ================================================================== */}
+      {/* MODE 2: Word Input + Hybrid Choice Pills (Tasks 5, 6, 7)           */}
+      {/* ================================================================== */}
+      {effectiveKind === 'word_input' && (
+        <div className="flex flex-col gap-2.5 my-auto">
+          {/* Sentence or 5 rows context */}
+          {fipiQ.rows.length > 1 ? (
+            <div className="flex flex-col gap-1.5">
+              {fipiQ.rows.map((row, idx) => (
+                <div
+                  key={idx}
+                  className="px-3 py-2 rounded-xl border border-[var(--ios-separator)] text-[12.5px] sm:text-[13.5px] font-semibold leading-snug text-left"
+                  style={{
+                    background:
+                      fipiSubmitted && row.isCorrectRow
+                        ? 'var(--ios-green-soft)'
+                        : 'var(--ios-bg-secondary)',
+                    color: 'var(--ios-label)',
+                  }}
+                >
+                  <span className="opacity-60 font-extrabold mr-1.5">{idx + 1})</span>
+                  <span>{(fipiSubmitted ? row.solvedWords : row.words).join(' ')}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              className="p-3.5 rounded-2xl border border-[var(--ios-separator)] text-[13.5px] sm:text-[14.5px] font-semibold leading-relaxed text-left whitespace-pre-line"
+              style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label)' }}
+            >
+              {fipiQ.sentence || (fipiQ.rows[0]?.words || []).join(' ')}
+            </div>
+          )}
+
+          {/* Hybrid Quick Choice Pills (if available) */}
+          {fipiQ.choiceOptions && fipiQ.choiceOptions.length > 0 && !fipiSubmitted && (
+            <div className="flex flex-col gap-1">
+              <span
+                className="text-[10.5px] font-bold uppercase tracking-wider"
+                style={{ color: 'var(--ios-label-sec)' }}
+              >
+                Быстрый выбор или введите ответ вручную:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {fipiQ.choiceOptions.map((pill, idx) => {
+                  const isPicked = fipiWordInput.trim().toUpperCase() === pill.trim().toUpperCase();
+                  return (
+                    <button
+                      key={`pill-${idx}-${pill}`}
+                      type="button"
+                      onClick={() => setFipiWordInput(pill)}
+                      className="px-3 py-1.5 rounded-xl text-[12.5px] font-extrabold transition-all cursor-pointer active:scale-95"
+                      style={{
+                        background: isPicked ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+                        color: isPicked ? '#FFFFFF' : 'var(--ios-label)',
+                        border: isPicked
+                          ? '1.5px solid var(--ios-blue)'
+                          : '1px solid var(--ios-separator)',
+                      }}
+                    >
+                      {pill}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Official Exam Blank Input */}
+          <div className="flex flex-col gap-1">
+            <input
+              type="text"
+              disabled={fipiSubmitted}
+              value={fipiWordInput}
+              onChange={(e) => setFipiWordInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && canSubmitFipi()) {
+                  handleCheckFipi();
+                }
+              }}
+              placeholder="Введите слово в бланк без пробелов..."
+              className="w-full px-3.5 py-2.5 rounded-xl text-[15px] font-extrabold tracking-wide uppercase outline-none border transition-all"
+              style={{
+                background: 'var(--ios-bg-secondary)',
+                color: 'var(--ios-label)',
+                borderColor: fipiSubmitted
+                  ? fipiResultOk
+                    ? 'var(--ios-green)'
+                    : 'var(--ios-red)'
+                  : 'var(--ios-separator)',
+              }}
+            />
+          </div>
+
+          {fipiSubmitted && fipiQ.rows[0]?.explanation && (
+            <div
+              className="p-3 rounded-2xl border border-[var(--ios-separator)] text-[11.5px] leading-snug text-left"
+              style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label-sec)' }}
+            >
+              {cleanExplanation(fipiQ.rows[0].explanation)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ================================================================== */}
+      {/* MODE 3: 5-Letter Matching Matrix А Б В Г Д (Tasks 8 & 22)          */}
+      {/* ================================================================== */}
+      {effectiveKind === 'matching_grid' && (
+        <div className="flex flex-col gap-2 my-auto">
+          {/* Interactive 5-Cell А Б В Г Д Blank */}
+          <div
+            className="p-2.5 rounded-2xl border border-[var(--ios-separator)] flex flex-col gap-1.5"
+            style={{ background: 'var(--ios-bg-secondary)' }}
+          >
+            <div className="flex items-center justify-between text-[11px] font-bold px-1">
+              <span style={{ color: 'var(--ios-label-sec)' }}>
+                Бланк ответа А–Д (нажмите букву, затем номер 1–9):
+              </span>
+              {fipiSubmitted && (
+                <span style={{ color: 'var(--ios-blue)' }}>
+                  Баллы: {checkResult.pointsEarned} из {checkResult.maxPoints}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {['А', 'Б', 'В', 'Г', 'Д'].map((letter, slotIdx) => {
+                const userDigit = fipiMatchingDigits[slotIdx];
+                const expectedDigit = fipiQ.correctIndices[slotIdx];
+                const isSlotActive = !fipiSubmitted && activeMatchSlot === slotIdx;
+                const isSlotCorrect = fipiSubmitted && userDigit === expectedDigit;
+
+                return (
+                  <button
+                    key={letter}
+                    type="button"
+                    disabled={fipiSubmitted}
+                    onClick={() => setActiveMatchSlot(slotIdx)}
+                    className="py-1.5 px-2 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer"
+                    style={{
+                      background: fipiSubmitted
+                        ? isSlotCorrect
+                          ? 'var(--ios-green-soft)'
+                          : 'var(--ios-red-soft)'
+                        : isSlotActive
+                          ? 'var(--ios-blue-soft)'
+                          : 'var(--ios-bg-primary)',
+                      border: fipiSubmitted
+                        ? `1.5px solid ${isSlotCorrect ? 'var(--ios-green)' : 'var(--ios-red)'}`
+                        : isSlotActive
+                          ? '2px solid var(--ios-blue)'
+                          : '1px solid var(--ios-separator)',
+                    }}
+                  >
+                    <span className="text-[10px] font-extrabold opacity-70">{letter}</span>
+                    <span className="text-[16px] font-black leading-tight">
+                      {userDigit > 0 ? userDigit : '—'}
+                    </span>
+                    {fipiSubmitted && !isSlotCorrect && (
+                      <span className="text-[9.5px] font-extrabold" style={{ color: 'var(--ios-green)' }}>
+                        верно: {expectedDigit}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Letters А–Д Descriptions */}
+          {fipiQ.matchingLetters && fipiQ.matchingLetters.length > 0 && (
+            <div className="flex flex-col gap-1 max-h-[165px] overflow-y-auto pr-0.5">
+              {fipiQ.matchingLetters.map((item, idx) => {
+                const isCurrent = !fipiSubmitted && activeMatchSlot === idx;
+                const assignedDigit = fipiMatchingDigits[idx];
+                const rawItemText = typeof item === 'string' ? item : item.text || '';
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    disabled={fipiSubmitted}
+                    onClick={() => setActiveMatchSlot(idx)}
+                    className="px-2.5 py-1.5 rounded-xl text-left text-[11.5px] sm:text-[12.5px] font-semibold leading-snug flex items-start gap-2 transition-all cursor-pointer"
+                    style={{
+                      background: isCurrent ? 'var(--ios-blue-soft)' : 'var(--ios-bg-secondary)',
+                      border: isCurrent
+                        ? '1.5px solid var(--ios-blue)'
+                        : '1px solid var(--ios-separator)',
+                      color: 'var(--ios-label)',
+                    }}
+                  >
+                    <span
+                      className="px-1.5 py-0.5 rounded-md text-[10.5px] font-black shrink-0"
+                      style={{
+                        background: assignedDigit > 0 ? 'var(--ios-blue)' : 'var(--ios-bg-tertiary)',
+                        color: assignedDigit > 0 ? '#FFFFFF' : 'var(--ios-label)',
+                      }}
+                    >
+                      {['А', 'Б', 'В', 'Г', 'Д'][idx]}
+                      {assignedDigit > 0 ? ` → ${assignedDigit}` : ''}
+                    </span>
+                    <span className="flex-1">{rawItemText.replace(/^[А-ДA-E]\)\s*/i, '')}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Numbered Candidates 1–9 */}
+          <div className="flex flex-col gap-1 max-h-[210px] overflow-y-auto pr-0.5">
+            {fipiQ.rows.map((row, idx) => {
+              const digit = idx + 1;
+              const assignedSlotIdx = fipiMatchingDigits.indexOf(digit);
+              const assignedLetter =
+                assignedSlotIdx !== -1 ? ['А', 'Б', 'В', 'Г', 'Д'][assignedSlotIdx] : null;
+              return (
+                <button
+                  key={digit}
+                  type="button"
+                  disabled={fipiSubmitted}
+                  onClick={() => assignMatchingDigit(digit)}
+                  className="px-2.5 py-1.5 rounded-xl text-left text-[11.5px] sm:text-[12.5px] font-medium leading-snug flex items-start gap-2 transition-all cursor-pointer"
+                  style={{
+                    background: assignedLetter ? 'var(--ios-blue-soft)' : 'var(--ios-bg-secondary)',
+                    border: assignedLetter
+                      ? '1.5px solid var(--ios-blue)'
+                      : '1px solid var(--ios-separator)',
+                    color: 'var(--ios-label)',
+                  }}
+                >
+                  <span
+                    className="w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5"
+                    style={{
+                      background: assignedLetter ? 'var(--ios-blue)' : 'var(--ios-bg-tertiary)',
+                      color: assignedLetter ? '#FFFFFF' : 'var(--ios-label)',
+                    }}
+                  >
+                    {digit}
+                  </span>
+                  <span className="flex-1">{row.words.join(' ').replace(/^\d+\)\s*/, '')}</span>
+                  {assignedLetter && (
+                    <span
+                      className="px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0"
+                      style={{ background: 'var(--ios-blue)', color: '#FFFFFF' }}
+                    >
+                      {assignedLetter}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================== */}
+      {/* MODE 4: Multi-Row Selection (Tasks 4, 9–14, 16, 21)                */}
+      {/* ================================================================== */}
+      {effectiveKind === 'rows' && (
+        <div className="flex flex-col gap-1.5 my-auto max-h-[380px] overflow-y-auto pr-0.5">
+          {fipiQ.rows.map((row, idx) => {
             const rowNum = idx + 1;
             const isSelected = fipiSelectedRows.includes(rowNum);
             let rowState = isSelected ? 'selected' : '';
@@ -629,7 +1038,9 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                 </span>
                 <div className="flex-1 min-w-0 text-left">
                   <div className="text-[13px] font-bold leading-snug">
-                    {(fipiSubmitted ? row.solvedWords : row.words).map(cleanWord).join(', ')}
+                    {(fipiSubmitted ? row.solvedWords : row.words)
+                      .map((w) => (['9', '10', '11', '12', '13', '14', '15'].includes(fipiQ.task) ? cleanWord(w) : w))
+                      .join(', ')}
                   </div>
                   {fipiSubmitted && (
                     <div
@@ -640,13 +1051,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                           : 'var(--ios-label-sec)',
                       }}
                     >
-                      {question.task === '13' || question.task === '14'
-                        ? (row.isCorrectRow
-                            ? `Подходит: ${row.letter}`
-                            : `Не подходит: ${row.letter}`)
-                        : (row.isCorrectRow
-                            ? `Подходит: одна и та же буква «${row.letter}»`
-                            : 'Разные буквы в ряду')}
+                      {getRowFeedbackLabel(row)}
                     </div>
                   )}
                   {fipiSubmitted && row.explanation && (
@@ -676,10 +1081,14 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               }}
             >
               {fipiResultOk ? (
-                <span>Верно. Правильный ответ: <strong>{correctStr}</strong></span>
+                <span>
+                  Верно ({checkResult.pointsEarned}/{checkResult.maxPoints} б.). Ответ:{' '}
+                  <strong>{correctStr}</strong>
+                </span>
               ) : (
                 <span>
-                  Ошибка. Правильный ответ: <strong>{correctStr}</strong> (ваш выбор: <strong>{userStr || '—'}</strong>)
+                  Ошибка ({checkResult.pointsEarned}/{checkResult.maxPoints} б.). Правильный ответ:{' '}
+                  <strong>{correctStr}</strong> (ваш ответ: <strong>{userStr || '—'}</strong>)
                 </span>
               )}
             </div>
@@ -697,16 +1106,24 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
           <button
             id="submit-fipi-btn"
             type="button"
-            disabled={fipiSelectedRows.length === 0}
+            disabled={!canSubmitFipi()}
             onClick={handleCheckFipi}
             className="ios-btn-primary"
           >
             <span>
-              {fipiSelectedRows.length > 0
-                ? `Проверить ответ (${fipiSelectedRows.join(', ')})`
-                : question.task === '15'
-                ? `Выберите цифры в предложении (1–${question.rows.length})`
-                : 'Выберите номера строк (2–4)'}
+              {effectiveKind === 'word_input'
+                ? fipiWordInput.trim()
+                  ? `Проверить слово «${fipiWordInput.trim().toUpperCase()}»`
+                  : 'Введите или выберите слово-ответ'
+                : effectiveKind === 'matching_grid'
+                  ? canSubmitFipi()
+                    ? `Проверить соответствие (${fipiMatchingDigits.join('')})`
+                    : 'Заполните все 5 букв (А–Д)'
+                  : fipiSelectedRows.length > 0
+                    ? `Проверить ответ (${fipiSelectedRows.join(', ')})`
+                    : effectiveKind === 'numbered_gaps'
+                      ? `Выберите цифры (1–${fipiQ.rows.length})`
+                      : 'Выберите номера ответов'}
             </span>
           </button>
         )}

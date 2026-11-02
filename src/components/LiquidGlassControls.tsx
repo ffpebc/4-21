@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FlashcardItem, TaskId } from '../utils/trainerLogic';
+import { FlashcardItem, TaskId, TASK_IDS, TASK_META } from '../utils/trainerLogic';
 
 /* ============================================================================
    1. DRAGGABLE APPLE LIQUID GLASS SEGMENTED CONTROL (FOR ALL 2/3/6-WAY BARS)
@@ -548,16 +548,7 @@ export const FlashcardListItem: React.FC<{
           <span
             className="w-5 h-5 rounded-md text-[11px] font-extrabold flex items-center justify-center text-white shrink-0"
             style={{
-              background:
-                card.task === '9'
-                  ? 'linear-gradient(135deg, #007AFF, #5856D6)'
-                  : card.task === '10'
-                  ? 'linear-gradient(135deg, #5856D6, #AF52DE)'
-                  : card.task === '11'
-                  ? 'linear-gradient(135deg, #AF52DE, #FF2D55)'
-                  : card.task === '12'
-                  ? 'linear-gradient(135deg, #FF2D55, #FF9500)'
-                  : 'linear-gradient(135deg, #FF9500, #34C759)',
+              background: TASK_META[card.task]?.gradient || 'linear-gradient(135deg, #007AFF, #5856D6)',
             }}
           >
             {card.task}
@@ -821,16 +812,42 @@ export const QuizletFlashcardDeck: React.FC<QuizletFlashcardDeckProps> = ({
       id="lab-flashcards-view"
       className="flex-1 flex flex-col justify-start gap-1.5 select-none ios-subview-animate"
     >
-      {/* Top Draggable Liquid Glass Filter Bar */}
-      <div className="mb-0.5">
-        <LiquidGlassSegmented
-          id="fc-task-glass-filter"
-          options={TASK_FILTER_OPTIONS}
-          value={filterTask}
-          onChange={onChangeFilterTask}
-          ariaLabel="Фильтр карточек по заданиям"
-          compact
-        />
+      {/* Top Scrollable Filter Bar (All Tasks 4–22) */}
+      <div
+        id="fc-task-glass-filter"
+        role="tablist"
+        aria-label="Фильтр карточек по заданиям"
+        className="mb-0.5 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filterTask === 'all'}
+          onClick={() => onChangeFilterTask('all')}
+          className="px-3 py-1 rounded-full text-[11.5px] font-extrabold shrink-0 cursor-pointer transition-all"
+          style={{
+            background: filterTask === 'all' ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+            color: filterTask === 'all' ? '#FFFFFF' : 'var(--ios-label-sec)',
+          }}
+        >
+          Все
+        </button>
+        {TASK_IDS.map((tId) => (
+          <button
+            key={tId}
+            type="button"
+            role="tab"
+            aria-selected={filterTask === tId}
+            onClick={() => onChangeFilterTask(tId)}
+            className="px-2.5 py-1 rounded-full text-[11.5px] font-extrabold shrink-0 cursor-pointer transition-all"
+            style={{
+              background: filterTask === tId ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+              color: filterTask === tId ? '#FFFFFF' : 'var(--ios-label-sec)',
+            }}
+          >
+            № {tId}
+          </button>
+        ))}
       </div>
 
       {/* 3D Quizlet Card Stack positioned higher up directly below filter */}

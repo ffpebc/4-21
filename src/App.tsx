@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   TaskId,
+  TaskBlockId,
   TASK_IDS,
+  TASK_BLOCKS,
   TASK_META,
   SprintGameMode,
   LabSubMode,
@@ -13,6 +15,8 @@ import {
   FLASHCARDS_BANK,
   HOMOPHONE_PAIRS_BANK,
   createInitialState,
+  createDefaultEnabledTasks,
+  checkFipiQuestionAnswer,
   getTrainerBank,
   clampTaskQty,
   stepTaskQty,
@@ -114,6 +118,22 @@ interface SessionMistakeItem {
   userChoice: string;
 }
 
+const createEmptyTaskTallies = (): Record<TaskId, { solved: number; correct: number }> => {
+  const rec = {} as Record<TaskId, { solved: number; correct: number }>;
+  TASK_IDS.forEach((id) => {
+    rec[id] = { solved: 0, correct: 0 };
+  });
+  return rec;
+};
+
+const createEmptyKimAnswers = (): Record<TaskId, string> => {
+  const rec = {} as Record<TaskId, string>;
+  TASK_IDS.forEach((id) => {
+    rec[id] = '';
+  });
+  return rec;
+};
+
 export default function App() {
   const [bankRev, setBankRev] = useState(0);
   useEffect(() => {
@@ -136,6 +156,12 @@ export default function App() {
   const [state, setState] = useState<TrainerState>(() => loadInitialStateSync());
   const [activeTab, setActiveTab] = useState<ActiveTab>('workout');
   const [workoutView, setWorkoutView] = useState<WorkoutSubView>('builder');
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Record<TaskBlockId, boolean>>({
+    speech: false,
+    ortho: false,
+    punct: false,
+    expressive: false,
+  });
 
   // Liquid Glass optical customization state
   const [glassStyle, setGlassStyle] = useState<LiquidGlassStyle>('clear');
@@ -148,15 +174,7 @@ export default function App() {
   const [sessionWrong, setSessionWrong] = useState(0);
   const [sessionTaskTallies, setSessionTaskTallies] = useState<
     Record<TaskId, { solved: number; correct: number }>
-  >({
-    '9': { solved: 0, correct: 0 },
-    '10': { solved: 0, correct: 0 },
-    '11': { solved: 0, correct: 0 },
-    '12': { solved: 0, correct: 0 },
-    '13': { solved: 0, correct: 0 },
-    '14': { solved: 0, correct: 0 },
-    '15': { solved: 0, correct: 0 },
-  });
+  >(createEmptyTaskTallies);
   const [sessionMistakes, setSessionMistakes] = useState<SessionMistakeItem[]>([]);
   const [showSessionErrorsDrawer, setShowSessionErrorsDrawer] = useState(false);
 
@@ -171,12 +189,13 @@ export default function App() {
   const [survivalScore, setSurvivalScore] = useState(0);
   const [survivalFinished, setSurvivalFinished] = useState(false);
 
-  // Lab 9–13 Tab state (3D Flashcards, Homophone Pairs, KIM 9–13 Simulator)
+  // Lab 4–22 Tab state (3D Flashcards, Homophone Pairs, KIM 4–22 Simulator)
   const [labSubMode, setLabSubMode] = useState<LabSubMode>('flashcards');
   const [fcFilter, setFcFilter] = useState<'all' | TaskId>('all');
   const [fcIndex, setFcIndex] = useState(0);
   const [fcFlipped, setFcFlipped] = useState(false);
 
+  const [pairFilter, setPairFilter] = useState<'all' | TaskId>('all');
   const [pairDeck, setPairDeck] = useState(() =>
     buildBalancedHomophoneDeck(HOMOPHONE_PAIRS_BANK)
   );
@@ -185,15 +204,7 @@ export default function App() {
 
   const [kimVariantIdx, setKimVariantIdx] = useState(0);
   const [kimActiveTask, setKimActiveTask] = useState<TaskId>('9');
-  const [kimAnswers, setKimAnswers] = useState<Record<TaskId, string>>({
-    '9': '',
-    '10': '',
-    '11': '',
-    '12': '',
-    '13': '',
-    '14': '',
-    '15': '',
-  });
+  const [kimAnswers, setKimAnswers] = useState<Record<TaskId, string>>(createEmptyKimAnswers);
   const [kimChecked, setKimChecked] = useState(false);
 
   // Stats Sub-mode state
@@ -413,7 +424,7 @@ export default function App() {
 
   const isScrollLocked = useMemo(() => {
     if (activeTab === 'workout') {
-      if (workoutView === 'builder') return true;
+      if (workoutView === 'builder') return false;
       if (workoutView === 'active') return false;
       if (workoutView === 'summary') {
         return !showSessionErrorsDrawer || sessionMistakes.length === 0;
@@ -430,7 +441,8 @@ export default function App() {
       return state.errorBank.length <= 1;
     }
     if (activeTab === 'stats') {
-      if (statSubMode === 'overview' || statSubMode === 'cloud') return true;
+      if (statSubMode === 'cloud') return true;
+      if (statSubMode === 'overview') return false;
       if (statSubMode === 'journal') {
         return !state.sessionJournal || state.sessionJournal.length <= 2;
       }
@@ -447,14 +459,20 @@ export default function App() {
     state.sessionJournal,
   ]);
 
+  const enabledMap = useMemo(
+    () => ({ ...createDefaultEnabledTasks(), ...(state.enabledTasks || {}) }),
+    [state.enabledTasks]
+  );
+
   // Filtered and balanced pool for Quick Sprint
   const sprintPool = useMemo(() => {
     const filtered =
       sprintFilter === 'all'
-        ? bank.sprintQuestions
+        ? bank.sprintQuestions.filter((q) => enabledMap[q.task] !== false)
         : bank.sprintQuestions.filter((q) => q.task === sprintFilter);
-    return balanceSprintQuestionsList(shuffleArray(filtered));
-  }, [bank.sprintQuestions, sprintFilter]);
+    const pool = filtered.length > 0 ? filtered : bank.sprintQuestions;
+    return balanceSprintQuestionsList(shuffleArray(pool));
+  }, [bank.sprintQuestions, sprintFilter, enabledMap]);
 
   const currentSprintQuestion =
     sprintPool[sprintCursor % Math.max(1, sprintPool.length)] ||
@@ -462,16 +480,28 @@ export default function App() {
 
   // Filtered Flashcards
   const filteredFlashcards = useMemo(() => {
-    if (fcFilter === 'all') return FLASHCARDS_BANK;
+    if (fcFilter === 'all') {
+      const activeCards = FLASHCARDS_BANK.filter((fc) => enabledMap[fc.task] !== false);
+      return activeCards.length > 0 ? activeCards : FLASHCARDS_BANK;
+    }
     return FLASHCARDS_BANK.filter((fc) => fc.task === fcFilter);
-  }, [fcFilter]);
+  }, [fcFilter, enabledMap]);
 
   const currentFlashcard =
     filteredFlashcards[fcIndex % Math.max(1, filteredFlashcards.length)] ||
     FLASHCARDS_BANK[0];
 
+  const filteredPairs = useMemo(() => {
+    if (pairFilter === 'all') {
+      const activePairs = pairDeck.filter((p) => enabledMap[p.task] !== false);
+      return activePairs.length > 0 ? activePairs : pairDeck;
+    }
+    const byTask = pairDeck.filter((p) => p.task === pairFilter);
+    return byTask.length > 0 ? byTask : pairDeck;
+  }, [pairDeck, pairFilter, enabledMap]);
+
   const currentPair =
-    pairDeck[pairIndex % Math.max(1, pairDeck.length)] ||
+    filteredPairs[pairIndex % Math.max(1, filteredPairs.length)] ||
     HOMOPHONE_PAIRS_BANK[0];
 
   const currentKimVariant =
@@ -482,10 +512,58 @@ export default function App() {
     currentKimVariant?.tasks?.['9'] ||
     bank.fipiQuestions[0];
 
+  const handleToggleTaskEnabled = (task: TaskId) => {
+    setState((prev) => {
+      const currEnabled = prev.enabledTasks?.[task] !== false;
+      const nextEnabled = !currEnabled;
+      const nextQty = nextEnabled
+        ? Math.max(1, prev.quantities[task] || 3)
+        : 0;
+      return {
+        ...prev,
+        enabledTasks: {
+          ...createDefaultEnabledTasks(),
+          ...(prev.enabledTasks || {}),
+          [task]: nextEnabled,
+        },
+        quantities: {
+          ...prev.quantities,
+          [task]: nextQty,
+        },
+      };
+    });
+  };
+
+  const handleToggleBlockEnabled = (blockId: TaskBlockId) => {
+    const block = TASK_BLOCKS.find((b) => b.id === blockId);
+    if (!block) return;
+    setState((prev) => {
+      const currMap = { ...createDefaultEnabledTasks(), ...(prev.enabledTasks || {}) };
+      const allActive = block.tasks.every((t) => currMap[t] !== false);
+      const nextVal = !allActive;
+      const nextEnabled = { ...currMap };
+      const nextQuantities = { ...prev.quantities };
+      block.tasks.forEach((t) => {
+        nextEnabled[t] = nextVal;
+        nextQuantities[t] = nextVal ? Math.max(1, prev.quantities[t] || 3) : 0;
+      });
+      return {
+        ...prev,
+        enabledTasks: nextEnabled,
+        quantities: nextQuantities,
+      };
+    });
+  };
+
   const handleSetTaskQty = (task: TaskId, newQty: number) => {
     const clamped = clampTaskQty(newQty);
     setState((prev) => ({
       ...prev,
+      enabledTasks: {
+        ...createDefaultEnabledTasks(),
+        ...(prev.enabledTasks || {}),
+        [task]: clamped > 0,
+      },
       quantities: {
         ...prev.quantities,
         [task]: clamped,
@@ -494,36 +572,53 @@ export default function App() {
   };
 
   const handleStepTask = (task: TaskId, delta: number) => {
-    setState((prev) => ({
-      ...prev,
-      quantities: {
-        ...prev.quantities,
-        [task]: stepTaskQty(prev.quantities[task] || 0, delta),
-      },
-    }));
+    setState((prev) => {
+      const nextQty = stepTaskQty(prev.quantities[task] || 0, delta);
+      return {
+        ...prev,
+        enabledTasks: {
+          ...createDefaultEnabledTasks(),
+          ...(prev.enabledTasks || {}),
+          [task]: nextQty > 0,
+        },
+        quantities: {
+          ...prev.quantities,
+          [task]: nextQty,
+        },
+      };
+    });
   };
 
   const handleApplyPreset = (qtyEach: number) => {
     const clamped = clampTaskQty(qtyEach);
-    setState((prev) => ({
-      ...prev,
-      quantities: {
-        '9': clamped,
-        '10': clamped,
-        '11': clamped,
-        '12': clamped,
-        '13': clamped,
-        '14': clamped,
-        '15': clamped,
-      },
-    }));
+    setState((prev) => {
+      const currEnabled = { ...createDefaultEnabledTasks(), ...(prev.enabledTasks || {}) };
+      const nextQuantities = {} as Record<TaskId, number>;
+      TASK_IDS.forEach((id) => {
+        nextQuantities[id] = clamped === 0 ? 0 : currEnabled[id] !== false ? clamped : 0;
+      });
+      return {
+        ...prev,
+        quantities: nextQuantities,
+      };
+    });
   };
 
-  const handleApplyCustomQuantities = (quantities: Record<TaskId, number>) => {
-    setState((prev) => ({
-      ...prev,
-      quantities,
-    }));
+  const handleApplyCustomQuantities = (quantities: Partial<Record<TaskId, number>>) => {
+    setState((prev) => {
+      const nextEnabled = { ...createDefaultEnabledTasks(), ...(prev.enabledTasks || {}) };
+      const nextQuantities = { ...prev.quantities };
+      TASK_IDS.forEach((id) => {
+        const v = clampTaskQty(quantities[id] ?? 0);
+        nextQuantities[id] = v;
+        nextEnabled[id] = v > 0;
+      });
+      return {
+        ...prev,
+        enabledTasks: nextEnabled,
+        quantities: nextQuantities,
+      };
+    });
   };
 
   const startSessionWithQueue = (queue: TrainerQuestion[]) => {
@@ -534,15 +629,7 @@ export default function App() {
     setSessionWrong(0);
     setSessionMistakes([]);
     setShowSessionErrorsDrawer(false);
-    setSessionTaskTallies({
-      '9': { solved: 0, correct: 0 },
-      '10': { solved: 0, correct: 0 },
-      '11': { solved: 0, correct: 0 },
-      '12': { solved: 0, correct: 0 },
-      '13': { solved: 0, correct: 0 },
-      '14': { solved: 0, correct: 0 },
-      '15': { solved: 0, correct: 0 },
-    });
+    setSessionTaskTallies(createEmptyTaskTallies());
     setActiveTab('workout');
     setWorkoutView('active');
   };
@@ -551,21 +638,16 @@ export default function App() {
     const queue = buildWorkoutQueue(state.quantities, state.workoutMode, {
       randomize: true,
       shuffleTasks: state.isShuffled,
+      enabledTasks: state.enabledTasks,
     });
     startSessionWithQueue(queue);
   };
 
   const handleStartWeakestTaskWorkout = (taskId: TaskId) => {
-    const customQty: Record<TaskId, number> = {
-      '9': 0,
-      '10': 0,
-      '11': 0,
-      '12': 0,
-      '13': 0,
-      '14': 0,
-      '15': 0,
-      [taskId]: 20,
-    };
+    const customQty = {} as Record<TaskId, number>;
+    TASK_IDS.forEach((id) => {
+      customQty[id] = id === taskId ? 20 : 0;
+    });
     const queue = buildWorkoutQueue(customQty, state.workoutMode, {
       randomize: true,
       shuffleTasks: false,
@@ -574,16 +656,25 @@ export default function App() {
   };
 
   const handleStartRealKimWorkout = () => {
+    const kimQty = {} as Record<TaskId, number>;
+    TASK_IDS.forEach((id) => {
+      kimQty[id] = enabledMap[id] !== false ? 1 : 0;
+    });
+    // If all switches were turned off, enable all 19 tasks
+    if (Object.values(kimQty).every((v) => v === 0)) {
+      TASK_IDS.forEach((id) => {
+        kimQty[id] = 1;
+      });
+    }
     setState((prev) => ({
       ...prev,
-      quantities: { '9': 1, '10': 1, '11': 1, '12': 1, '13': 1, '14': 1, '15': 1 },
+      quantities: kimQty,
       workoutMode: 'fipi',
     }));
-    const queue = buildWorkoutQueue(
-      { '9': 1, '10': 1, '11': 1, '12': 1, '13': 1, '14': 1, '15': 1 },
-      'fipi',
-      { randomize: true, shuffleTasks: false }
-    );
+    const queue = buildWorkoutQueue(kimQty, 'fipi', {
+      randomize: true,
+      shuffleTasks: false,
+    });
     startSessionWithQueue(queue);
   };
 
@@ -765,12 +856,13 @@ export default function App() {
     currentSprintQuestion,
   ]);
 
-  // KIM 9–13 Blank handlers
+  // KIM 4–22 Blank handlers
   const handleSelectKimVariant = (newIdx: number) => {
     const wrapped = (newIdx + bank.kimVariants.length) % bank.kimVariants.length;
     setKimVariantIdx(wrapped);
-    setKimActiveTask('9');
-    setKimAnswers({ '9': '', '10': '', '11': '', '12': '', '13': '', '14': '', '15': '' });
+    const firstActive = TASK_IDS.find((t) => enabledMap[t] !== false) || '4';
+    setKimActiveTask(firstActive);
+    setKimAnswers(createEmptyKimAnswers());
     setKimChecked(false);
   };
 
@@ -778,20 +870,45 @@ export default function App() {
     if (kimChecked) return;
     const digit = String(rowNumber1Based);
     const currentVal = kimAnswers[kimActiveTask] || '';
+    // For matching_grid (8, 22), append up to 5 digits in order
+    if (kimActiveTask === '8' || kimActiveTask === '22') {
+      const nextRaw = currentVal.includes(digit)
+        ? currentVal.replace(digit, '')
+        : (currentVal + digit).slice(0, 5);
+      setKimAnswers((prev) => ({
+        ...prev,
+        [kimActiveTask]: nextRaw.replace(/[^1-9]/g, ''),
+      }));
+      return;
+    }
     const nextRaw = currentVal.includes(digit)
       ? currentVal.replace(digit, '')
       : currentVal + digit;
     setKimAnswers((prev) => ({
       ...prev,
-      [kimActiveTask]: normalizeKimDigits(nextRaw),
+      [kimActiveTask]: normalizeKimDigits(nextRaw, 9),
     }));
   };
 
   const handleKimInputDirect = (val: string) => {
     if (kimChecked) return;
+    if (['5', '6', '7'].includes(kimActiveTask)) {
+      setKimAnswers((prev) => ({
+        ...prev,
+        [kimActiveTask]: val.replace(/\s+/g, '').toUpperCase(),
+      }));
+      return;
+    }
+    if (kimActiveTask === '8' || kimActiveTask === '22') {
+      setKimAnswers((prev) => ({
+        ...prev,
+        [kimActiveTask]: val.replace(/[^1-9]/g, '').slice(0, 5),
+      }));
+      return;
+    }
     setKimAnswers((prev) => ({
       ...prev,
-      [kimActiveTask]: normalizeKimDigits(val),
+      [kimActiveTask]: normalizeKimDigits(val, 9),
     }));
   };
 
@@ -801,26 +918,27 @@ export default function App() {
       return;
     }
     setKimChecked(true);
-    let variantCorrectCount = 0;
+    let variantPrimaryScore = 0;
+    let variantMaxScore = 0;
 
     setState((prev) => {
       let nextState = { ...prev };
       for (const t of TASK_IDS) {
         const fq = currentKimVariant?.tasks?.[t];
         if (!fq) continue;
-        const expected = (fq.correctIndices || []).join('');
-        const userAns = normalizeKimDigits(kimAnswers[t] || '');
-        const isOk = userAns === expected;
-        if (isOk) variantCorrectCount++;
+        const userAns = (kimAnswers[t] || '').trim();
+        const check = checkFipiQuestionAnswer(fq, userAns);
+        variantPrimaryScore += check.pointsEarned;
+        variantMaxScore += check.maxPoints;
         nextState = applyAnswerToState(
           nextState,
           fq,
-          isOk,
+          check.isCorrect,
           userAns || 'пусто',
           false
         );
       }
-      const accuracy = calculateAccuracyPercent(variantCorrectCount, TASK_IDS.length);
+      const accuracy = calculateAccuracyPercent(variantPrimaryScore, Math.max(1, variantMaxScore));
       const timeStr = new Date().toLocaleTimeString('ru-RU', {
         hour: '2-digit',
         minute: '2-digit',
@@ -831,9 +949,9 @@ export default function App() {
         sessionJournal: [
           {
             id: `sj-kim-${Date.now()}`,
-            title: `${currentKimVariant.title} (Задания 9–15)`,
-            total: TASK_IDS.length,
-            correct: variantCorrectCount,
+            title: `${currentKimVariant.title} (Задания 4–22)`,
+            total: variantMaxScore,
+            correct: variantPrimaryScore,
             accuracy,
             dateLabel: `Сегодня, ${timeStr}`,
           },
@@ -1077,12 +1195,12 @@ export default function App() {
                           onClick={handleStartRealKimWorkout}
                           className="liquid-pill-btn flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer shrink-0"
                           style={{ color: 'var(--ios-blue)', background: 'var(--ios-blue-soft)' }}
-                          title="Реальный экзаменационный КИМ ЕГЭ (задания 9–15 ФИПИ)"
+                          title="Реальный экзаменационный КИМ ЕГЭ (задания 4–22 ФИПИ)"
                         >
                           <svg className="w-3 h-3 shrink-0">
                             <use href="#sf-sparkles" />
                           </svg>
-                          <span>КИМ 9–15</span>
+                          <span>КИМ 4–22</span>
                         </button>
                         <button
                           type="button"
@@ -1171,71 +1289,165 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Tasks 9–15 Liquid Glass Group (Uncluttered, full titles) */}
-                    <div className="ios-section-header">Задания блока орфографии (9–15)</div>
-                    <div className="ios-inset-group !mb-2.5">
-                      {TASK_IDS.map((taskId) => {
-                        const meta = TASK_META[taskId];
-                        const qty = state.quantities[taskId] || 0;
-                        return (
-                          <div key={taskId} className="ios-cell">
-                            <div
-                              className="ios-row-icon"
-                              style={{ background: meta.gradient }}
+                    {/* Tasks 4–22 Grouped by Official FIPI Blocks + iOS Switches */}
+                    {TASK_BLOCKS.map((block) => {
+                      const isBlockEnabled = block.tasks.every((t) => enabledMap[t] !== false);
+                      const isBlockCollapsed = collapsedBlocks[block.id];
+                      const activeCountInBlock = block.tasks.filter((t) => enabledMap[t] !== false).length;
+
+                      return (
+                        <div key={block.id} className="mb-3">
+                          <div className="flex items-center justify-between px-1 mb-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCollapsedBlocks((prev) => ({
+                                  ...prev,
+                                  [block.id]: !prev[block.id],
+                                }))
+                              }
+                              className="flex items-center gap-1.5 text-left cursor-pointer"
                             >
-                              {taskId}
-                            </div>
-                            <div className="flex-1 min-w-0 pr-1.5">
-                              <div className="text-[13px] font-bold tracking-[-0.25px] leading-tight whitespace-nowrap truncate">
-                                {meta.title}
-                              </div>
-                              <div
-                                className="text-[11px] leading-tight truncate mt-0.5"
+                              <span className="ios-section-header !m-0 !p-0">
+                                {block.title} ({block.badge})
+                              </span>
+                              <span
+                                className="text-[10.5px] font-extrabold px-1.5 py-0.5 rounded-full"
+                                style={{
+                                  background: 'var(--ios-bg-tertiary)',
+                                  color: 'var(--ios-label-sec)',
+                                }}
+                              >
+                                {activeCountInBlock}/{block.tasks.length}
+                              </span>
+                              <svg
+                                className={`w-3.5 h-3.5 ios-accordion-arrow ${
+                                  isBlockCollapsed ? 'rotated' : ''
+                                }`}
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="18 15 12 9 6 15" />
+                              </svg>
+                            </button>
+
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className="text-[10.5px] font-bold"
                                 style={{ color: 'var(--ios-label-sec)' }}
                               >
-                                {meta.subtitle}
-                              </div>
-                            </div>
-                            <input
-                              id={`qty-badge-${taskId}`}
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              maxLength={4}
-                              value={qty}
-                              onChange={(e) => {
-                                const cleaned = e.target.value.replace(/[^0-9]/g, '');
-                                handleSetTaskQty(taskId, cleaned === '' ? 0 : Number(cleaned));
-                              }}
-                              onBlur={resetViewportOnBlur}
-                              className={`ios-count-badge ${qty > 0 ? 'has-value' : ''}`}
-                              aria-label={`Количество заданий ${taskId}`}
-                            />
-                            <div className="ios-stepper">
+                                Блок
+                              </span>
                               <button
                                 type="button"
-                                className="ios-stepper-btn"
-                                disabled={qty <= 0}
-                                onClick={() => handleStepTask(taskId, -1)}
-                                aria-label={`Уменьшить задание ${taskId}`}
+                                role="switch"
+                                aria-checked={isBlockEnabled}
+                                aria-label={`Включить или выключить блок ${block.title}`}
+                                onClick={() => handleToggleBlockEnabled(block.id)}
+                                className={`ios-switch shrink-0 ${isBlockEnabled ? 'is-active' : ''}`}
                               >
-                                −
-                              </button>
-                              <div className="ios-stepper-divider" />
-                              <button
-                                type="button"
-                                className="ios-stepper-btn"
-                                disabled={qty >= 1000}
-                                onClick={() => handleStepTask(taskId, 1)}
-                                aria-label={`Увеличить задание ${taskId}`}
-                              >
-                                +
+                                <div className="ios-switch-knob" />
                               </button>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+
+                          {!isBlockCollapsed && (
+                            <div className="ios-inset-group !mb-0">
+                              {block.tasks.map((taskId) => {
+                                const meta = TASK_META[taskId];
+                                const isTaskEnabled = enabledMap[taskId] !== false;
+                                const qty = isTaskEnabled ? state.quantities[taskId] || 0 : 0;
+                                return (
+                                  <div
+                                    key={taskId}
+                                    className={`ios-cell transition-opacity ${
+                                      !isTaskEnabled ? 'opacity-55' : ''
+                                    }`}
+                                  >
+                                    <div
+                                      className="ios-row-icon"
+                                      style={{ background: meta.gradient }}
+                                    >
+                                      {taskId}
+                                    </div>
+                                    <div className="flex-1 min-w-0 pr-1.5">
+                                      <div className="text-[13px] font-bold tracking-[-0.25px] leading-tight whitespace-nowrap truncate">
+                                        {meta.title}
+                                      </div>
+                                      <div
+                                        className="text-[11px] leading-tight truncate mt-0.5"
+                                        style={{ color: 'var(--ios-label-sec)' }}
+                                      >
+                                        {meta.subtitle}
+                                      </div>
+                                    </div>
+
+                                    {/* Per-Task iOS Switch */}
+                                    <button
+                                      id={`task-switch-${taskId}`}
+                                      type="button"
+                                      role="switch"
+                                      aria-checked={isTaskEnabled}
+                                      aria-label={`Переключатель задания ${taskId}`}
+                                      onClick={() => handleToggleTaskEnabled(taskId)}
+                                      className={`ios-switch shrink-0 mr-1.5 ${
+                                        isTaskEnabled ? 'is-active' : ''
+                                      }`}
+                                    >
+                                      <div className="ios-switch-knob" />
+                                    </button>
+
+                                    <input
+                                      id={`qty-badge-${taskId}`}
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      maxLength={4}
+                                      value={qty}
+                                      onChange={(e) => {
+                                        const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                                        handleSetTaskQty(
+                                          taskId,
+                                          cleaned === '' ? 0 : Number(cleaned)
+                                        );
+                                      }}
+                                      onBlur={resetViewportOnBlur}
+                                      className={`ios-count-badge ${qty > 0 ? 'has-value' : ''}`}
+                                      aria-label={`Количество заданий ${taskId}`}
+                                    />
+                                    <div className="ios-stepper">
+                                      <button
+                                        type="button"
+                                        className="ios-stepper-btn"
+                                        disabled={qty <= 0}
+                                        onClick={() => handleStepTask(taskId, -1)}
+                                        aria-label={`Уменьшить задание ${taskId}`}
+                                      >
+                                        −
+                                      </button>
+                                      <div className="ios-stepper-divider" />
+                                      <button
+                                        type="button"
+                                        className="ios-stepper-btn"
+                                        disabled={qty >= 1000}
+                                        onClick={() => handleStepTask(taskId, 1)}
+                                        aria-label={`Увеличить задание ${taskId}`}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Ergonomic Action Bar: Primary Start CTA Positioned Comfortably Above TabBar */}
@@ -1722,24 +1934,48 @@ export default function App() {
                     />
                   </div>
 
-                  <div className="mb-1">
-                    <LiquidGlassSegmented
-                      id="sprint-task-filter-segmented"
-                      ariaLabel="Фильтр спринта по заданиям"
-                      value={sprintFilter}
-                      onChange={setSprintFilter}
-                      compact
-                      options={[
-                        { key: 'all', label: 'Все' },
-                        { key: '9', label: '№ 9' },
-                        { key: '10', label: '№ 10' },
-                        { key: '11', label: '№ 11' },
-                        { key: '12', label: '№ 12' },
-                        { key: '13', label: '№ 13' },
-                        { key: '14', label: '№ 14' },
-                        { key: '15', label: '№ 15' },
-                      ]}
-                    />
+                  <div
+                    id="sprint-task-filter-segmented"
+                    role="tablist"
+                    aria-label="Фильтр спринта по заданиям"
+                    className="mb-1 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={sprintFilter === 'all'}
+                      onClick={() => setSprintFilter('all')}
+                      className="px-3 py-1 rounded-full text-[11.5px] font-extrabold shrink-0 cursor-pointer transition-all"
+                      style={{
+                        background:
+                          sprintFilter === 'all' ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+                        color: sprintFilter === 'all' ? '#FFFFFF' : 'var(--ios-label-sec)',
+                      }}
+                    >
+                      Все активные
+                    </button>
+                    {TASK_IDS.map((tId) => {
+                      const isActive = enabledMap[tId] !== false;
+                      return (
+                        <button
+                          key={tId}
+                          type="button"
+                          role="tab"
+                          aria-selected={sprintFilter === tId}
+                          onClick={() => setSprintFilter(tId)}
+                          className={`px-2.5 py-1 rounded-full text-[11.5px] font-extrabold shrink-0 cursor-pointer transition-all ${
+                            !isActive && sprintFilter !== tId ? 'opacity-50' : ''
+                          }`}
+                          style={{
+                            background:
+                              sprintFilter === tId ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+                            color: sprintFilter === tId ? '#FFFFFF' : 'var(--ios-label-sec)',
+                          }}
+                        >
+                          № {tId}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1793,13 +2029,13 @@ export default function App() {
             )}
 
             {/* ======================================================================
-                TAB 3: LAB 9–13 (3D FLASHCARDS, HOMOPHONE PAIRS & KIM 9–13 SIMULATOR)
+                TAB 3: LAB 4–22 (3D FLASHCARDS, HOMOPHONE PAIRS & KIM 4–22 SIMULATOR)
                ====================================================================== */}
             {activeTab === 'lab' && (
               <motion.section
                 key="tab-lab"
                 id="screen-lab"
-                aria-label="Лаборатория 9–15"
+                aria-label="Лаборатория 4–22"
                 className="min-h-full flex-1 flex flex-col w-full"
                 custom={tabDirection}
                 variants={iosScreenSlideVariants}
@@ -1810,7 +2046,7 @@ export default function App() {
                 <div className="ios-screen-stack !justify-start">
                   <div>
                     <div className="flex items-center justify-between gap-1.5 mt-0.5 mb-1.5 min-w-0 whitespace-nowrap">
-                      <h1 className="ios-large-title !m-0">Лаборатория 9–15</h1>
+                      <h1 className="ios-large-title !m-0">Лаборатория 4–22</h1>
                       <button
                         type="button"
                         id="lab-traps-dict-btn"
@@ -1831,7 +2067,7 @@ export default function App() {
                         options={[
                           { key: 'flashcards', label: 'Карточки' },
                           { key: 'pairs', label: 'Омофоны' },
-                          { key: 'kim', label: 'КИМ 9–15' },
+                          { key: 'kim', label: 'КИМ 4–22' },
                         ]}
                       />
                     </div>
@@ -1873,6 +2109,41 @@ export default function App() {
                         animate="center"
                         exit="exit"
                       >
+                    <div className="mb-1 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPairFilter('all');
+                          setPairIndex(0);
+                        }}
+                        className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 cursor-pointer"
+                        style={{
+                          background:
+                            pairFilter === 'all' ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+                          color: pairFilter === 'all' ? '#FFFFFF' : 'var(--ios-label-sec)',
+                        }}
+                      >
+                        Все активные
+                      </button>
+                      {TASK_IDS.map((tId) => (
+                        <button
+                          key={tId}
+                          type="button"
+                          onClick={() => {
+                            setPairFilter(tId);
+                            setPairIndex(0);
+                          }}
+                          className="px-2 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 cursor-pointer"
+                          style={{
+                            background:
+                              pairFilter === tId ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+                            color: pairFilter === tId ? '#FFFFFF' : 'var(--ios-label-sec)',
+                          }}
+                        >
+                          № {tId}
+                        </button>
+                      ))}
+                    </div>
                     <div className="flex items-center justify-between gap-2 whitespace-nowrap">
                       <span
                         className="text-[11.5px] font-bold px-2.5 py-1 rounded-full truncate"
@@ -1888,8 +2159,8 @@ export default function App() {
                           className="text-[11px] font-semibold"
                           style={{ color: 'var(--ios-label-sec)' }}
                         >
-                          {(pairIndex % pairDeck.length) + 1}/
-                          {pairDeck.length}
+                          {(pairIndex % filteredPairs.length) + 1}/
+                          {filteredPairs.length}
                         </span>
                         <button
                           type="button"
@@ -2157,7 +2428,7 @@ export default function App() {
                   </motion.div>
                 )}
 
-                {/* SUB-VIEW C: KIM 9–13 BLANK SIMULATOR (25 VARIANTS) */}
+                {/* SUB-VIEW C: KIM 4–22 BLANK SIMULATOR (25 VARIANTS) */}
                 {labSubMode === 'kim' && (
                   <motion.div
                     key="lab-kim"
@@ -2198,30 +2469,28 @@ export default function App() {
                         </button>
                       </div>
 
-                      {/* 5 Task Tabs (9, 10, 11, 12, 13) */}
-                      <div className="kim-nav-grid">
+                      {/* 19 Task Tabs (4–22) */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 mb-2 no-scrollbar">
                         {TASK_IDS.map((tId) => {
-                          const userAns = normalizeKimDigits(kimAnswers[tId] || '');
-                          const expected = (
-                            currentKimVariant?.tasks?.[tId]?.correctIndices || []
-                          ).join('');
+                          const fq = currentKimVariant?.tasks?.[tId];
+                          const userAns = (kimAnswers[tId] || '').trim();
                           let checkClass = '';
-                          if (kimChecked) {
-                            checkClass =
-                              userAns === expected ? 'checked-ok' : 'checked-bad';
+                          if (kimChecked && fq) {
+                            const check = checkFipiQuestionAnswer(fq, userAns);
+                            checkClass = check.isCorrect ? 'checked-ok' : 'checked-bad';
                           }
                           return (
                             <button
                               key={tId}
                               type="button"
                               onClick={() => setKimActiveTask(tId)}
-                              className={`kim-task-tab ${
+                              className={`kim-task-tab shrink-0 !min-w-[54px] !px-2 ${
                                 kimActiveTask === tId ? 'active' : ''
                               } ${checkClass}`}
                             >
-                              <span className="text-[12px] font-extrabold">№ {tId}</span>
+                              <span className="text-[11.5px] font-extrabold">№ {tId}</span>
                               <span
-                                className="text-[11px] font-mono font-bold"
+                                className="text-[10px] font-mono font-bold truncate max-w-[52px]"
                                 style={{ color: 'var(--ios-label-sec)' }}
                               >
                                 {userAns || '—'}
@@ -2236,21 +2505,21 @@ export default function App() {
                         key={`${kimVariantIdx}-${kimActiveTask}`}
                         className="ios-inset-group p-3 !mb-0 word-stage-animate"
                       >
-                        <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
                           <div className="min-w-0 flex-1 pr-1">
                             <div className="flex items-center gap-1.5">
                               <span
                                 className="text-[12.5px] font-extrabold whitespace-nowrap"
                                 style={{ color: 'var(--ios-blue)' }}
                               >
-                                Задание № {kimActiveTask}
+                                Задание № {kimActiveTask} · {TASK_META[kimActiveTask]?.title}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => openRuleInspector(currentKimTaskQuestion, null)}
                                 className="liquid-pill-btn text-[10.5px] font-bold px-2 py-0.5 rounded-full cursor-pointer shrink-0"
                               >
-                                Шпора ({TASK_META[kimActiveTask].cheatPages})
+                                Шпора
                               </button>
                             </div>
                           </div>
@@ -2259,19 +2528,29 @@ export default function App() {
                               className="text-[11px] font-bold whitespace-nowrap"
                               style={{ color: 'var(--ios-label-sec)' }}
                             >
-                              Бланк:
+                              Бланк №1:
                             </span>
                             <input
                               id="kim-blank-input"
                               type="text"
-                              inputMode="numeric"
-                              maxLength={5}
+                              inputMode={
+                                ['5', '6', '7'].includes(kimActiveTask) ? 'text' : 'numeric'
+                              }
+                              maxLength={['5', '6', '7'].includes(kimActiveTask) ? 28 : 9}
                               value={kimAnswers[kimActiveTask] || ''}
                               onChange={(e) => handleKimInputDirect(e.target.value)}
                               onBlur={resetViewportOnBlur}
-                              placeholder="12..."
+                              placeholder={
+                                ['5', '6', '7'].includes(kimActiveTask)
+                                  ? 'СЛОВО'
+                                  : ['8', '22'].includes(kimActiveTask)
+                                    ? 'АБВГД'
+                                    : '12...'
+                              }
                               aria-label={`Ответ бланка для задания ${kimActiveTask}`}
-                              className="ege-blank-input"
+                              className={`ege-blank-input ${
+                                ['5', '6', '7'].includes(kimActiveTask) ? '!w-[155px] !text-[12.5px]' : ''
+                              }`}
                             />
                           </div>
                         </div>
@@ -2281,50 +2560,51 @@ export default function App() {
                           className="px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl mb-2.5 text-left border border-[var(--ios-separator)] shadow-xs"
                           style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label)' }}
                         >
-                          <div className="text-[14.5px] sm:text-[16px] font-semibold leading-relaxed">
+                          <div className="text-[14px] sm:text-[15.5px] font-semibold leading-relaxed">
                             <FormattedInstruction rule={currentKimTaskQuestion.rule} task={kimActiveTask} />
                           </div>
                         </div>
 
-                        {/* Task 15 Authentic Sentence View in KIM */}
-                        {kimActiveTask === '15' && (currentKimTaskQuestion.instruction || (currentKimTaskQuestion as any).sentence) && (
-                          <div
-                            className="p-3.5 rounded-2xl mb-2.5 text-left border border-[var(--ios-separator)] shadow-xs"
-                            style={{
-                              background: 'var(--ios-bg-secondary)',
-                              color: 'var(--ios-label)',
-                            }}
-                          >
-                            <div
-                              className="text-[10px] font-extrabold uppercase tracking-wider mb-1.5 opacity-70"
-                              style={{ color: 'var(--ios-blue)' }}
-                            >
-                              Предложение задания:
-                            </div>
-                            <Task15SentenceView
-                              sentence={currentKimTaskQuestion.instruction || (currentKimTaskQuestion as any).sentence || ''}
-                              rows={currentKimTaskQuestion.rows}
-                              selectedDigits={(kimAnswers['15'] || '').split('').map(Number).filter(Boolean)}
-                              isSubmitted={kimChecked}
-                              onToggleDigit={handleToggleKimRowDigit}
-                            />
-                          </div>
-                        )}
-
-                        {kimActiveTask === '15' ? (
+                        {/* Numbered Gaps in Sentence (Tasks 15, 17, 18, 19, 20) */}
+                        {['15', '17', '18', '19', '20'].includes(kimActiveTask) ? (
                           <div className="flex flex-col gap-2 my-1">
                             <div
-                              className="text-[11px] font-bold text-center uppercase tracking-wider opacity-65"
-                              style={{ color: 'var(--ios-label-sec)' }}
+                              className="p-3.5 rounded-2xl mb-1 text-left border border-[var(--ios-separator)] shadow-xs"
+                              style={{
+                                background: 'var(--ios-bg-secondary)',
+                                color: 'var(--ios-label)',
+                              }}
                             >
-                              {kimChecked ? 'Результат по номерам пропусков:' : 'Выберите цифры ответа:'}
+                              <div
+                                className="text-[10px] font-extrabold uppercase tracking-wider mb-1.5 opacity-70"
+                                style={{ color: 'var(--ios-blue)' }}
+                              >
+                                Предложение задания:
+                              </div>
+                              <Task15SentenceView
+                                sentence={
+                                  currentKimTaskQuestion.instruction ||
+                                  (currentKimTaskQuestion as any).sentence ||
+                                  ''
+                                }
+                                rows={currentKimTaskQuestion.rows}
+                                selectedDigits={(kimAnswers[kimActiveTask] || '')
+                                  .split('')
+                                  .map(Number)
+                                  .filter(Boolean)}
+                                isSubmitted={kimChecked}
+                                onToggleDigit={handleToggleKimRowDigit}
+                              />
                             </div>
 
-                            <div className="flex items-center justify-center gap-3 sm:gap-4 my-1 w-full max-w-sm mx-auto">
+                            <div className="flex items-center justify-center flex-wrap gap-2.5 my-1 w-full mx-auto">
                               {currentKimTaskQuestion.rows.map((row, idx) => {
                                 const digit = idx + 1;
-                                const isPicked = (kimAnswers['15'] || '').includes(String(digit));
-                                let circleClass = 'w-12 h-12 sm:w-14 sm:h-14 rounded-full text-[19px] sm:text-[21px] font-black flex items-center justify-center transition-all select-none shadow-xs active:scale-95 cursor-pointer';
+                                const isPicked = (kimAnswers[kimActiveTask] || '').includes(
+                                  String(digit)
+                                );
+                                let circleClass =
+                                  'w-10 h-10 sm:w-12 sm:h-12 rounded-full text-[17px] sm:text-[19px] font-black flex items-center justify-center transition-all select-none shadow-xs active:scale-95 cursor-pointer';
                                 let circleStyle: React.CSSProperties = {
                                   background: 'var(--ios-bg-secondary)',
                                   color: 'var(--ios-label)',
@@ -2350,20 +2630,12 @@ export default function App() {
                                       color: 'var(--ios-red)',
                                       border: '2px solid var(--ios-red)',
                                     };
-                                  } else {
-                                    circleStyle = {
-                                      background: 'var(--ios-bg-secondary)',
-                                      color: 'var(--ios-label-sec)',
-                                      border: '1px solid var(--ios-separator)',
-                                      opacity: 0.45,
-                                    };
                                   }
                                 } else if (isPicked) {
                                   circleStyle = {
                                     background: 'var(--ios-blue)',
                                     color: '#FFFFFF',
                                     border: '2px solid var(--ios-blue)',
-                                    boxShadow: '0 4px 14px rgba(0, 122, 255, 0.35)',
                                   };
                                   circleClass += ' scale-105';
                                 }
@@ -2376,58 +2648,96 @@ export default function App() {
                                     onClick={() => handleToggleKimRowDigit(digit)}
                                     className={circleClass}
                                     style={circleStyle}
-                                    aria-label={`Цифра ${digit}${isPicked ? ' (выбрана)' : ''}`}
                                   >
                                     <span>{digit}</span>
                                   </button>
                                 );
                               })}
                             </div>
-
-                            {/* Explanations shown only AFTER checking KIM */}
-                            {kimChecked && (
-                              <div className="flex flex-col gap-1.5 mt-2 text-left">
-                                {currentKimTaskQuestion.rows.map((row, idx) => {
-                                  const digit = idx + 1;
-                                  const solvedWord = cleanWord(row.solvedWords[0] || row.words[0]);
-                                  return (
-                                    <div
-                                      key={digit}
-                                      className="p-2.5 rounded-2xl border border-[var(--ios-separator)] text-[12px]"
-                                      style={{ background: 'var(--ios-bg-secondary)' }}
-                                    >
-                                      <div className="flex items-center gap-2 font-bold mb-0.5">
-                                        <span
-                                          className="w-5 h-5 rounded-full text-[11px] font-extrabold flex items-center justify-center shrink-0"
-                                          style={{
-                                            background: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-bg-tertiary)',
-                                            color: row.isCorrectRow ? '#fff' : 'var(--ios-label-sec)',
-                                          }}
-                                        >
-                                          {digit}
-                                        </span>
-                                        <span className="font-extrabold" style={{ color: 'var(--ios-label)' }}>
-                                          {solvedWord}
-                                        </span>
-                                        <span
-                                          className="text-[11px] ml-auto font-semibold"
-                                          style={{ color: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-label-sec)' }}
-                                        >
-                                          {`пишется «${row.letter}»`}
-                                        </span>
-                                      </div>
-                                      {row.explanation && (
-                                        <div className="text-[11px] opacity-85 leading-snug pl-7" style={{ color: 'var(--ios-label-sec)' }}>
-                                          {cleanExplanation(row.explanation)}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                          </div>
+                        ) : ['5', '6', '7'].includes(kimActiveTask) ? (
+                          /* Word Input Tasks 5, 6, 7 in KIM Blank Simulator */
+                          <div className="flex flex-col gap-2">
+                            {currentKimTaskQuestion.rows.length > 1 ? (
+                              currentKimTaskQuestion.rows.map((row, idx) => (
+                                <div
+                                  key={idx}
+                                  className="px-3 py-2 rounded-xl border border-[var(--ios-separator)] text-[12.5px] font-semibold leading-snug text-left"
+                                  style={{ background: 'var(--ios-bg-secondary)' }}
+                                >
+                                  <span className="opacity-60 font-extrabold mr-1.5">
+                                    {idx + 1})
+                                  </span>
+                                  <span>
+                                    {(kimChecked ? row.solvedWords : row.words).join(' ')}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <div
+                                className="p-3 rounded-2xl border border-[var(--ios-separator)] text-[13.5px] font-semibold leading-relaxed text-left whitespace-pre-line"
+                                style={{ background: 'var(--ios-bg-secondary)' }}
+                              >
+                                {currentKimTaskQuestion.sentence ||
+                                  (currentKimTaskQuestion.rows[0]?.words || []).join(' ')}
                               </div>
                             )}
                           </div>
+                        ) : ['8', '22'].includes(kimActiveTask) ? (
+                          /* Matching Grid Tasks 8 & 22 in KIM Blank Simulator */
+                          <div className="flex flex-col gap-2">
+                            {currentKimTaskQuestion.matchingLetters &&
+                              currentKimTaskQuestion.matchingLetters.length > 0 && (
+                                <div className="flex flex-col gap-1 max-h-[160px] overflow-y-auto">
+                                  {currentKimTaskQuestion.matchingLetters.map((letterDesc, idx) => {
+                                    const rawLetterText =
+                                      typeof letterDesc === 'string'
+                                        ? letterDesc
+                                        : letterDesc.text || '';
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="px-2.5 py-1.5 rounded-xl border border-[var(--ios-separator)] text-[11.5px] font-semibold text-left"
+                                        style={{ background: 'var(--ios-bg-secondary)' }}
+                                      >
+                                        <strong className="mr-1.5" style={{ color: 'var(--ios-blue)' }}>
+                                          {['А', 'Б', 'В', 'Г', 'Д'][idx]})
+                                        </strong>
+                                        {rawLetterText.replace(/^[А-ДA-E]\)\s*/i, '')}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            <div className="flex flex-col gap-1 max-h-[210px] overflow-y-auto">
+                              {currentKimTaskQuestion.rows.map((row, idx) => {
+                                const rowNum = idx + 1;
+                                const isPicked = (kimAnswers[kimActiveTask] || '').includes(
+                                  String(rowNum)
+                                );
+                                return (
+                                  <button
+                                    key={rowNum}
+                                    type="button"
+                                    onClick={() => handleToggleKimRowDigit(rowNum)}
+                                    className="px-2.5 py-1.5 rounded-xl border border-[var(--ios-separator)] text-[11.5px] font-medium text-left flex items-start gap-2 cursor-pointer"
+                                    style={{
+                                      background: isPicked
+                                        ? 'var(--ios-blue-soft)'
+                                        : 'var(--ios-bg-secondary)',
+                                    }}
+                                  >
+                                    <span className="font-extrabold">{rowNum})</span>
+                                    <span className="flex-1">
+                                      {row.words.join(' ').replace(/^\d+\)\s*/, '')}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         ) : (
+                          /* Multi-Row Tasks (4, 9–14, 16, 21) */
                           <div className="flex flex-col gap-1.5">
                             {currentKimTaskQuestion.rows.map((row, idx) => {
                               const rowNum = idx + 1;
@@ -2467,24 +2777,6 @@ export default function App() {
                                     <div className="text-[13px] font-bold leading-snug">
                                       {displayWords.join(', ')}
                                     </div>
-                                    {kimChecked && (
-                                      <div
-                                        className="text-[11px] font-semibold mt-0.5 truncate"
-                                        style={{
-                                          color: row.isCorrectRow
-                                            ? 'var(--ios-green)'
-                                            : 'var(--ios-label-sec)',
-                                        }}
-                                      >
-                                        {kimActiveTask === '13' || kimActiveTask === '14'
-                                          ? (row.isCorrectRow
-                                              ? `Подходит: ${row.letter}`
-                                              : `Не подходит: ${row.letter}`)
-                                          : (row.isCorrectRow
-                                              ? `Подходит (буква ${row.letter})`
-                                              : 'Разные буквы в ряду')}
-                                      </div>
-                                    )}
                                     {kimChecked && row.explanation && (
                                       <div
                                         className="text-[10.5px] mt-0.5 line-clamp-2 opacity-85 leading-tight"
@@ -2502,7 +2794,7 @@ export default function App() {
 
                         {kimChecked && (
                           <div
-                            className="mt-2.5 p-2.5 rounded-xl text-[12px] font-bold flex items-center justify-between"
+                            className="mt-2.5 p-2.5 rounded-xl text-[12px] font-bold flex items-center justify-between flex-wrap gap-2"
                             style={{
                               background: 'var(--ios-bg-secondary)',
                               color: 'var(--ios-label)',
@@ -2516,7 +2808,12 @@ export default function App() {
                             </span>
                             <span style={{ color: 'var(--ios-green)' }}>
                               Эталон ФИПИ:{' '}
-                              {(currentKimTaskQuestion?.correctIndices || []).join('')}
+                              {
+                                checkFipiQuestionAnswer(
+                                  currentKimTaskQuestion,
+                                  kimAnswers[kimActiveTask] || ''
+                                ).correctAnswerDisplay
+                              }
                             </span>
                           </div>
                         )}
@@ -2536,7 +2833,7 @@ export default function App() {
                         <span>
                           {kimChecked
                             ? 'Следующий вариант КИМ →'
-                            : 'Проверить вариант (5 заданий)'}
+                            : 'Проверить вариант КИМ (4–22)'}
                         </span>
                       </button>
                     </div>
@@ -2879,7 +3176,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="ios-section-header">Освоение тем (Задания 9–15)</div>
+                      <div className="ios-section-header">Освоение тем (Задания 4–22)</div>
                       <div id="global-task-bars" className="ios-inset-group !mb-0">
                         {TASK_IDS.map((taskId) => {
                           const meta = TASK_META[taskId];
@@ -3112,7 +3409,7 @@ export default function App() {
           },
           {
             key: 'lab',
-            label: 'Лаб 9–15',
+            label: 'Лаб 4–22',
             iconHref: '#sf-sparkles',
           },
           {

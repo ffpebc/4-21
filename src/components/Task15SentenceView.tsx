@@ -22,8 +22,10 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
     return resolveTask15Sentence({ sentence, rows });
   }, [sentence, rows]);
 
-  // Pattern matches words with gaps like: деревя(1)ая, письме(2)ый, по-особе(3)ому, etc.
-  const regex = /([А-Яа-яЁё-]+)\((\d+)\)([А-Яа-яЁё-]*)/g;
+  // Pattern matches either:
+  // 1) Words with internal gaps like деревя(1)ая, письме(2)ый (Task 15) -> groups 1, 2, 3
+  // 2) Standalone punctuation gaps like (1), (2) (Tasks 17, 18, 19, 20) -> group 4
+  const regex = /([А-Яа-яЁё-]+)\((\d+)\)([А-Яа-яЁё-]*)|\((\d+)\)/g;
   const elements: React.ReactNode[] = [];
   let lastIdx = 0;
   let match: RegExpExecArray | null;
@@ -31,7 +33,10 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
   while ((match = regex.exec(effectiveSentence)) !== null) {
     const matchStart = match.index;
     const matchEnd = regex.lastIndex;
-    const [fullMatch, prefix, digitStr, suffix] = match;
+    const isWordGap = match[2] !== undefined;
+    const prefix = isWordGap ? match[1] : '';
+    const digitStr = isWordGap ? match[2] : match[4];
+    const suffix = isWordGap ? match[3] : '';
     const digit = parseInt(digitStr, 10);
     const rowIdx = digit - 1;
     const row = rows.find((r) => r.words.some((w) => w.includes(`(${digit})`))) || rows[rowIdx];
@@ -47,25 +52,25 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
     let badgeText = `(${digit})`;
 
     if (isSubmitted && row) {
+      const displayLetter = row.letter || (row.isCorrectRow ? ',' : '—');
       if (row.isCorrectRow && isSelected) {
-        // User picked correctly
         badgeClass += 'bg-[var(--ios-green-soft)] text-[var(--ios-green)] border border-[rgba(52,199,89,0.35)] shadow-xs';
-        badgeText = `${row.letter} (${digit})`;
+        badgeText = `${displayLetter} (${digit})`;
       } else if (row.isCorrectRow && !isSelected) {
-        // Correct, but missed by user
         badgeClass += 'bg-[var(--ios-orange-soft)] text-[var(--ios-orange)] border border-[rgba(255,149,0,0.35)]';
-        badgeText = `${row.letter} (${digit})`;
+        badgeText = `${displayLetter} (${digit})`;
       } else if (!row.isCorrectRow && isSelected) {
-        // Wrongly picked
         badgeClass += 'bg-[var(--ios-red-soft)] text-[var(--ios-red)] border border-[rgba(255,59,48,0.35)]';
-        badgeText = `${row.letter} (${digit})`;
+        badgeText = `${displayLetter} (${digit})`;
       } else {
-        // Correctly not picked
         badgeClass += 'bg-[var(--ios-bg-tertiary)] text-[var(--ios-label-sec)] border border-transparent opacity-75';
-        badgeText = `${row.letter} (${digit})`;
+        badgeText = `${displayLetter} (${digit})`;
       }
     } else if (isSelected) {
       badgeClass += 'bg-[var(--ios-blue)] text-white shadow-xs scale-105 active:scale-95';
+      if (!isWordGap) {
+        badgeText = `, (${digit})`;
+      }
     } else {
       badgeClass += 'bg-[var(--ios-bg-tertiary)] text-[var(--ios-blue)] hover:bg-[var(--ios-blue-soft)] active:scale-95 cursor-pointer';
     }
@@ -87,11 +92,11 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
         }}
         role="button"
         tabIndex={0}
-        aria-label={`Слово ${digit}: ${fullMatch}`}
+        aria-label={`Цифра ${digit}`}
       >
-        <span>{prefix}</span>
+        {prefix && <span>{prefix}</span>}
         <span className={badgeClass}>{badgeText}</span>
-        <span>{suffix}</span>
+        {suffix && <span>{suffix}</span>}
       </span>
     );
 

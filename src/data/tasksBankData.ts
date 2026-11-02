@@ -17,6 +17,12 @@ export interface WordEntry {
   isTrap?: boolean;
 }
 
+const ALL_TASK_IDS_LIST: TaskId[] = [
+  '4', '5', '6', '7', '8',
+  '9', '10', '11', '12', '13', '14', '15',
+  '16', '17', '18', '19', '20', '21', '22',
+];
+
 let initialWords: WordEntry[] = (starterBank.words || []) as WordEntry[];
 let initialFipi: FipiQuestion[] = (starterBank.fipi || []) as FipiQuestion[];
 let initialSprint: SprintQuestion[] = (starterBank.sprint || []) as SprintQuestion[];
@@ -65,35 +71,26 @@ export const PARSED_FIPI_QUESTIONS: FipiQuestion[] = [...initialFipi];
 export const PARSED_SPRINT_QUESTIONS: SprintQuestion[] = [...initialSprint];
 
 export const PARSED_TASKS_MAP: Record<TaskId, FipiQuestion[]> = {
-  '9': [],
-  '10': [],
-  '11': [],
-  '12': [],
-  '13': [],
-  '14': [],
-  '15': [],
+  '4': [], '5': [], '6': [], '7': [], '8': [],
+  '9': [], '10': [], '11': [], '12': [], '13': [], '14': [], '15': [],
+  '16': [], '17': [], '18': [], '19': [], '20': [], '21': [], '22': [],
 };
 
 export const PARSED_WORDS_DATABASE: Record<TaskId, WordEntry[]> = {
-  '9': [],
-  '10': [],
-  '11': [],
-  '12': [],
-  '13': [],
-  '14': [],
-  '15': [],
+  '4': [], '5': [], '6': [], '7': [], '8': [],
+  '9': [], '10': [], '11': [], '12': [], '13': [], '14': [], '15': [],
+  '16': [], '17': [], '18': [], '19': [], '20': [], '21': [], '22': [],
 };
 
 export function refreshMaps() {
-  const tasks: TaskId[] = ['9', '10', '11', '12', '13', '14', '15'];
-  for (const t of tasks) {
+  for (const t of ALL_TASK_IDS_LIST) {
     PARSED_TASKS_MAP[t] = PARSED_FIPI_QUESTIONS.filter((q) => {
-      if (q.task !== t) return false;
-      if (t !== '15' && q.rows.length !== 5) return false;
-      if (q.correctIndices.some((c) => c < 1 || c > q.rows.length)) return false;
+      if (String(q.task) !== t) return false;
+      if (!Array.isArray(q.rows) || q.rows.length === 0) return false;
+      if (!Array.isArray(q.correctIndices) || q.correctIndices.length === 0) return false;
       return true;
     });
-    PARSED_WORDS_DATABASE[t] = PARSED_WORDS.filter((w) => w.task === t);
+    PARSED_WORDS_DATABASE[t] = PARSED_WORDS.filter((w) => String(w.task) === t);
   }
 }
 
@@ -102,14 +99,14 @@ refreshMaps();
 // Очищаем устаревший кэш с урезанной или поврежденной базой
 if (typeof window !== 'undefined' && 'caches' in window) {
   try {
-    for (let v = 1; v <= 18; v++) {
+    for (let v = 1; v <= 19; v++) {
       window.caches.delete(`ege-bank-cache-v${v}`);
     }
   } catch {}
 }
 
 async function fetchJsonWithCache(url: string, fallbackUrls: string[] = []): Promise<any> {
-  const cacheName = 'ege-bank-cache-v19';
+  const cacheName = 'ege-bank-cache-v20';
   let cache: Cache | null = null;
   if (typeof window !== 'undefined' && 'caches' in window) {
     try {
@@ -118,14 +115,14 @@ async function fetchJsonWithCache(url: string, fallbackUrls: string[] = []): Pro
       if (cached) {
         const cachedData = await cached.json();
         const count = Array.isArray(cachedData) ? cachedData.length : cachedData?.words?.length || 0;
-        if (count >= 10000 || (url.includes('fipiTasks') && count >= 2000) || (url.includes('sprint') && count >= 10000)) {
+        if (count >= 20000 || (url.includes('fipiTasks') && count >= 5000) || (url.includes('sprint') && count >= 20000)) {
           return cachedData;
         }
       }
     } catch {}
   }
 
-  // 1. Попытка загрузки из локальной или fallback CDN баз
+  // 1. Попытка загрузки из локальной или fallback CDN баз (ветка data в GitHub)
   const allUrls = [url, ...fallbackUrls];
   for (const targetUrl of allUrls) {
     try {
@@ -158,19 +155,25 @@ export async function loadFullDataBank(): Promise<boolean> {
     const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
     const cdnBase = 'https://cdn.jsdelivr.net/gh/ffpebc/9-15@data/public/data';
-    const vParam = '?v=19';
+    const vParam = '?v=20';
     const [allWordsData, fipiData, sprintData] = await Promise.all([
       fetchJsonWithCache(`${localBase}/allWordsBank9_15.json${vParam}`, [
         `${rawGithubBase}/allWordsBank9_15.json${vParam}`,
         `${cdnBase}/allWordsBank9_15.json${vParam}`,
+        `${rawGithubBase}/allWordsBank.json${vParam}`,
+        `${cdnBase}/allWordsBank.json${vParam}`,
       ]),
       fetchJsonWithCache(`${localBase}/fipiTasksBank9_15.json${vParam}`, [
         `${rawGithubBase}/fipiTasksBank9_15.json${vParam}`,
         `${cdnBase}/fipiTasksBank9_15.json${vParam}`,
+        `${rawGithubBase}/fipiTasksBank.json${vParam}`,
+        `${cdnBase}/fipiTasksBank.json${vParam}`,
       ]),
       fetchJsonWithCache(`${localBase}/sprintBank9_15.json${vParam}`, [
         `${rawGithubBase}/sprintBank9_15.json${vParam}`,
         `${cdnBase}/sprintBank9_15.json${vParam}`,
+        `${rawGithubBase}/sprintBank.json${vParam}`,
+        `${cdnBase}/sprintBank.json${vParam}`,
       ]),
     ]);
 

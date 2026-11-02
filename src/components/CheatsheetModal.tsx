@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { TaskId } from '../utils/trainerLogic';
-import { SwipeableSheet, LiquidGlassSegmented } from './LiquidGlassControls';
+import { TaskId, TASK_IDS } from '../utils/trainerLogic';
+import { SwipeableSheet } from './LiquidGlassControls';
 
 interface CheatsheetModalProps {
   isOpen: boolean;
@@ -84,6 +84,145 @@ const BadgeTag: React.FC<{
 };
 
 const CHEAT_SECTIONS: CheatSectionData[] = [
+  {
+    task: '4',
+    title: '4 · ОРФОЭПИЧЕСКИЕ НОРМЫ (УДАРЕНИЯ)',
+    pages: 'Словник ФИПИ',
+    accentVar: 'var(--ios-orange)',
+    softVar: 'var(--ios-orange-soft)',
+    keywords: 'ударения баловать звонит торты банты шарфы клала крала слала послала отослала доверху донизу досуха засветло затемно',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-orange)' }}>
+          Главные закономерности словника ФИПИ № 4
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Женский род прош. вр. на -ЛА́:</strong> <em>брала́, взяла́, влила́сь, гнала́, звала́, лгала́, лила́, пила́, рвала́</em>.<br />
+            <strong style={{ color: 'var(--ios-red)' }}>Исключения (ударение на основе):</strong> <em>кла́ла, кра́ла, сла́ла, посла́ла, отосла́ла</em>.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Глаголы на -ИТЬ (3 л. на -И́Т/-Я́Т):</strong> <em>звони́т, включи́т, вручи́т, облегчи́т, сверли́т, укрепи́т, щеми́т</em>.<br />
+            <strong>Исключения:</strong> <em>опо́шлить — опо́шлит, осве́домиться — осве́домится, заку́порить, отку́порить</em>.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Неподвижное ударение на основе (сущ.):</strong> <em>ба́нты, то́рты, ша́рфы, кра́ны, ле́кторы, бухга́лтеры, сре́дства</em>.<br />
+            <strong>На окончании:</strong> <em>еретик — еретика́, столя́р, маля́р, досу́г, катало́г, некроло́г, кварта́л</em>.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Наречия с ДО- и ЗА-:</strong> <em>до́верху, до́низу, до́суха, за́светло, за́темно</em> (но: <em>донéльзя, добела́, докрасна́</em>).
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '5',
+    title: '5 · ПАРОНИМЫ (ЛЕКСИЧЕСКИЙ ВЫБОР)',
+    pages: 'Словарь ФИПИ',
+    accentVar: 'var(--ios-orange)',
+    softVar: 'var(--ios-orange-soft)',
+    keywords: 'паронимы абонент абонемент адресат адресант дипломат дипломант эффектный эффективный экономический экономичный экономный',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-orange)' }}>
+          Ключевые группы паронимов ФИПИ № 5
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            • <strong>Абонент</strong> (человек) / <strong>Абонемент</strong> (билет, документ)<br />
+            • <strong>Адресат</strong> (получатель) / <strong>Адресант</strong> (отправитель)<br />
+            • <strong>Дипломат</strong> (посол) / <strong>Дипломант</strong> (призёр конкурса)
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            • <strong>Эффектный</strong> (броский) / <strong>Эффективный</strong> (действенный)<br />
+            • <strong>Экономический</strong> (кризис) / <strong>Экономичный</strong> (двигатель) / <strong>Экономный</strong> (человек)<br />
+            • <strong>Гарантийный</strong> (талон, срок) / <strong>Гарантированный</strong> (доход, право)
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '6',
+    title: '6 · ЛЕКСИЧЕСКИЕ НОРМЫ (ПЛЕОНАЗМ И ПАРОНИМЫ)',
+    pages: 'Нормы речи',
+    accentVar: 'var(--ios-orange)',
+    softVar: 'var(--ios-orange-soft)',
+    keywords: 'плеоназм тавтология памятный сувенир свободная вакансия первая премьера играть роль иметь значение одержать победу',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-orange)' }}>
+          Исключение лишнего слова или замена неверного слова
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>1. Исключить лишнее слово (плеоназм):</strong><br />
+            <em>памятный сувенир, свободная вакансия, первая премьера, главная суть, коллега по работе, взаимный диалог, прейскурант цен, хронометраж времени</em>.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>2. Заменить слово (нарушение сочетаемости):</strong><br />
+            <em>играть роль</em> (не значение), <em>иметь значение</em> (не роль), <em>одержать победу</em>, <em>потерпеть поражение</em>, <em>принять меры</em>, <em>предпринять шаги</em>, <em>повысить уровень</em>.
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '7',
+    title: '7 · МОРФОЛОГИЧЕСКИЕ НОРМЫ (ФОРМА СЛОВА)',
+    pages: 'Нормы грамматики',
+    accentVar: 'var(--ios-orange)',
+    softVar: 'var(--ios-orange-soft)',
+    keywords: 'чулок носков помидоров ботинок погон эполет поезжай ляг лягте обеими пятисот более лучше',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-orange)' }}>
+          Образование грамматических форм (Задание № 7)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Р.п. мн. ч. существительных:</strong><br />
+            Нулевое окончание: <em>чулок, ботинок, сапог, валенок, погон, эполет, партизан, солдат, яблок, мест, дел</em>.<br />
+            Окончание <strong>-ОВ</strong>: <em>носков, гольфов, помидоров, томатов, апельсинов, мандаринов, килограммов, гектаров</em>.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Прилагательные, числительные, глаголы:</strong><br />
+            • Нельзя: «более лучше» → <em>лучше / более хорошо</em>.<br />
+            • Р.п.: <em>пятисот, шестисот, семисот</em>; Т.п.: <em>пятьюстами, обоими (м./ср.р.), обеими (ж.р.)</em>.<br />
+            • Повелит.: <em>поезжай, ляг, лягте, положи, машет, жжёт, печёт</em>.
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '8',
+    title: '8 · СИНТАКСИЧЕСКИЕ НОРМЫ (2 БАЛЛА)',
+    pages: 'А Б В Г Д',
+    accentVar: 'var(--ios-orange)',
+    softVar: 'var(--ios-orange-soft)',
+    keywords: 'причастный деепричастный оборот связь подлежащего и сказуемого несогласованное приложение предлог по приезде благодаря вопреки однородные косвенная речь',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-orange)' }}>
+          10 классических синтаксических ошибок в задании № 8
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            • <strong>Причастный оборот:</strong> разрыв оборота определяемым словом или неверный падеж причастия.<br />
+            • <strong>Деепричастный оборот:</strong> субъект деепричастия не совпадает с подлежащим в И.п.<br />
+            • <strong>Предлог:</strong> <em>по приезде, по окончании, по прибытии</em> (П.п.); <em>благодаря, согласно, вопреки</em> + Д.п. (чему?).
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            • <strong>Подлежащее и сказуемое:</strong> <em>Все, кто пришёл (ед.), сдали (мн.)</em>.<br />
+            • <strong>Несогласованное приложение:</strong> при родовом слове («в романе», «в пьесе») название в кавычках ставится в И.п.<br />
+            • <strong>Однородные члены:</strong> общее дополнение при глаголах с разным управлением; смешение двойных союзов.
+          </div>
+        </div>
+      </div>
+    ),
+  },
   /* ==========================================================================
      ЗАДАНИЕ 9: ПРАВОПИСАНИЕ КОРНЕЙ (СТР. 2–13)
      ========================================================================== */
@@ -1685,6 +1824,198 @@ const CHEAT_SECTIONS: CheatSectionData[] = [
       </>
     ),
   },
+  {
+    task: '16',
+    title: '16 · ЗНАКИ ПРЕПИНАНИЯ В ССП И ПРИ ОДНОРОДНЫХ ЧЛЕНАХ',
+    pages: 'Пунктуация',
+    accentVar: 'var(--ios-green)',
+    softVar: 'var(--ios-green-soft)',
+    keywords: 'ссп однородные члены общий второстепенный член попарное соединение двойные союзы не только но и',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
+          Алгоритм поиска одной запятой в задании № 16
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Когда запятая перед И в ССП НЕ ставится:</strong><br />
+            Есть общий второстепенный член в начале предложения (<em>«В лесу было тихо и пахло хвоей»</em>), общее придаточное, общее вводное слово или обе части вопросительные/восклицательные.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Однородные члены:</strong><br />
+            • Разные ряды однородных членов (определения + сказуемые) не разделяются запятой.<br />
+            • При попарном соединении (<em>А и Б, В и Г</em>) ставится 1 запятая между парами.<br />
+            • При двойных союзах (<em>как..., так и...; не только..., но и...</em>) запятая ставится только перед второй частью.
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '17',
+    title: '17 · ОБОСОБЛЕННЫЕ ЧЛЕНЫ (ПРИЧАСТНЫЕ И ДЕЕПРИЧАСТНЫЕ ОБОРОТЫ)',
+    pages: 'Пунктуация',
+    accentVar: 'var(--ios-green)',
+    softVar: 'var(--ios-green-soft)',
+    keywords: 'причастный деепричастный оборот определяемое слово личное местоимение фразеологизм сломя голову',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
+          Правила обособления определений и обстоятельств (№ 17)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Причастный оборот:</strong><br />
+            • ПОСЛЕ определяемого слова — всегда обособляется.<br />
+            • ПЕРЕД определяемым существительным — НЕ обособляется (кроме случая с личным местоимением <em>он, она, я, мы</em> или причинным значением).
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Деепричастный оборот:</strong><br />
+            • Всегда обособляется независимо от места в предложении.<br />
+            • <strong>Исключения:</strong> фразеологизмы (<em>сломя голову, затаив дыхание, спустя рукава</em>) и одиночные наречия (<em>стоя, сидя, молча, нехотя</em>).
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '18',
+    title: '18 · ВВОДНЫЕ СЛОВА И ОБРАЩЕНИЯ',
+    pages: 'Пунктуация',
+    accentVar: 'var(--ios-green)',
+    softVar: 'var(--ios-green-soft)',
+    keywords: 'вводные слова обращения будто вряд ли едва ли даже именно как будто почти вдруг ведь однако',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
+          Вводные конструкции vs лжевводные частицы (№ 18)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Всегда вводные (выделяются запятыми):</strong><br />
+            <em>конечно, разумеется, несомненно, безусловно, кажется, вероятно, возможно, во-первых, итак, следовательно, по-моему, к счастью, к сожалению</em>.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-red-soft)' }}>
+            <strong style={{ color: 'var(--ios-red)' }}>• НИКОГДА не бывают вводными (БЕЗ запятых):</strong><br />
+            <em>будто, как будто, вряд ли, едва ли, почти, именно, исключительно, вдруг, ведь, вот, всё-таки, даже, однажды, словно, якобы</em>.
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '19',
+    title: '19 · ЗНАКИ ПРЕПИНАНИЯ В СЛОЖНОПОДЧИНЁННОМ ПРЕДЛОЖЕНИИ (СПП)',
+    pages: 'Пунктуация',
+    accentVar: 'var(--ios-green)',
+    softVar: 'var(--ios-green-soft)',
+    keywords: 'спп придаточное который союзное слово однородное соподчинение',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
+          Границы придаточных и союзное слово «КОТОРЫЙ» (№ 19)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Придаточное со словом «КОТОРЫЙ»:</strong><br />
+            Запятая ставится на границе главной и придаточной части (например: <em>«дом, (1) крыша (2) которого...»</em> — запятая только на месте 1, перед «которого» на месте 2 запятой нет).
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Однородные придаточные:</strong><br />
+            Если два придаточных отвечают на один вопрос от одного главного предложения и соединены союзом <strong>И / ИЛИ</strong>, запятая между ними НЕ ставится.
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '20',
+    title: '20 · СЛОЖНЫЕ ПРЕДЛОЖЕНИЯ С РАЗНЫМИ ВИДАМИ СВЯЗИ (СТЫК СОЮЗОВ)',
+    pages: 'Пунктуация',
+    accentVar: 'var(--ios-green)',
+    softVar: 'var(--ios-green-soft)',
+    keywords: 'стык союзов что если что когда и если но когда то но так',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
+          Золотое правило стыка союзов «ТО, НО, ТАК» (№ 20)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-green-soft)' }}>
+            <strong style={{ color: 'var(--ios-green)' }}>• Запятая на стыке союзов СТАВИТСЯ:</strong><br />
+            Если после придаточного предложения <strong>НЕТ</strong> слов <strong>ТО, НО, ТАК</strong> (придаточное можно безболезненно вынуть из предложения).
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-orange-soft)' }}>
+            <strong style={{ color: 'var(--ios-orange)' }}>• Запятая на стыке союзов НЕ ставится:</strong><br />
+            Если дальше после придаточного <strong>ЕСТЬ</strong> коррелят <strong>ТО, НО</strong> или <strong>ТАК</strong> (<em>«Я знал, что (1) если приду, (2) ТО он поможет»</em> — на месте 1 запятой нет).
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '21',
+    title: '21 · ПУНКТУАЦИОННЫЙ АНАЛИЗ ТЕКСТА (ТИРЕ, ДВОЕТОЧИЕ, ЗАПЯТАЯ)',
+    pages: 'Анализ текста',
+    accentVar: 'var(--ios-green)',
+    softVar: 'var(--ios-green-soft)',
+    keywords: 'тире двоеточие запятая подлежащее и сказуемое приложение бсп обобщающее слово прямая речь',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
+          Разграничение правил постановки тире, двоеточия и запятых (№ 21)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Причины постановки ТИРЕ (не смешивать!):</strong><br />
+            1) Между подлежащим и сказуемым;<br />
+            2) При обособленном приложении;<br />
+            3) В бессоюзном сложном предложении (БСП);<br />
+            4) Между однородными и обобщающим словом;<br />
+            5) В неполном предложении (пропуск сказуемого);<br />
+            6) При прямой речи / вставной конструкции.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Причины постановки ДВОЕТОЧИЯ:</strong><br />
+            1) В БСП (причина, пояснение, дополнение);<br />
+            2) После обобщающего слова перед однородными;<br />
+            3) После слов автора перед прямой речью / цитатой.
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    task: '22',
+    title: '22 · ЯЗЫКОВЫЕ СРЕДСТВА ВЫРАЗИТЕЛЬНОСТИ (2 БАЛЛА)',
+    pages: 'А Б В Г Д',
+    accentVar: 'var(--ios-purple)',
+    softVar: 'var(--ios-purple-soft)',
+    keywords: 'эпитет метафора олицетворение сравнение гипербола литота метонимия анафора эпифора антитеза оксюморон парцелляция градация инверсия параллелизм аллитерация ассонанс',
+    content: (
+      <div className="cheat-subbox text-[12px] leading-snug">
+        <div className="cheat-subbox-title" style={{ color: 'var(--ios-purple)' }}>
+          Тропы, фигуры речи и звукопись (Задание № 22)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Тропы (образный перенос):</strong><br />
+            • <strong>Эпитет</strong> — образное прилагательное/наречие (<em>малиновая улыбка, горькая доля</em>).<br />
+            • <strong>Метафора</strong> — скрытое сравнение (<em>костёр рябины, море слёз</em>).<br />
+            • <strong>Олицетворение</strong> — свойства живого у неживого (<em>спит земля, вьюга злилась</em>).<br />
+            • <strong>Сравнение</strong> — с союзами <em>как, словно, точно, будто</em> или сущ. в Т.п.
+          </div>
+          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            <strong>• Фигуры речи и звукопись:</strong><br />
+            • <strong>Анафора</strong> — единоначатие; <strong>Эпифора</strong> — одинаковая концовка.<br />
+            • <strong>Антитеза</strong> — противопоставление; <strong>Оксюморон</strong> — сочетание несочетаемого (<em>живой труп</em>).<br />
+            • <strong>Парцелляция</strong> — разрыв предложения точками; <strong>Градация</strong> — нарастание.<br />
+            • <strong>Аллитерация</strong> — повтор согласных; <strong>Ассонанс</strong> — повтор гласных.
+          </div>
+        </div>
+      </div>
+    ),
+  },
 ];
 
 export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
@@ -1742,13 +2073,13 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
       <div className="flex items-center justify-between gap-2 mb-2 shrink-0">
         <div className="min-w-0 flex-1 pr-1">
           <h2 className="text-[18px] font-extrabold tracking-tight leading-tight whitespace-nowrap truncate">
-            Конспект ЕГЭ 9–15
+            Конспект ЕГЭ 4–22
           </h2>
           <span
             className="block text-[11.5px] font-medium truncate whitespace-nowrap mt-0.5"
             style={{ color: 'var(--ios-label-sec)' }}
           >
-            Все правила, запоминалки ⭐ и ловушки (стр. 2–80)
+            Все правила, запоминалки ⭐ и ловушки (задания 4–22)
           </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -1788,7 +2119,7 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onBlur={resetViewportZoomOnBlur}
-          placeholder="Поиск правила, запоминалки или слова (Фока, окно, не вода, полог)..."
+          placeholder="Поиск правила, запоминалки или слова (Фока, окно, звонит, полог)..."
           aria-label="Поиск правила, корня или слова-исключения"
           className="w-full px-3.5 py-2.5 rounded-2xl text-[16px] font-medium outline-none"
           style={{
@@ -1799,23 +2130,32 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
         />
       </div>
 
-      <div id="cheat-pills-scroll" className="mb-2.5 shrink-0">
-        <LiquidGlassSegmented
-          value={activeTab}
-          onChange={setActiveTab}
-          compact
-          ariaLabel="Фильтр разделов шпаргалки 9–15"
-          options={[
-            { key: 'all', label: 'Все' },
-            { key: '9', label: '№ 9' },
-            { key: '10', label: '№ 10' },
-            { key: '11', label: '№ 11' },
-            { key: '12', label: '№ 12' },
-            { key: '13', label: '№ 13' },
-            { key: '14', label: '№ 14' },
-            { key: '15', label: '№ 15' },
-          ]}
-        />
+      <div id="cheat-pills-scroll" className="mb-2.5 shrink-0 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        <button
+          type="button"
+          onClick={() => setActiveTab('all')}
+          className="px-3 py-1 rounded-full text-[11.5px] font-extrabold shrink-0 cursor-pointer transition-all"
+          style={{
+            background: activeTab === 'all' ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+            color: activeTab === 'all' ? '#FFFFFF' : 'var(--ios-label-sec)',
+          }}
+        >
+          Все
+        </button>
+        {TASK_IDS.map((tId) => (
+          <button
+            key={tId}
+            type="button"
+            onClick={() => setActiveTab(tId)}
+            className="px-2.5 py-1 rounded-full text-[11.5px] font-extrabold shrink-0 cursor-pointer transition-all"
+            style={{
+              background: activeTab === tId ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
+              color: activeTab === tId ? '#FFFFFF' : 'var(--ios-label-sec)',
+            }}
+          >
+            № {tId}
+          </button>
+        ))}
       </div>
 
       <div id="cheat-reader-body" className="cheat-reader">

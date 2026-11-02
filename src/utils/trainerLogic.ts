@@ -5,7 +5,27 @@ import {
 } from '../data/tasksBankData.ts';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
 
-export type TaskId = '9' | '10' | '11' | '12' | '13' | '14' | '15';
+export type TaskId =
+  | '4'
+  | '5'
+  | '6'
+  | '7'
+  | '8'
+  | '9'
+  | '10'
+  | '11'
+  | '12'
+  | '13'
+  | '14'
+  | '15'
+  | '16'
+  | '17'
+  | '18'
+  | '19'
+  | '20'
+  | '21'
+  | '22';
+export type TaskBlockId = 'speech' | 'ortho' | 'punct' | 'expressive';
 export type WorkoutMode = 'sprint' | 'fipi' | 'mixed';
 export type SprintGameMode = 'endless' | 'blitz60' | 'survival';
 export type LabSubMode = 'flashcards' | 'pairs' | 'kim';
@@ -36,10 +56,17 @@ export interface FipiRow {
   explanation: string;
 }
 
+export interface MatchingLetterItem {
+  label: string;
+  text: string;
+  correctDigit: number;
+}
+
 export interface FipiQuestion {
   id: string;
   instanceId?: string;
   kind: 'fipi';
+  questionKind?: 'rows' | 'word_input' | 'matching_grid' | 'numbered_gaps';
   task: TaskId;
   topic: string;
   rule: string;
@@ -47,7 +74,10 @@ export interface FipiQuestion {
   sentence?: string;
   source?: string;
   rows: FipiRow[];
-  correctIndices: number[]; // 1-based indices (e.g., [1, 3])
+  correctIndices: number[]; // 1-based indices (or 5 ordered digits for tasks 8 & 22)
+  textAnswers?: string[]; // valid word answers for tasks 5, 6, 7 or 5-digit string for 8 & 22
+  choiceOptions?: string[]; // interactive pill choices for tasks 5, 6, 7
+  matchingLetters?: MatchingLetterItem[]; // А, Б, В, Г, Д items for tasks 8 & 22
 }
 
 export type TrainerQuestion = SprintQuestion | FipiQuestion;
@@ -115,6 +145,7 @@ export interface SessionJournalEntry {
 
 export interface TrainerState {
   quantities: Record<TaskId, number>;
+  enabledTasks: Record<TaskId, boolean>;
   workoutMode: WorkoutMode;
   isShuffled: boolean;
   totalSolved: number;
@@ -133,7 +164,55 @@ export interface TrainerState {
   profilePin: string;
 }
 
-export const TASK_IDS: TaskId[] = ['9', '10', '11', '12', '13', '14', '15'];
+export const TASK_IDS: TaskId[] = [
+  '4', '5', '6', '7', '8',
+  '9', '10', '11', '12', '13', '14', '15',
+  '16', '17', '18', '19', '20', '21', '22',
+];
+
+export interface TaskBlockMeta {
+  id: TaskBlockId;
+  title: string;
+  subtitle: string;
+  badge: string;
+  color: string;
+  tasks: TaskId[];
+}
+
+export const TASK_BLOCKS: TaskBlockMeta[] = [
+  {
+    id: 'speech',
+    title: 'Культура речи и грамматика',
+    subtitle: 'Ударения, паронимы, лексика, морфология и синтаксис',
+    badge: '№ 4–8',
+    color: '#007AFF',
+    tasks: ['4', '5', '6', '7', '8'],
+  },
+  {
+    id: 'ortho',
+    title: 'Орфография',
+    subtitle: 'Корни, приставки, суффиксы, спряжения, НЕ/НИ, слитно/раздельно, Н/НН',
+    badge: '№ 9–15',
+    color: '#5856D6',
+    tasks: ['9', '10', '11', '12', '13', '14', '15'],
+  },
+  {
+    id: 'punct',
+    title: 'Пунктуация',
+    subtitle: 'ССП, обособление, вводные слова, СПП, стык союзов, пунктуационный анализ',
+    badge: '№ 16–21',
+    color: '#34C759',
+    tasks: ['16', '17', '18', '19', '20', '21'],
+  },
+  {
+    id: 'expressive',
+    title: 'Выразительность речи',
+    subtitle: 'Тропы, лексические и синтаксические средства выразительности (2 балла)',
+    badge: '№ 22',
+    color: '#FF2D55',
+    tasks: ['22'],
+  },
+];
 
 export const TASK_META: Record<
   TaskId,
@@ -143,14 +222,63 @@ export const TASK_META: Record<
     subtitle: string;
     gradient: string;
     cheatPages: string;
+    block: TaskBlockId;
+    maxPoints: number;
   }
 > = {
+  '4': {
+    id: '4',
+    title: 'Орфоэпические нормы',
+    subtitle: 'Ударения (словник ФИПИ)',
+    gradient: 'linear-gradient(135deg, #00C6FF, #0072FF)',
+    cheatPages: 'Блок 4–8',
+    block: 'speech',
+    maxPoints: 1,
+  },
+  '5': {
+    id: '5',
+    title: 'Лексические нормы (Паронимы)',
+    subtitle: 'Выбор и замена паронима',
+    gradient: 'linear-gradient(135deg, #4FACFE, #00F2FE)',
+    cheatPages: 'Блок 4–8',
+    block: 'speech',
+    maxPoints: 1,
+  },
+  '6': {
+    id: '6',
+    title: 'Лексическая сочетаемость',
+    subtitle: 'Плеоназмы и замена слова',
+    gradient: 'linear-gradient(135deg, #43E97B, #38F9D7)',
+    cheatPages: 'Блок 4–8',
+    block: 'speech',
+    maxPoints: 1,
+  },
+  '7': {
+    id: '7',
+    title: 'Морфологические нормы',
+    subtitle: 'Образование форм слов',
+    gradient: 'linear-gradient(135deg, #FA709A, #FEE140)',
+    cheatPages: 'Блок 4–8',
+    block: 'speech',
+    maxPoints: 1,
+  },
+  '8': {
+    id: '8',
+    title: 'Синтаксические нормы',
+    subtitle: 'Грамматические ошибки А–Д (2 балла)',
+    gradient: 'linear-gradient(135deg, #667EEA, #764BA2)',
+    cheatPages: 'Блок 4–8',
+    block: 'speech',
+    maxPoints: 2,
+  },
   '9': {
     id: '9',
     title: 'Правописание корней',
     subtitle: 'Чередования и исключения',
     gradient: 'linear-gradient(135deg, #3898FF, #007AFF)',
     cheatPages: 'стр. 2–13',
+    block: 'ortho',
+    maxPoints: 1,
   },
   '10': {
     id: '10',
@@ -158,6 +286,8 @@ export const TASK_META: Record<
     subtitle: 'ПРЕ-/ПРИ-, Ъ/Ь, Ы/И, З/С',
     gradient: 'linear-gradient(135deg, #7D7AFF, #5856D6)',
     cheatPages: 'стр. 13–18',
+    block: 'ortho',
+    maxPoints: 1,
   },
   '11': {
     id: '11',
@@ -165,6 +295,8 @@ export const TASK_META: Record<
     subtitle: 'Сущ., прил., глаголы',
     gradient: 'linear-gradient(135deg, #CE72F5, #AF52DE)',
     cheatPages: 'стр. 25–48',
+    block: 'ortho',
+    maxPoints: 1,
   },
   '12': {
     id: '12',
@@ -172,6 +304,8 @@ export const TASK_META: Record<
     subtitle: 'Окончания и причастия',
     gradient: 'linear-gradient(135deg, #FFB340, #FF9500)',
     cheatPages: 'стр. 49–58',
+    block: 'ortho',
+    maxPoints: 1,
   },
   '13': {
     id: '13',
@@ -179,6 +313,8 @@ export const TASK_META: Record<
     subtitle: 'Слитно и раздельно',
     gradient: 'linear-gradient(135deg, #FF6482, #FF2D55)',
     cheatPages: 'стр. 60–62',
+    block: 'ortho',
+    maxPoints: 1,
   },
   '14': {
     id: '14',
@@ -186,6 +322,8 @@ export const TASK_META: Record<
     subtitle: 'Союзы, предлоги, частицы',
     gradient: 'linear-gradient(135deg, #30D158, #34C759)',
     cheatPages: 'стр. 63–70',
+    block: 'ortho',
+    maxPoints: 1,
   },
   '15': {
     id: '15',
@@ -193,6 +331,71 @@ export const TASK_META: Record<
     subtitle: 'Причастия и прилагательные',
     gradient: 'linear-gradient(135deg, #FF375F, #E0245E)',
     cheatPages: 'стр. 71–80',
+    block: 'ortho',
+    maxPoints: 1,
+  },
+  '16': {
+    id: '16',
+    title: 'Пунктуация в ССП и с ОЧП',
+    subtitle: 'Предложения с ОДНОЙ запятой',
+    gradient: 'linear-gradient(135deg, #11998E, #38EF7D)',
+    cheatPages: 'Блок 16–21',
+    block: 'punct',
+    maxPoints: 1,
+  },
+  '17': {
+    id: '17',
+    title: 'Обособленные члены',
+    subtitle: 'Причастные и деепричастные обороты',
+    gradient: 'linear-gradient(135deg, #0BA360, #3CBA92)',
+    cheatPages: 'Блок 16–21',
+    block: 'punct',
+    maxPoints: 1,
+  },
+  '18': {
+    id: '18',
+    title: 'Вводные слова и обращения',
+    subtitle: 'Вводные конструкции и лже-вводные',
+    gradient: 'linear-gradient(135deg, #56CCF2, #2F80ED)',
+    cheatPages: 'Блок 16–21',
+    block: 'punct',
+    maxPoints: 1,
+  },
+  '19': {
+    id: '19',
+    title: 'Пунктуация в СПП',
+    subtitle: 'Придаточные предложения и «который»',
+    gradient: 'linear-gradient(135deg, #F2994A, #F2C94C)',
+    cheatPages: 'Блок 16–21',
+    block: 'punct',
+    maxPoints: 1,
+  },
+  '20': {
+    id: '20',
+    title: 'Разные виды связи',
+    subtitle: 'Стык союзов и правило ТО / НО / ТАК',
+    gradient: 'linear-gradient(135deg, #8E2DE2, #4A00E0)',
+    cheatPages: 'Блок 16–21',
+    block: 'punct',
+    maxPoints: 1,
+  },
+  '21': {
+    id: '21',
+    title: 'Пунктуационный анализ',
+    subtitle: 'Правила тире, двоеточия и запятой',
+    gradient: 'linear-gradient(135deg, #F857A6, #FF5858)',
+    cheatPages: 'Блок 16–21',
+    block: 'punct',
+    maxPoints: 1,
+  },
+  '22': {
+    id: '22',
+    title: 'Средства выразительности',
+    subtitle: 'Тропы и фигуры речи А–Д (2 балла)',
+    gradient: 'linear-gradient(135deg, #FF416C, #FF4B2B)',
+    cheatPages: 'Блок 22',
+    block: 'expressive',
+    maxPoints: 2,
   },
 };
 
@@ -1339,9 +1542,442 @@ export const FLASHCARDS_BANK: FlashcardItem[] = [
     backWord: 'СТАРИННЫЙ, ТУМАННЫЙ, КАРМАННЫЙ, ОСЕННИЙ',
     backRule: 'Если основа слова оканчивается на букву Н (старина, туман, карман, осень, длина), а суффикс начинается с Н, на стыке морфем ВСЕГДА пишется две буквы НН.',
   },
+  // --- ЗАДАНИЕ 4: Орфоэпические нормы (Ударения) ---
+  {
+    id: 'fc-4-1',
+    task: '4',
+    badge: 'Задание 4 • Существительные',
+    topic: 'Неподвижное ударение на основе',
+    frontWord: 'банты, торты, шарфы, краны, лифты, аэропорты',
+    frontHint: 'На какой слог падает ударение во всех падежах?',
+    backWord: 'бАнты, тОрты, шАрфы, крАны, лИфты, аэропОрты',
+    backRule: 'В этих существительных ударение НЕПОДВИЖНО и во всех падежах остаётся на основе: бАнты — бАнтов, тОрты — тОртов, шАрфы — шАрфов, аэропОрты — в аэропОрте.',
+  },
+  {
+    id: 'fc-4-2',
+    task: '4',
+    badge: 'Задание 4 • Глаголы прош. времени',
+    topic: 'Женский род с ударением на окончание -А vs исключения',
+    frontWord: 'брала, звала, лгала, гнала vs клала, кралась, послала',
+    frontHint: 'Где ударение переходит на -А, а где остаётся на корне?',
+    backWord: 'бралА, звалА, лгалА, гналА / клАла, крАлась, послАла',
+    backRule: 'У большинства глаголов в прош. времени жен. рода ударение падает на окончание -А (бралА, взялА, спалА). Исключения с ударением на основе: клАла, крАлась, слАла, послАла, отослАла.',
+  },
+  {
+    id: 'fc-4-3',
+    task: '4',
+    badge: 'Задание 4 • Глаголы на -ИТЬ',
+    topic: 'Личные формы: звонит, включит, вручит, облегчит',
+    frontWord: 'звонит, включит, вручит, облегчит, сверлит, ободрит',
+    frontHint: 'Ударение при спряжении глаголов на -ИТЬ',
+    backWord: 'звонИт, включИт, вручИт, облегчИт, сверлИт, ободрИт',
+    backRule: 'В глаголах на -ИТЬ при спряжении ударение падает на окончание (-Ишь, -Ит, -Им, -Ите, -Ат/-Ят). Исключения: опОшлить → опОшлит, освЕдомиться → освЕдомится, откУпорить, черпать → чЕрпает.',
+  },
+  {
+    id: 'fc-4-4',
+    task: '4',
+    badge: 'Задание 4 • Ловушки ФИПИ',
+    topic: 'Заимствованные существительные и наречия',
+    frontWord: 'жалюзи, диспансер, эксперт, квартал, каталог, доверху, досуха',
+    frontHint: 'Французские заимствования и наречия с приставкой ДО-',
+    backWord: 'жалюзИ, диспансЕр, экспЕрт, квартАл, каталОг / дОверху, дОсуха, дОбела',
+    backRule: 'Французские слова сохраняют ударение на последнем слоге (жалюзИ, партЕр, диспансЕр). В наречиях с ДО- ударение на приставку: дОверху, дОнизу, дОсуха (кроме: добелА, докраснА).',
+  },
+  // --- ЗАДАНИЕ 5: Паронимы ---
+  {
+    id: 'fc-5-1',
+    task: '5',
+    badge: 'Задание 5 • Паронимы ФИПИ',
+    topic: 'Дипломатичный vs Дипломатический',
+    frontWord: '(дипломатичный / дипломатический) ответ vs корпус',
+    frontHint: 'Тактичный и вежливый vs относящийся к дипломатии',
+    backWord: 'ДИПЛОМАТИЧНЫЙ ответ / ДИПЛОМАТИЧЕСКИЙ корпус',
+    backRule: 'Дипломатичный — тонкий, тактичный, уклончивый в общении (поступок, человек, ответ). Дипломатический — относящийся к внешней политике и посольствам (паспорт, корпус, визит).',
+  },
+  {
+    id: 'fc-5-2',
+    task: '5',
+    badge: 'Задание 5 • Паронимы ФИПИ',
+    topic: 'Эффектный vs Эффективный, Невежа vs Невежда',
+    frontWord: 'эффектный трюк / эффективный метод; невежа / невежда',
+    frontHint: 'Впечатляющий vs результативный; грубиян vs неуч',
+    backWord: 'ЭФФЕКТНЫЙ (яркий) vs ЭФФЕКТИВНЫЙ (действенный); НЕВЕЖДА (не ведает)',
+    backRule: 'Эффектный производит внешний эффект (наряд, жест); эффективный даёт результат (лекарство, метод). Невежда — необразованный человек (от «не ведать»); невежа — грубый, невежливый.',
+  },
+  {
+    id: 'fc-5-3',
+    task: '5',
+    badge: 'Задание 5 • Паронимы ФИПИ',
+    topic: 'Абонент vs Абонемент, Адресат vs Адресант',
+    frontWord: 'абонент сети vs абонемент в бассейн; адресат vs адресант',
+    frontHint: 'Лицо vs документ; получатель vs отправитель',
+    backWord: 'АБОНЕНТ (человек) / АБОНЕМЕНТ (билет); АДРЕСАТ (получатель) / АДРЕСАНТ (отправитель)',
+    backRule: 'Абонент — пользователь связи; абонемент — право на обслуживание. Адресат — тот, КОМУ адресовано письмо; адресант — тот, КТО отправляет.',
+  },
+  // --- ЗАДАНИЕ 6: Лексические нормы ---
+  {
+    id: 'fc-6-1',
+    task: '6',
+    badge: 'Задание 6 • Плеоназмы',
+    topic: 'Скрытое дублирование смысла (речевая избыточность)',
+    frontWord: 'памятный сувенир, первый дебют, свободная вакансия, прейскурант цен',
+    frontHint: 'Какие слова являются лишними в этих сочетаниях?',
+    backWord: 'сувенир (без «памятный»), дебют (без «первый»), вакансия, прейскурант',
+    backRule: 'Сувенир — подарок на память; дебют — первое выступление; вакансия — свободная должность; прейскурант — справочник цен; биография — история жизни; лейтмотив — главная мысль.',
+  },
+  {
+    id: 'fc-6-2',
+    task: '6',
+    badge: 'Задание 6 • Сочетаемость',
+    topic: 'Контаминация (смешение) устойчивых оборотов',
+    frontWord: 'играть значение vs иметь роль; одержать успех vs добиться победы',
+    frontHint: 'Как правильно соединяются глаголы с существительными?',
+    backWord: 'ИГРАТЬ РОЛЬ и ИМЕТЬ ЗНАЧЕНИЕ; ОДЕРЖАТЬ ПОБЕДУ и ДОБИТЬСЯ УСПЕХА',
+    backRule: 'Нельзя скрещивать близкие обороты: играют всегда роль, а имеют — значение; одерживают победу, устанавливают рекорд, повышают кругозор → расширяют кругозор.',
+  },
+  // --- ЗАДАНИЕ 7: Морфологические нормы ---
+  {
+    id: 'fc-7-1',
+    task: '7',
+    badge: 'Задание 7 • Родительный падеж мн. ч.',
+    topic: 'Обувь, одежда и овощи/фрукты',
+    frontWord: 'нет (туфли, сапоги, чулки, носки, помидоры, мандарины)',
+    frontHint: 'Правило длины для чулок/носков и окончания для фруктов',
+    backWord: 'тУфель, сапОг, чулОк (коротко), носкОв (длинно), помидОров, мандаринов',
+    backRule: 'Чулки (длинные) → чулок (нулевое окончание); носки (короткие) → носков (-ов). Овощи и фрукты муж. рода имеют окончание -ОВ: помидоров, баклажанов, абрикосов, ананасов (но: яблок, слив).',
+  },
+  {
+    id: 'fc-7-2',
+    task: '7',
+    badge: 'Задание 7 • Числительные и глаголы',
+    topic: 'Склонение сложных числительных и повелительное наклонение',
+    frontWord: 'с (500) рублями, в (2026) году; (ехать, лечь, махать)',
+    frontHint: 'Изменяются ли обе части в 500 и только последнее слово в 2026?',
+    backWord: 'ПЯТЬЮСТАМИ рублями, в две тысячи двадцать ШЕСТОМ году; ПОЕЗЖАЙ, ЛЯГ, МАШИ',
+    backRule: 'В сложных количественных числительных (200–900) склоняются ОБЕ части (двумястами, пятистам). В составных порядковых (2026-й) склоняется ТОЛЬКО последнее слово!',
+  },
+  // --- ЗАДАНИЕ 8: Синтаксические нормы ---
+  {
+    id: 'fc-8-1',
+    task: '8',
+    badge: 'Задание 8 • Предлоги и Приложения',
+    topic: 'Предлоги БЛАГОДАРЯ/СОГЛАСНО/ВОПРЕКИ и названия в кавычках',
+    frontWord: 'согласно (приказ/приказу); в романе «Евгении Онегине» / на картине «Грачах»',
+    frontHint: 'Какой падеж требуют производные предлоги и когда склоняется название?',
+    backWord: 'согласно ПРИКАЗУ (Д.п.); в романе «Евгений Онегин» (И.п. при родовом слове!)',
+    backRule: 'Предлоги «благодаря, согласно, вопреки, наперекор, подобно» требуют ТОЛЬКО дательного падежа (чему? приказу). При наличии родового слова (роман, повесть, фильм) название в кавычках стоит в И.п.!',
+  },
+  {
+    id: 'fc-8-2',
+    task: '8',
+    badge: 'Задание 8 • Причастный и деепричастный обороты',
+    topic: 'Алгоритм проверки ПО и ДО в задании № 8 (2 балла)',
+    frontWord: 'Подъезжая к станции, у меня слетела шляпа',
+    frontHint: 'Кто выполняет основное действие (подлежащее) и добавочное (деепричастие)?',
+    backWord: 'ОШИБКА ДО: подлежащее «шляпа» не может сама «подъезжать к станции»!',
+    backRule: 'Деепричастие и глагол-сказуемое должны обозначать действия ОДНОГО И ТОГО ЖЕ лица (подлежащего) или употребляться в определённо-личном предложении.',
+  },
+  // --- ЗАДАНИЯ 16–21: Пунктуация ---
+  {
+    id: 'fc-16-1',
+    task: '16',
+    badge: 'Задание 16 • ССП и общий член',
+    topic: 'Когда перед союзом И в ССП запятая НЕ ставится?',
+    frontWord: 'В старом саду пели соловьи и цвела душистая сирень',
+    frontHint: 'К обеим ли основам относится обстоятельство «В старом саду»?',
+    backWord: 'БЕЗ ЗАПЯТОЙ: есть общий второстепенный член «В старом саду»!',
+    backRule: 'В сложносочинённом предложении (ССП) перед одиночным союзом И, ДА (=И), ИЛИ запятая НЕ ставится, если части объединены общим второстепенным членом, общим вводным словом или общей придаточной частью.',
+  },
+  {
+    id: 'fc-17-1',
+    task: '17',
+    badge: 'Задание 17 • Причастный и деепричастный обороты',
+    topic: 'Позиция причастного оборота и однородные обороты с И',
+    frontWord: 'Освещённый луной (1) лес молчал vs Лес (1) освещённый луной (2) молчал',
+    frontHint: 'Зависимость запятых от положения оборота до или после определяемого слова',
+    backWord: 'До сущ. — НЕ обособляется; после сущ. — обособляется с двух сторон!',
+    backRule: 'Причастный оборот обособляется, если стоит ПОСЛЕ определяемого слова (или если относится к личному местоимению: «Уставший, он уснул»). Два однородных оборота, соединённых одиночным И, запятой между собой не разделяются.',
+  },
+  {
+    id: 'fc-18-1',
+    task: '18',
+    badge: 'Задание 18 • Вводные и лже-вводные слова',
+    topic: 'Слова, которые НИКОГДА не бывают вводными на ЕГЭ',
+    frontWord: 'будто, словно, вряд ли, едва ли, якобы, именно, как раз, почти, даже, всё-таки',
+    frontHint: 'Выделяются ли эти частицы и наречия запятыми?',
+    backWord: 'НИКОГДА НЕ ОБОСОБЛЯЮТСЯ (это частицы или наречия, а не вводные слова!)',
+    backRule: 'Запомните список «лже-вводных» слов ФИПИ: будто, словно, едва ли, вряд ли, якобы, именно, исключительно, только, почти, даже, ведь, вот, всё-таки, как будто, в конечном счёте — запятыми НЕ выделяются!',
+  },
+  {
+    id: 'fc-19-1',
+    task: '19',
+    badge: 'Задание 19 • СПП с «который»',
+    topic: 'Придаточное со словом «который» внутри сочетания',
+    frontWord: 'Мы вошли в дом (1) крыша (2) которого (3) была покрыта черепицей',
+    frontHint: 'Где начинается придаточная часть: на цифре (1) или перед «которого» (2)?',
+    backWord: 'Запятая ставится ТОЛЬКО на месте (1)! Перед «которого» (2) запятая НЕ ставится!',
+    backRule: 'В конструкциях «дом, крыша которого...», «писатель, романы которого...» граница придаточного проходит ПЕРЕД существительным («крыша», «романы»), от которого зависит слово «которого».',
+  },
+  {
+    id: 'fc-20-1',
+    task: '20',
+    badge: 'Задание 20 • Стык союзов',
+    topic: 'Золотое правило «ТО — НО — ТАК» на стыке двух союзов',
+    frontWord: 'Он сказал, что (1) если пойдёт дождь, мы останемся vs ...что (1) если пойдёт дождь, ТО мы останемся',
+    frontHint: 'Когда на стыке союзов (ЧТО ЕСЛИ, И КОГДА) ставится запятая?',
+    backWord: 'НЕТ «ТО/НО/ТАК» → запятая на (1) СТАВИТСЯ; ЕСТЬ «ТО/НО/ТАК» → запятая НЕ ставится!',
+    backRule: 'На стыке двух союзов запятая ставится, если после придаточного НЕТ второй части двойного союза (ТО, НО, ТАК). Если дальше есть ТО, НО или ТАК — запятая на стыке союзов НЕ ставится!',
+  },
+  {
+    id: 'fc-21-1',
+    task: '21',
+    badge: 'Задание 21 • Пунктуационный анализ',
+    topic: 'Разграничение причин постановки ТИРЕ в задании № 21',
+    frontWord: '1) Байкал — самое глубокое озеро. 2) Озеро Байкал — жемчужина Сибири — поражает чистотой.',
+    frontHint: 'В чём разница между тире между подлежащим и сказуемым и тире при приложении?',
+    backWord: '1) Тире между подлежащим и сказуемым; 2) Тире при обособленном приложении',
+    backRule: 'В задании 21 нельзя смешивать разные правила тире: 1) подлежащее и сказуемое (сущ. И.п. — сущ. И.п.); 2) приложение; 3) однородные с обобщающим словом; 4) БСП; 5) вводная/вставная конструкция; 6) неполное предложение; 7) прямая речь.',
+  },
+  // --- ЗАДАНИЕ 22: Средства выразительности ---
+  {
+    id: 'fc-22-1',
+    task: '22',
+    badge: 'Задание 22 • Тропы',
+    topic: 'Метафора vs Сравнение vs Олицетворение vs Метонимия',
+    frontWord: '«костёр рябины красной», «лес спит», «читал Пушкина», «точный как часы»',
+    frontHint: 'Как безошибочно различить главные тропы в задании 22 (2 балла)?',
+    backWord: 'Метафора (скрытое сравнение) / Олицетворение (неживое как живое) / Метонимия (смежность) / Сравнение (как, словно, будто или Т.п.)',
+    backRule: 'Метафора — перенос по сходству без союзов; Сравнение — с союзами «как, словно, будто, точно» или сущ. в Т.п.; Олицетворение — наделение неживого свойствами живого; Метонимия — замена по смежности (автор вместо книги, материал вместо изделия).',
+  },
+  {
+    id: 'fc-22-2',
+    task: '22',
+    badge: 'Задание 22 • Фигуры речи',
+    topic: 'Анафора vs Эпифора vs Парцелляция vs Градация',
+    frontWord: 'Единоначатие строк vs концовка vs разрыв точками vs нарастание',
+    frontHint: 'Синтаксические фигуры речи в задании № 22',
+    backWord: 'Анафора (в начале) / Эпифора (в конце) / Парцелляция (разрыв точкой) / Градация (нарастание/убывание)',
+    backRule: 'Анафора — повтор в начале соседних предложений/строк; Эпифора — повтор в конце; Парцелляция — намеренное расчленение единого предложения точками («Он ушёл. Навсегда. В ночь.»); Антитеза — резкое противопоставление.',
+  },
 ];
 
 const RAW_HOMOPHONE_PAIRS_BANK: HomophonePairItem[] = [
+  // --- ЗАДАНИЕ 4: Акцентные дуэли (Ударения) ---
+  {
+    id: 'pair-4-1',
+    task: '4',
+    topic: 'Ударения в причастиях и глаголах',
+    leftWordGap: 'включ..нный',
+    leftContext: '(в розетку яркий светильник)',
+    leftAns: 'Ё',
+    rightWordGap: 'включ..т',
+    rightContext: '(завтра утром отопление в доме)',
+    rightAns: 'И',
+    options: ['Ё / И', 'Е / Ю'],
+    correctOption: 'Ё / И',
+    explanation: 'В страдательных причастиях суффикс -ЁНН- всегда под ударением (включЁнный); в глаголах на -ИТЬ ударение на окончании (включИт).',
+  },
+  {
+    id: 'pair-4-2',
+    task: '4',
+    topic: 'Ударение в женском роде прошедшего времени',
+    leftWordGap: 'клал..',
+    leftContext: '(книги на верхнюю полку шкафа)',
+    leftAns: 'клАла',
+    rightWordGap: 'брал..',
+    rightContext: '(билеты в драматический театр)',
+    rightAns: 'бралА',
+    options: ['клАла / бралА', 'клалА / брАла'],
+    correctOption: 'клАла / бралА',
+    explanation: 'Исключение «клАла» (ударение на основу) vs общее правило женского рода «бралА» (ударение на окончание -А).',
+  },
+  // --- ЗАДАНИЕ 5: Паронимические дуэли ---
+  {
+    id: 'pair-5-1',
+    task: '5',
+    topic: 'Паронимы ЭФФЕКТНЫЙ vs ЭФФЕКТИВНЫЙ',
+    leftWordGap: 'эффект..ый',
+    leftContext: '(зрелищный акробатический прыжок)',
+    leftAns: 'ЭФФЕКТНЫЙ',
+    rightWordGap: 'эффект..ый',
+    rightContext: '(результативный метод лечения)',
+    rightAns: 'ЭФФЕКТИВНЫЙ',
+    options: ['ЭФФЕКТНЫЙ / ЭФФЕКТИВНЫЙ', 'ЭФФЕКТИВНЫЙ / ЭФФЕКТНЫЙ'],
+    correctOption: 'ЭФФЕКТНЫЙ / ЭФФЕКТИВНЫЙ',
+    explanation: 'Эффектный = производящий яркое впечатление; эффективный = действенный, дающий высокий результат.',
+  },
+  {
+    id: 'pair-5-2',
+    task: '5',
+    topic: 'Паронимы ДИПЛОМАТИЧНЫЙ vs ДИПЛОМАТИЧЕСКИЙ',
+    leftWordGap: 'дипломат..ый',
+    leftContext: '(тактичный уход от острого спора)',
+    leftAns: 'ДИПЛОМАТИЧНЫЙ',
+    rightWordGap: 'дипломат..ий',
+    rightContext: '(неприкосновенный паспорт посла)',
+    rightAns: 'ДИПЛОМАТИЧЕСКИЙ',
+    options: ['ДИПЛОМАТИЧНЫЙ / ДИПЛОМАТИЧЕСКИЙ', 'ДИПЛОМАТИЧЕСКИЙ / ДИПЛОМАТИЧНЫЙ'],
+    correctOption: 'ДИПЛОМАТИЧНЫЙ / ДИПЛОМАТИЧЕСКИЙ',
+    explanation: 'Дипломатичный = вежливый, тонкий в общении; дипломатический = относящийся к дипломатии как службе.',
+  },
+  {
+    id: 'pair-5-3',
+    task: '5',
+    topic: 'Паронимы АБОНЕНТ vs АБОНЕМЕНТ',
+    leftWordGap: 'абон..т',
+    leftContext: '(временно недоступен для звонка)',
+    leftAns: 'АБОНЕНТ',
+    rightWordGap: 'абон..т',
+    rightContext: '(годовой на посещение бассейна)',
+    rightAns: 'АБОНЕМЕНТ',
+    options: ['АБОНЕНТ / АБОНЕМЕНТ', 'АБОНЕМЕНТ / АБОНЕНТ'],
+    correctOption: 'АБОНЕНТ / АБОНЕМЕНТ',
+    explanation: 'Абонент — человек, пользователь услуги; абонемент — документ или карточка на посещение.',
+  },
+  // --- ЗАДАНИЕ 6: Лексические нормы ---
+  {
+    id: 'pair-6-1',
+    task: '6',
+    topic: 'Устойчивая лексическая сочетаемость',
+    leftWordGap: '[..] важную роль',
+    leftContext: 'в становлении молодого учёного',
+    leftAns: 'ИГРАТЬ',
+    rightWordGap: '[..] первостепенное значение',
+    rightContext: 'для безопасности полётов',
+    rightAns: 'ИМЕТЬ',
+    options: ['ИГРАТЬ / ИМЕТЬ', 'ИМЕТЬ / ИГРАТЬ'],
+    correctOption: 'ИГРАТЬ / ИМЕТЬ',
+    explanation: 'Нормативные сочетания: «играть роль» и «иметь значение». Смешение «играть значение» — грубая лексическая ошибка.',
+  },
+  // --- ЗАДАНИЕ 7: Морфологические нормы ---
+  {
+    id: 'pair-7-1',
+    task: '7',
+    topic: 'Родительный падеж мн. ч.: ЧУЛОК vs НОСКОВ',
+    leftWordGap: 'пара тёплых (чулки)',
+    leftContext: 'правило длины: длинное изделие → короткое окончание',
+    leftAns: 'ЧУЛОК',
+    rightWordGap: 'пара шерстяных (носки)',
+    rightContext: 'правило длины: короткое изделие → длинное окончание',
+    rightAns: 'НОСКОВ',
+    options: ['ЧУЛОК / НОСКОВ', 'ЧУЛКОВ / НОСОК'],
+    correctOption: 'ЧУЛОК / НОСКОВ',
+    explanation: 'В Р.п. мн. ч. нормативны формы: нет чулок (нулевое окончание), но нет носков (окончание -ОВ).',
+  },
+  // --- ЗАДАНИЕ 8: Синтаксические нормы ---
+  {
+    id: 'pair-8-1',
+    task: '8',
+    topic: 'Несогласованное приложение с родовым словом и без него',
+    leftWordGap: 'В романе [..] Пушкин показал эпоху',
+    leftContext: 'есть родовое слово «в романе»',
+    leftAns: '«Евгений Онегин»',
+    rightWordGap: 'В [..] Пушкин показал эпоху',
+    rightContext: 'нет родового слова «в романе»',
+    rightAns: '«Евгении Онегине»',
+    options: ['«Евгений Онегин» / «Евгении Онегине»', '«Евгении Онегине» / «Евгений Онегин»'],
+    correctOption: '«Евгений Онегин» / «Евгении Онегине»',
+    explanation: 'При наличии родового слова («в романе») название в кавычках стоит в И.п.; без родового слова название склоняется.',
+  },
+  // --- ЗАДАНИЯ 16–22: Пунктуация и Выразительность ---
+  {
+    id: 'pair-16-1',
+    task: '16',
+    topic: 'ССП с общим второстепенным членом vs без него',
+    leftWordGap: 'Весной тает снег [..] бегут ручьи',
+    leftContext: 'общее обстоятельство времени «Весной»',
+    leftAns: 'БЕЗ ЗАПЯТОЙ',
+    rightWordGap: 'Тает снег [..] звонко бегут ручьи',
+    rightContext: 'нет общего второстепенного члена',
+    rightAns: 'ЗАПЯТАЯ',
+    options: ['БЕЗ ЗАПЯТОЙ / ЗАПЯТАЯ', 'ЗАПЯТАЯ / БЕЗ ЗАПЯТОЙ'],
+    correctOption: 'БЕЗ ЗАПЯТОЙ / ЗАПЯТАЯ',
+    explanation: 'Общий второстепенный член «Весной» отменяет запятую перед И в ССП.',
+  },
+  {
+    id: 'pair-17-1',
+    task: '17',
+    topic: 'Причастный оборот ДО и ПОСЛЕ определяемого слова',
+    leftWordGap: 'Озарённый солнцем [..] лес проснулся',
+    leftContext: 'оборот стоит ПЕРЕД существительным «лес»',
+    leftAns: 'БЕЗ ЗАПЯТОЙ',
+    rightWordGap: 'Лес [..] озарённый солнцем, проснулся',
+    rightContext: 'оборот стоит ПОСЛЕ существительного «лес»',
+    rightAns: 'ЗАПЯТАЯ',
+    options: ['БЕЗ ЗАПЯТОЙ / ЗАПЯТАЯ', 'ЗАПЯТАЯ / БЕЗ ЗАПЯТОЙ'],
+    correctOption: 'БЕЗ ЗАПЯТОЙ / ЗАПЯТАЯ',
+    explanation: 'Причастный оборот после определяемого существительного обособляется, а перед ним — нет.',
+  },
+  {
+    id: 'pair-18-1',
+    task: '18',
+    topic: 'Омонимия вводного слова ОДНАКО и союза ОДНАКО (= НО)',
+    leftWordGap: 'Мы устали, [..] продолжили путь',
+    leftContext: 'стоит в начале второй части (= союзу НО)',
+    leftAns: 'СОЮЗ (1 запятая)',
+    rightWordGap: 'Погода, [..] , скоро испортилась',
+    rightContext: 'стоит внутри предложения',
+    rightAns: 'ВВОДНОЕ (2 запятые)',
+    options: ['СОЮЗ (1 запятая) / ВВОДНОЕ (2 запятые)', 'ВВОДНОЕ (2 запятые) / СОЮЗ (1 запятая)'],
+    correctOption: 'СОЮЗ (1 запятая) / ВВОДНОЕ (2 запятые)',
+    explanation: 'Если «однако» заменяется на «но» на стыке частей — это союз. В середине предложения — вводное слово, выделяемое с двух сторон.',
+  },
+  {
+    id: 'pair-19-1',
+    task: '19',
+    topic: 'Граница придаточного со словом КОТОРЫЙ',
+    leftWordGap: 'Дом [..] в котором мы жили',
+    leftContext: 'придаточное начинается с предлога «в котором»',
+    leftAns: 'ЗАПЯТАЯ',
+    rightWordGap: 'Дом, крыша [..] была красной',
+    rightContext: 'слово «которого» зависит от «крыша»',
+    rightAns: 'БЕЗ ЗАПЯТОЙ',
+    options: ['ЗАПЯТАЯ / БЕЗ ЗАПЯТОЙ', 'БЕЗ ЗАПЯТОЙ / ЗАПЯТАЯ'],
+    correctOption: 'ЗАПЯТАЯ / БЕЗ ЗАПЯТОЙ',
+    explanation: 'В конструкции «дом, крыша которого...» запятая ставится перед «крыша», а перед «которого» запятая НЕ ставится!',
+  },
+  {
+    id: 'pair-20-1',
+    task: '20',
+    topic: 'Стык союзов ЧТО ЕСЛИ: правило второй части ТО',
+    leftWordGap: 'Я знаю, что [..] верить, мечта сбудется',
+    leftContext: 'после придаточного НЕТ слова «ТО»',
+    leftAns: 'ЗАПЯТАЯ',
+    rightWordGap: 'Я знаю, что [..] верить, ТО мечта сбудется',
+    rightContext: 'после придаточного ЕСТЬ слово «ТО»',
+    rightAns: 'БЕЗ ЗАПЯТОЙ',
+    options: ['ЗАПЯТАЯ / БЕЗ ЗАПЯТОЙ', 'БЕЗ ЗАПЯТОЙ / ЗАПЯТАЯ'],
+    correctOption: 'ЗАПЯТАЯ / БЕЗ ЗАПЯТОЙ',
+    explanation: 'На стыке союзов запятая ставится только при отсутствии продолжения ТО, НО, ТАК.',
+  },
+  {
+    id: 'pair-21-1',
+    task: '21',
+    topic: 'Правила постановки ТИРЕ в задании № 21',
+    leftWordGap: 'Байкал — древнейшее озеро планеты',
+    leftContext: 'оба главных члена выражены сущ. в И.п.',
+    leftAns: 'ПОДЛЕЖ. И СКАЗ.',
+    rightWordGap: 'Байкал — гордость Сибири — удивителен',
+    rightContext: 'пояснение к подлежащему с двух сторон',
+    rightAns: 'ПРИЛОЖЕНИЕ',
+    options: ['ПОДЛЕЖ. И СКАЗ. / ПРИЛОЖЕНИЕ', 'ПРИЛОЖЕНИЕ / ПОДЛЕЖ. И СКАЗ.'],
+    correctOption: 'ПОДЛЕЖ. И СКАЗ. / ПРИЛОЖЕНИЕ',
+    explanation: 'В первом случае тире связывает подлежащее и сказуемое; во втором — выделяет обособленное приложение.',
+  },
+  {
+    id: 'pair-22-1',
+    task: '22',
+    topic: 'Синтаксические фигуры: АНАФОРА vs ЭПИФОРА',
+    leftWordGap: 'Клянусь я первым днём... Клянусь его последним...',
+    leftContext: 'повтор слов в НАЧАЛЕ соседних строк',
+    leftAns: 'АНАФОРА',
+    rightWordGap: 'Мне бы хотелось знать, отчего я титулярный советник? Почему именно титулярный советник?',
+    rightContext: 'повтор слов в КОНЦЕ соседних предложений',
+    rightAns: 'ЭПИФОРА',
+    options: ['АНАФОРА / ЭПИФОРА', 'ЭПИФОРА / АНАФОРА'],
+    correctOption: 'АНАФОРА / ЭПИФОРА',
+    explanation: 'Анафора — единоначатие; эпифора — повтор концовок.',
+  },
   // --- ЗАДАНИЕ 9: Омонимичные корни ---
   {
     id: 'pair-1',
@@ -2053,6 +2689,20 @@ const RAW_HOMOPHONE_PAIRS_BANK: HomophonePairItem[] = [
     correctOption: 'Н / НН',
     explanation: '«воспитана бабушкой» (краткое причастие = её воспитали) — одна Н; «умна и воспитанна» (краткое прил. от благовоспитанная) — две НН.',
   },
+  {
+    id: 'pair-22-2',
+    task: '22',
+    topic: 'Фигуры речи: Анафора vs Эпифора',
+    leftWordGap: 'Клянусь я первым днём творенья, / Клянусь его последним днём — (..)',
+    leftContext: 'единоначатие строк',
+    leftAns: 'АНАФОРА',
+    rightWordGap: 'Мне бы хотелось знать, отчего я титулярный советник? Почему именно титулярный советник? — (..)',
+    rightContext: 'повтор концовки предложений',
+    rightAns: 'ЭПИФОРА',
+    options: ['АНАФОРА / ЭПИФОРА', 'ЭПИФОРА / АНАФОРА'],
+    correctOption: 'АНАФОРА / ЭПИФОРА',
+    explanation: 'Анафора — единоначатие (повтор слов в начале соседних строк или предложений); эпифора — повтор одних и тех же слов в конце соседних предложений.',
+  },
 ];
 
 // Deterministic balanced pattern (50/50 split, max 2 consecutive identical indices)
@@ -2495,14 +3145,29 @@ export function getTrainerBank() {
   const seenFipiSignatures = new Set<string>();
   const wordsInAuthenticFipi = new Set<string>();
 
-  // 1. Add authentic whole tasks from FIPI 2026-2027 demo and Shkolkovo (strictly deduplicated)
+  // 1. Add authentic whole tasks from FIPI 2026-2027 demo, NeoFamily and Shkolkovo (strictly deduplicated)
   if (Array.isArray(PARSED_FIPI_QUESTIONS)) {
     for (const rawFq of PARSED_FIPI_QUESTIONS) {
-      if (rawFq.task !== '15' && rawFq.rows.length !== 5) continue;
-      if (rawFq.correctIndices.some((c) => c < 1 || c > rawFq.rows.length)) continue;
+      const isFiveRowTask = ['4', '9', '10', '11', '12', '13', '14', '16'].includes(rawFq.task);
+      if (isFiveRowTask && rawFq.rows.length !== 5) continue;
+      if (['8', '21', '22'].includes(rawFq.task) && (rawFq.rows.length < 4 || rawFq.rows.length > 9)) continue;
+      if (['15', '17', '18', '19', '20'].includes(rawFq.task) && rawFq.rows.length < 2) continue;
+      if (!Array.isArray(rawFq.rows) || rawFq.rows.length === 0) continue;
+      if (!Array.isArray(rawFq.correctIndices) || rawFq.correctIndices.length === 0) continue;
+      const isMatchingGrid =
+        rawFq.questionKind === 'matching_grid' || ['8', '22'].includes(rawFq.task);
+      if (isMatchingGrid) {
+        if (rawFq.correctIndices.some((c) => c < 1 || c > 9)) continue;
+      } else {
+        if (rawFq.correctIndices.some((c) => c < 1 || c > rawFq.rows.length)) continue;
+      }
 
-      let rule = cleanQuestionRule(rawFq.rule, rawFq.task);
-      let sentence = rawFq.task === '15' ? resolveTask15Sentence(rawFq) : undefined;
+      const rule = cleanQuestionRule(rawFq.rule, rawFq.task);
+      const isNumberedGapTask = ['15', '17', '18', '19', '20'].includes(rawFq.task);
+      const sentence =
+        rawFq.task === '15'
+          ? resolveTask15Sentence(rawFq)
+          : (rawFq as any).sentence || (isNumberedGapTask ? rawFq.instruction : undefined);
 
       const rows: FipiRow[] = rawFq.rows.map((r) => ({
         ...r,
@@ -2511,15 +3176,26 @@ export function getTrainerBank() {
         explanation: cleanExplanation(r.explanation),
       }));
 
+      const questionKind =
+        rawFq.questionKind ||
+        (['5', '6', '7'].includes(rawFq.task)
+          ? 'word_input'
+          : ['8', '22'].includes(rawFq.task)
+          ? 'matching_grid'
+          : isNumberedGapTask
+          ? 'numbered_gaps'
+          : 'rows');
+
       const fq: FipiQuestion = {
         ...rawFq,
+        questionKind,
         rule,
         instruction: sentence || rawFq.instruction,
-        sentence: sentence || (rawFq as any).sentence,
+        sentence,
         rows,
       };
 
-      const sig = fq.rows.map((r) => r.words.join('|')).join('||');
+      const sig = `${fq.task}:${(fq.sentence || '').slice(0, 80)}:` + fq.rows.map((r) => r.words.join('|')).join('||');
       if (seenFipiSignatures.has(sig)) continue;
       seenFipiSignatures.add(sig);
       fipiQuestions.push(fq);
@@ -2532,15 +3208,18 @@ export function getTrainerBank() {
     }
   }
 
-  // 2. Add unique sprint questions (5000+ unique words) with smart competing options
+  // 2. Add unique sprint questions (28,000+ unique items across tasks 4–22)
   const seenSprintKeys = new Set<string>();
   const seenTrapStems = new Set<string>();
 
   if (Array.isArray(PARSED_SPRINT_QUESTIONS)) {
     for (let i = 0; i < PARSED_SPRINT_QUESTIONS.length; i++) {
       const rawSq = PARSED_SPRINT_QUESTIONS[i];
-      if (!rawSq.prefix && rawSq.task !== '13' && rawSq.task !== '14') continue;
-      const stemKey = `${rawSq.task}:${rawSq.prefix.toLowerCase().trim()}..${rawSq.suffix.toLowerCase().trim()}`;
+      const isOrthoTask = ['9', '10', '11', '12', '13', '14', '15'].includes(rawSq.task);
+      if (isOrthoTask && !rawSq.prefix && rawSq.task !== '13' && rawSq.task !== '14') continue;
+      const stemKey = isOrthoTask
+        ? `${rawSq.task}:${rawSq.prefix.toLowerCase().trim()}..${rawSq.suffix.toLowerCase().trim()}`
+        : `${rawSq.task}:${rawSq.id || i}:${(rawSq.context || '').toLowerCase().slice(0, 60)}`;
       if (seenSprintKeys.has(stemKey)) continue;
       seenSprintKeys.add(stemKey);
 
@@ -2558,18 +3237,22 @@ export function getTrainerBank() {
         Boolean(rawSq.isTrap)
       );
 
-      const smartBaseOpts = getSmartChoiceOptions(
-        rawSq.task,
-        rawSq.answer,
-        rawSq.prefix,
-        rawSq.suffix
-      );
+      const hasPrebuiltOpts =
+        !isOrthoTask && Array.isArray(rawSq.options) && rawSq.options.length >= 2;
+      const smartBaseOpts: [string, string] = hasPrebuiltOpts
+        ? [rawSq.options[0], rawSq.options[1]]
+        : getSmartChoiceOptions(
+            rawSq.task,
+            rawSq.answer,
+            rawSq.prefix,
+            rawSq.suffix
+          );
       const isTrap = Boolean(rawSq.isTrap || classified.isTrap);
       const sq: SprintQuestion = {
         ...rawSq,
         context: cleanedContext,
         explanation: cleanedExplanation,
-        topic: classified.topic,
+        topic: rawSq.topic && !isOrthoTask ? rawSq.topic : classified.topic,
         rule: classified.rule || cleanedRule,
         isTrap,
         options: orderOptionsDeterministically(smartBaseOpts, rawSq.answer, sprintQuestions.length),
@@ -2578,7 +3261,7 @@ export function getTrainerBank() {
       byId.set(sq.id, sq);
 
       const trapStem = `${sq.task}:${sq.prefix.toLowerCase().trim()}..${sq.suffix.toLowerCase().trim()}`;
-      if (isTrap && trapQuestions.length < 120 && !seenTrapStems.has(trapStem)) {
+      if (isTrap && trapQuestions.length < 160 && !seenTrapStems.has(trapStem)) {
         seenTrapStems.add(trapStem);
         trapQuestions.push(sq);
       }
@@ -2623,7 +3306,7 @@ export function getTrainerBank() {
       byId.set(q.id, q);
 
       const trapStem = `${q.task}:${prefix.toLowerCase().trim()}..${suffix.toLowerCase().trim()}`;
-      if (classified.isTrap && trapQuestions.length < 120 && !seenTrapStems.has(trapStem)) {
+      if (classified.isTrap && trapQuestions.length < 160 && !seenTrapStems.has(trapStem)) {
         seenTrapStems.add(trapStem);
         trapQuestions.push(q);
       }
@@ -2639,11 +3322,8 @@ export function getTrainerBank() {
     }
   }
 
-  // 4. Build additional non-overlapping 5-row FIPI tasks from the full unique sprintQuestions pool
-  for (const task of TASK_IDS) {
-    // Task 15 is strictly authentic sentence questions with numbered gap badges; never synthesize artificial 5x3 row questions
-    if (task === '15') continue;
-
+  // 4. Build additional non-overlapping 5-row FIPI tasks for orthography 9–14 from the sprintQuestions pool
+  for (const task of ['9', '10', '11', '12', '13', '14'] as TaskId[]) {
     const taskGroups = COMPACT_GROUPS.filter((g) => g.task === task);
     const taskSprintItems = sprintQuestions.filter((sq) => sq.task === task);
 
@@ -2745,13 +3425,14 @@ export function getTrainerBank() {
       const fq: FipiQuestion = {
         id: `fipi-${task}-${setNum}`,
         kind: 'fipi',
+        questionKind: 'rows',
         task,
         topic: TASK_META[task].title,
         rule: taskGroups[0]?.rule || '',
         rows,
         correctIndices,
       };
-      const sig = fq.rows.map((r) => r.words.join('|')).join('||');
+      const sig = `${fq.task}::` + fq.rows.map((r) => r.words.join('|')).join('||');
       if (!seenFipiSignatures.has(sig)) {
         seenFipiSignatures.add(sig);
         fipiQuestions.push(fq);
@@ -2760,7 +3441,7 @@ export function getTrainerBank() {
     }
   }
 
-  // Build 35 full authentic KIM Variants (each containing 1 FipiQuestion for tasks 9, 10, 11, 12, 13, 14, 15)
+  // Build 35 full authentic KIM Variants (each containing 1 FipiQuestion for all 19 tasks 4–22)
   const kimVariants: KimVariant[] = [];
   for (let v = 1; v <= 35; v++) {
     const tasksMap = {} as Record<TaskId, FipiQuestion>;
@@ -2779,10 +3460,10 @@ export function getTrainerBank() {
     }
     const variantTitle =
       v === 1
-        ? 'Вариант КИМ № 1 (ФИПИ 2026–2027 Демоверсия)'
+        ? 'Вариант КИМ № 1 (ФИПИ 2026–2027 Демоверсия · Задания 4–22)'
         : v === 2
-        ? 'Вариант КИМ № 2 (ФИПИ 2025 Демоверсия)'
-        : `Вариант КИМ № ${v} (Дощинский-2026 / ФИПИ)`;
+        ? 'Вариант КИМ № 2 (ФИПИ 2026 Открытый банк · Задания 4–22)'
+        : `Вариант КИМ № ${v} (Дощинский / ФИПИ · Задания 4–22)`;
 
     kimVariants.push({
       id: `kim-var-${v}`,
@@ -2801,9 +3482,24 @@ export function getTrainerBank() {
   return cachedQuestionBank;
 }
 
+export function createDefaultEnabledTasks(): Record<TaskId, boolean> {
+  const map = {} as Record<TaskId, boolean>;
+  for (const id of TASK_IDS) {
+    map[id] = true;
+  }
+  return map;
+}
+
 export function createInitialState(): TrainerState {
+  const quantities = {} as Record<TaskId, number>;
+  const taskStats = {} as Record<TaskId, TaskMasteryStat>;
+  for (const id of TASK_IDS) {
+    quantities[id] = ['9', '10', '11', '12', '13', '14', '15'].includes(id) ? 5 : 3;
+    taskStats[id] = { solved: 0, correct: 0 };
+  }
   return {
-    quantities: { '9': 5, '10': 5, '11': 5, '12': 5, '13': 5, '14': 5, '15': 5 },
+    quantities,
+    enabledTasks: createDefaultEnabledTasks(),
     workoutMode: 'sprint',
     isShuffled: true,
     totalSolved: 0,
@@ -2815,15 +3511,7 @@ export function createInitialState(): TrainerState {
     bestStreak: 0,
     bestBlitz60: 0,
     bestSurvival: 0,
-    taskStats: {
-      '9': { solved: 0, correct: 0 },
-      '10': { solved: 0, correct: 0 },
-      '11': { solved: 0, correct: 0 },
-      '12': { solved: 0, correct: 0 },
-      '13': { solved: 0, correct: 0 },
-      '14': { solved: 0, correct: 0 },
-      '15': { solved: 0, correct: 0 },
-    },
+    taskStats,
     errorBank: [],
     sessionJournal: [],
     darkMode: false,
@@ -2841,8 +3529,14 @@ export function stepTaskQty(current: number, delta: number): number {
   return clampTaskQty(current + delta);
 }
 
-export function calculateTotalPlanned(quantities: Record<TaskId, number>): number {
-  return TASK_IDS.reduce((sum, id) => sum + clampTaskQty(quantities[id] || 0), 0);
+export function calculateTotalPlanned(
+  quantities: Partial<Record<TaskId, number>>,
+  enabledTasks?: Partial<Record<TaskId, boolean>>
+): number {
+  return TASK_IDS.reduce((sum, id) => {
+    if (enabledTasks && enabledTasks[id] === false) return sum;
+    return sum + clampTaskQty(quantities[id] || 0);
+  }, 0);
 }
 
 export function calculateAccuracyPercent(correct: number, total: number): number {
@@ -2850,15 +3544,99 @@ export function calculateAccuracyPercent(correct: number, total: number): number
   return Math.round((correct / total) * 100);
 }
 
-export function normalizeKimDigits(raw: string): string {
+export function normalizeKimDigits(raw: string, maxDigit = 5): string {
+  const regex = new RegExp(`[^1-${maxDigit}]`, 'g');
   const digits = Array.from(
     new Set(
       String(raw || '')
-        .replace(/[^1-5]/g, '')
+        .replace(regex, '')
         .split('')
     )
   ).sort();
   return digits.join('');
+}
+
+export function normalizeWordAnswer(raw: string): string {
+  return String(raw || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^а-яa-z0-9]/gi, '')
+    .trim();
+}
+
+export function checkFipiQuestionAnswer(
+  q: FipiQuestion,
+  userRawInput: string | number[]
+): {
+  isCorrect: boolean;
+  pointsEarned: number;
+  maxPoints: number;
+  correctAnswerDisplay: string;
+  userAnswerDisplay: string;
+} {
+  const maxPoints = TASK_META[q.task]?.maxPoints || (['8', '22'].includes(q.task) ? 2 : 1);
+  const kind =
+    q.questionKind ||
+    (['5', '6', '7'].includes(q.task)
+      ? 'word_input'
+      : ['8', '22'].includes(q.task)
+      ? 'matching_grid'
+      : 'rows');
+
+  if (kind === 'word_input') {
+    const validAnswers =
+      Array.isArray(q.textAnswers) && q.textAnswers.length > 0
+        ? q.textAnswers
+        : [q.rows.find((r) => r.isCorrectRow)?.letter || ''];
+    const normalizedValid = validAnswers.map(normalizeWordAnswer).filter(Boolean);
+    const userStr = Array.isArray(userRawInput) ? userRawInput.join('') : String(userRawInput || '');
+    const normalizedUser = normalizeWordAnswer(userStr);
+    const isCorrect = normalizedUser.length > 0 && normalizedValid.includes(normalizedUser);
+    return {
+      isCorrect,
+      pointsEarned: isCorrect ? maxPoints : 0,
+      maxPoints,
+      correctAnswerDisplay: (validAnswers[0] || '').toUpperCase(),
+      userAnswerDisplay: userStr.trim().toUpperCase() || '—',
+    };
+  }
+
+  if (kind === 'matching_grid') {
+    const targetDigits = q.correctIndices.map(String);
+    const targetStr = targetDigits.join('');
+    const rawStr = Array.isArray(userRawInput)
+      ? userRawInput.map((d) => (d > 0 ? String(d) : '_')).join('')
+      : String(userRawInput || '').replace(/\D/g, '');
+    let matchCount = 0;
+    for (let i = 0; i < 5; i++) {
+      if (rawStr[i] && rawStr[i] === targetDigits[i]) {
+        matchCount++;
+      }
+    }
+    const isCorrect = matchCount === 5 && rawStr.replace(/\D/g, '').length === 5;
+    const pointsEarned = isCorrect ? 2 : matchCount >= 3 ? 1 : 0;
+    return {
+      isCorrect,
+      pointsEarned,
+      maxPoints: 2,
+      correctAnswerDisplay: targetStr,
+      userAnswerDisplay: rawStr || '—',
+    };
+  }
+
+  // Standard multi-digit sorted answer (4, 9–21)
+  const correctStr = q.correctIndices.slice().sort((a, b) => a - b).join('');
+  const userStr = Array.isArray(userRawInput)
+    ? userRawInput.slice().sort((a, b) => a - b).join('')
+    : normalizeKimDigits(String(userRawInput || ''), 9);
+  const isCorrect = userStr.length > 0 && userStr === correctStr;
+  return {
+    isCorrect,
+    pointsEarned: isCorrect ? 1 : 0,
+    maxPoints: 1,
+    correctAnswerDisplay: correctStr,
+    userAnswerDisplay: userStr || '—',
+  };
 }
 
 export function shuffleArray<T>(items: T[]): T[] {
@@ -2894,7 +3672,12 @@ export function balanceSprintQuestionsList(questions: SprintQuestion[]): SprintQ
   let streak = 0;
 
   return arr.map((q) => {
-    const baseOpts = getSmartChoiceOptions(q.task, q.answer, q.prefix, q.suffix);
+    const isOrthoTask = ['9', '10', '11', '12', '13', '14', '15'].includes(q.task);
+    const baseOpts: [string, string] =
+      !isOrthoTask && Array.isArray(q.options) && q.options.length >= 2
+        ? [q.options[0], q.options[1]]
+        : getSmartChoiceOptions(q.task, q.answer, q.prefix, q.suffix);
+
     if (q.task === '13' || baseOpts[0] === 'СЛИТНО') {
       const btnIdx = q.answer === 'СЛИТНО' ? 0 : 1;
       if (btnIdx === lastBtnIdx) {
@@ -2932,6 +3715,11 @@ export function balanceSprintQuestionsList(questions: SprintQuestion[]): SprintQ
 
 // Track recently served IDs across consecutive workouts so users never see repeats between runs
 const recentSprintIdsByTask: Record<TaskId, Set<string>> = {
+  '4': new Set(),
+  '5': new Set(),
+  '6': new Set(),
+  '7': new Set(),
+  '8': new Set(),
   '9': new Set(),
   '10': new Set(),
   '11': new Set(),
@@ -2939,9 +3727,21 @@ const recentSprintIdsByTask: Record<TaskId, Set<string>> = {
   '13': new Set(),
   '14': new Set(),
   '15': new Set(),
+  '16': new Set(),
+  '17': new Set(),
+  '18': new Set(),
+  '19': new Set(),
+  '20': new Set(),
+  '21': new Set(),
+  '22': new Set(),
 };
 
 const recentFipiIdsByTask: Record<TaskId, Set<string>> = {
+  '4': new Set(),
+  '5': new Set(),
+  '6': new Set(),
+  '7': new Set(),
+  '8': new Set(),
   '9': new Set(),
   '10': new Set(),
   '11': new Set(),
@@ -2949,21 +3749,34 @@ const recentFipiIdsByTask: Record<TaskId, Set<string>> = {
   '13': new Set(),
   '14': new Set(),
   '15': new Set(),
+  '16': new Set(),
+  '17': new Set(),
+  '18': new Set(),
+  '19': new Set(),
+  '20': new Set(),
+  '21': new Set(),
+  '22': new Set(),
 };
 
 export function buildWorkoutQueue(
-  quantities: Record<TaskId, number>,
+  quantities: Partial<Record<TaskId, number>>,
   mode: WorkoutMode,
-  options?: { randomize?: boolean; shuffleTasks?: boolean }
+  options?: {
+    randomize?: boolean;
+    shuffleTasks?: boolean;
+    enabledTasks?: Partial<Record<TaskId, boolean>>;
+  }
 ): TrainerQuestion[] {
   const bank = getTrainerBank();
   const queue: TrainerQuestion[] = [];
   const randomize = options?.randomize !== false;
+  const enabledTasks = options?.enabledTasks;
 
   const sessionUsedWordStems = new Set<string>();
   const sessionUsedQuestionIds = new Set<string>();
 
   for (const task of TASK_IDS) {
+    if (enabledTasks && enabledTasks[task] === false) continue;
     const count = clampTaskQty(quantities[task] || 0);
     if (count <= 0) continue;
 
@@ -3049,7 +3862,7 @@ export function buildWorkoutQueue(
       for (const sq of candidates) {
         if (pickedSprint.length >= sprintNeed) break;
         if (sessionUsedQuestionIds.has(sq.id)) continue;
-        const stem = `${sq.task}:${sq.prefix.toLowerCase().trim()}..${sq.suffix.toLowerCase().trim()}`;
+        const stem = `${sq.task}:${sq.prefix.toLowerCase().trim()}..${sq.suffix.toLowerCase().trim()}:${(sq.context || '').slice(0, 35)}`;
         if (sessionUsedWordStems.has(stem)) continue;
         pickedSprint.push(sq);
         sessionUsedQuestionIds.add(sq.id);
@@ -3057,7 +3870,7 @@ export function buildWorkoutQueue(
         sessionUsedWordStems.add(stem);
       }
 
-      // Fallback only if bank doesn't have enough unseen stems (unlikely with 1000+ words)
+      // Fallback only if bank doesn't have enough unseen stems
       if (pickedSprint.length < sprintNeed) {
         for (const sq of candidates) {
           if (pickedSprint.length >= sprintNeed) break;
@@ -3131,26 +3944,29 @@ export function applyAnswerToState(
 
   let updatedErrorBank = [...state.errorBank];
   if (!isCorrect) {
+    const isOrthoSprint = ['9', '10', '11', '12', '13', '14', '15'].includes(question.task);
     const entry: ErrorBankEntry =
       question.kind === 'sprint'
         ? {
             id: `err-${question.id}`,
             task: question.task,
             topic: question.topic,
-            wordDisplay:
-              question.task === '13'
-                ? `${question.prefix} ${question.suffix}`
-                : question.task === '14'
-                ? `${question.prefix} ${question.suffix}`
-                : `${question.prefix}..${question.suffix}`,
-            correctWord:
-              question.task === '13'
-                ? question.answer === 'СЛИТНО'
-                  ? `${question.prefix.replace(/[()]/g, '')}${question.suffix}`
-                  : `${question.prefix.replace(/[()]/g, '')} ${question.suffix}`
-                : question.task === '14'
-                ? formatTask14SolvedWord(question.prefix, question.suffix, question.answer)
-                : `${question.prefix}${question.answer.toLowerCase()}${question.suffix}`,
+            wordDisplay: !isOrthoSprint
+              ? `${question.prefix} ${question.suffix}`.trim() || question.context.slice(0, 65)
+              : question.task === '13'
+              ? `${question.prefix} ${question.suffix}`
+              : question.task === '14'
+              ? `${question.prefix} ${question.suffix}`
+              : `${question.prefix}..${question.suffix}`,
+            correctWord: !isOrthoSprint
+              ? question.answer
+              : question.task === '13'
+              ? question.answer === 'СЛИТНО'
+                ? `${question.prefix.replace(/[()]/g, '')}${question.suffix}`
+                : `${question.prefix.replace(/[()]/g, '')} ${question.suffix}`
+              : question.task === '14'
+              ? formatTask14SolvedWord(question.prefix, question.suffix, question.answer)
+              : `${question.prefix}${question.answer.toLowerCase()}${question.suffix}`,
             userChoice: userChoiceLabel,
             correctChoice: question.answer,
             context: question.context,
@@ -3166,12 +3982,20 @@ export function applyAnswerToState(
             wordDisplay: `Задание № ${question.task} · ФИПИ`,
             correctWord: `Задание № ${question.task} (ФИПИ)`,
             userChoice: userChoiceLabel,
-            correctChoice: question.correctIndices.join(''),
-            context: `Подходят строки: ${question.correctIndices.join(', ')}`,
+            correctChoice:
+              question.textAnswers && question.textAnswers.length > 0
+                ? question.textAnswers[0].toUpperCase()
+                : question.correctIndices.join(''),
+            context:
+              question.questionKind === 'word_input'
+                ? `Правильное слово: ${(question.textAnswers?.[0] || '').toUpperCase()}`
+                : question.questionKind === 'matching_grid'
+                ? `Соответствие АБВГД: ${question.correctIndices.join('')}`
+                : `Подходят варианты: ${question.correctIndices.join(', ')}`,
             explanation: question.rows
               .map((r, idx) =>
                 r.isCorrectRow
-                  ? `Строка ${idx + 1} (${r.letter}): ${r.solvedWords.join(', ')}`
+                  ? `Пункт ${idx + 1} (${r.letter}): ${r.solvedWords.join(', ')}`
                   : null
               )
               .filter(Boolean)
@@ -3184,7 +4008,7 @@ export function applyAnswerToState(
     updatedErrorBank = [
       entry,
       ...updatedErrorBank.filter((e) => e.questionId !== question.id),
-    ].slice(0, 100);
+    ].slice(0, 120);
   } else {
     updatedErrorBank = updatedErrorBank.filter((e) => e.questionId !== question.id);
   }
@@ -3215,8 +4039,9 @@ export function applyAnswerToState(
 
 export function encodeBackupCode(state: TrainerState): string {
   const compact = {
-    v: 27,
+    v: 28,
     q: TASK_IDS.map((id) => state.quantities[id] || 0),
+    en: TASK_IDS.map((id) => (state.enabledTasks?.[id] === false ? 0 : 1)),
     m: state.workoutMode,
     sh: state.isShuffled ? 1 : 0,
     ts: state.totalSolved,
@@ -3274,17 +4099,24 @@ export function decodeBackupCode(
     }
     const json = new TextDecoder().decode(bytes);
     const data = JSON.parse(json);
-    if (!data || data.v !== 27 || !Array.isArray(data.q)) return null;
+    if (!data || (data.v !== 27 && data.v !== 28) || !Array.isArray(data.q)) return null;
 
     const bank = getTrainerBank();
     const quantities: Record<TaskId, number> = { ...fallbackState.quantities };
-    TASK_IDS.forEach((id, i) => {
+    const enabledTasks: Record<TaskId, boolean> = { ...fallbackState.enabledTasks };
+    const idList: TaskId[] =
+      data.v === 27 ? ['9', '10', '11', '12', '13', '14', '15'] : TASK_IDS;
+
+    idList.forEach((id, i) => {
       quantities[id] = clampTaskQty(Number(data.q[i] ?? 5));
+      if (Array.isArray(data.en) && data.en[i] !== undefined) {
+        enabledTasks[id] = Boolean(data.en[i]);
+      }
     });
 
     const taskStats: Record<TaskId, TaskMasteryStat> = { ...fallbackState.taskStats };
     if (Array.isArray(data.ks)) {
-      TASK_IDS.forEach((id, i) => {
+      idList.forEach((id, i) => {
         const pair = data.ks[i];
         if (Array.isArray(pair)) {
           taskStats[id] = {
@@ -3373,6 +4205,7 @@ export function decodeBackupCode(
     return {
       ...fallbackState,
       quantities,
+      enabledTasks,
       workoutMode: data.m === 'fipi' || data.m === 'mixed' ? data.m : 'sprint',
       isShuffled: data.sh === undefined ? true : Boolean(data.sh),
       totalSolved: Math.max(0, Number(data.ts || 0)),

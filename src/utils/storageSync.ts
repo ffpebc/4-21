@@ -1,6 +1,7 @@
 import {
   TrainerState,
   createInitialState,
+  createDefaultEnabledTasks,
   encodeBackupCode,
   decodeBackupCode,
 } from './trainerLogic';
@@ -19,6 +20,10 @@ export function sanitizeLoadedState(state: TrainerState): TrainerState {
   return {
     ...state,
     isShuffled: typeof state.isShuffled === 'boolean' ? state.isShuffled : true,
+    enabledTasks: {
+      ...createDefaultEnabledTasks(),
+      ...(state.enabledTasks || {}),
+    },
     errorBank: state.errorBank.map((entry) => ({
       ...entry,
       explanation: cleanDisplayText(

@@ -18,6 +18,9 @@ import {
   cleanExplanation,
   cleanQuestionRule,
   resolveTask15Sentence,
+  checkFipiQuestionAnswer,
+  TASK_IDS,
+  TASK_BLOCKS,
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
@@ -45,17 +48,19 @@ test('FIPI bank generates sprint questions + FIPI sets + KIM variants + flashcar
   assert.equal(distinctAnswers.size >= 3, true);
 });
 
-test('task quantities step, clamp, and sum accurately for tasks 9-15 including tasks 14 and 15', () => {
+test('task quantities step, clamp, and sum accurately for tasks 4-22 including enabledTasks filter', () => {
   const state = createInitialState();
-  assert.equal(calculateTotalPlanned(state.quantities), 35);
+  // 7 orthography tasks (9-15) * 5 = 35, plus 12 other tasks (4-8, 16-22) * 3 = 36 => 71
+  assert.equal(calculateTotalPlanned(state.quantities), 71);
+  assert.equal(calculateTotalPlanned(state.quantities, { ...state.enabledTasks, '4': false, '22': false }), 65);
   assert.equal(stepTaskQty(5, -10), 0);
   assert.equal(stepTaskQty(995, 20), 1000);
 
-  const q14 = buildWorkoutQueue({ '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 5, '15': 0 }, 'sprint');
+  const q14 = buildWorkoutQueue({ '14': 5 }, 'sprint');
   assert.equal(q14.length, 5);
   assert.equal(q14.every((q) => q.task === '14'), true);
 
-  const q15 = buildWorkoutQueue({ '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 5 }, 'sprint');
+  const q15 = buildWorkoutQueue({ '15': 5 }, 'sprint');
   assert.equal(q15.length, 5);
   assert.equal(q15.every((q) => q.task === '15'), true);
 });
@@ -302,22 +307,27 @@ test('resolveTask15Sentence and clean helpers heal broken screenshot question fo
   assert.equal(homoglyphSent.includes('(З)'), false);
 });
 
-test('All FIPI questions across tasks 9-15 in trainer bank have strictly valid row counts and indices', () => {
+test('All FIPI questions across tasks 4-22 in trainer bank have strictly valid row counts and indices', () => {
   const bank = getTrainerBank();
   for (const q of bank.fipiQuestions) {
     assert.ok(q.rule, `Question ${q.id} must have a non-empty rule`);
     assert.ok(q.correctIndices.length >= 1, `Question ${q.id} must have at least 1 correctIndex`);
 
-    if (q.task !== '15') {
+    if (['4', '9', '10', '11', '12', '13', '14', '16'].includes(q.task)) {
       assert.equal(q.rows.length, 5, `Question ${q.id} (task ${q.task}) must have exactly 5 rows`);
-    } else {
-      assert.ok(q.rows.length >= 2, `Question ${q.id} (task 15) must have at least 2 rows`);
+    } else if (['15', '17', '18', '19', '20'].includes(q.task)) {
+      assert.ok(q.rows.length >= 2, `Question ${q.id} (task ${q.task}) must have at least 2 rows`);
       const sent = q.sentence || q.instruction;
-      assert.ok(sent && sent.length >= 15, `Question ${q.id} (task 15) must have a non-empty sentence`);
+      assert.ok(sent && sent.length >= 15, `Question ${q.id} (task ${q.task}) must have a non-empty sentence`);
+    } else if (['5', '6', '7'].includes(q.task)) {
+      assert.ok(q.rows.length >= 1, `Question ${q.id} (task ${q.task}) must have at least 1 row`);
+    } else if (['8', '21', '22'].includes(q.task)) {
+      assert.ok(q.rows.length >= 4 && q.rows.length <= 9, `Question ${q.id} (task ${q.task}) must have 4..9 rows`);
     }
 
     for (const c of q.correctIndices) {
-      assert.ok(c >= 1 && c <= q.rows.length, `correctIndex ${c} out of range in ${q.id}`);
+      const maxIdx = ['8', '22'].includes(q.task) ? 9 : q.rows.length;
+      assert.ok(c >= 1 && c <= maxIdx, `correctIndex ${c} out of range in ${q.id}`);
     }
 
     for (const r of q.rows) {
@@ -772,5 +782,46 @@ test('Authoritative orthography regression tests (Color adjectives, ЮЛЯ, part
     }
   }
 });
+
+test('All 19 tasks (4-22) have Sprint and FIPI questions, 4 official blocks, and universal grading', () => {
+  const bank = getTrainerBank();
+  assert.equal(TASK_IDS.length, 19);
+  assert.equal(TASK_BLOCKS.length, 4);
+
+  for (const tid of TASK_IDS) {
+    const sprintCount = bank.sprintQuestions.filter((q) => q.task === tid).length;
+    const fipiCount = bank.fipiQuestions.filter((q) => q.task === tid).length;
+    assert.ok(sprintCount >= 5, `Task ${tid} must have >= 5 sprint questions (found ${sprintCount})`);
+    assert.ok(fipiCount >= 1, `Task ${tid} must have >= 1 FIPI question (found ${fipiCount})`);
+  }
+
+  // Verify word_input grading (Tasks 5-7)
+  const q5 = bank.fipiQuestions.find((q) => q.task === '5');
+  assert.ok(q5);
+  const expectedWord = q5.textAnswers?.[0] || q5.rows.find((r) => r.isCorrectRow)?.letter || '';
+  assert.ok(expectedWord.length > 0);
+  const grade5Ok = checkFipiQuestionAnswer(q5, expectedWord);
+  assert.equal(grade5Ok.isCorrect, true);
+  assert.equal(grade5Ok.pointsEarned, 1);
+
+  // Verify matching_grid 2-point grading (Tasks 8 and 22)
+  const q8 = bank.fipiQuestions.find((q) => q.task === '8');
+  assert.ok(q8);
+  const fullCode8 = q8.correctIndices.join('');
+  assert.equal(fullCode8.length, 5);
+  const grade8Full = checkFipiQuestionAnswer(q8, fullCode8);
+  assert.equal(grade8Full.isCorrect, true);
+  assert.equal(grade8Full.pointsEarned, 2);
+  assert.equal(grade8Full.maxPoints, 2);
+
+  // 1 error in Task 8 awards 1 partial point
+  const wrongFirst = fullCode8[0] === '1' ? '2' : '1';
+  const partialCode8 = wrongFirst + fullCode8.slice(1);
+  const grade8Partial = checkFipiQuestionAnswer(q8, partialCode8);
+  assert.equal(grade8Partial.isCorrect, false);
+  assert.equal(grade8Partial.pointsEarned, 1);
+  assert.equal(grade8Partial.maxPoints, 2);
+});
+
 
 
