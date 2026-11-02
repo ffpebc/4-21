@@ -182,7 +182,7 @@ export interface TaskBlockMeta {
 export const TASK_BLOCKS: TaskBlockMeta[] = [
   {
     id: 'speech',
-    title: 'Культура речи и грамматика',
+    title: 'Культура речи',
     subtitle: 'Ударения, паронимы, лексика, морфология и синтаксис',
     badge: '№ 4–8',
     color: '#007AFF',

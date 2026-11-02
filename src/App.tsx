@@ -1297,7 +1297,7 @@ export default function App() {
 
                       return (
                         <div key={block.id} className="mb-3">
-                          <div className="flex items-center justify-between px-1 mb-1">
+                          <div className="flex items-center justify-between gap-2 px-1 mb-1 min-w-0">
                             <button
                               type="button"
                               onClick={() =>
@@ -1306,13 +1306,13 @@ export default function App() {
                                   [block.id]: !prev[block.id],
                                 }))
                               }
-                              className="flex items-center gap-1.5 text-left cursor-pointer"
+                              className="flex items-center gap-1.5 text-left cursor-pointer min-w-0 flex-1 overflow-hidden"
                             >
-                              <span className="ios-section-header !m-0 !p-0">
+                              <span className="ios-section-header !m-0 !p-0 truncate min-w-0">
                                 {block.title} ({block.badge})
                               </span>
                               <span
-                                className="text-[10.5px] font-extrabold px-1.5 py-0.5 rounded-full"
+                                className="text-[10.5px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0"
                                 style={{
                                   background: 'var(--ios-bg-tertiary)',
                                   color: 'var(--ios-label-sec)',
@@ -1321,7 +1321,7 @@ export default function App() {
                                 {activeCountInBlock}/{block.tasks.length}
                               </span>
                               <svg
-                                className={`w-3.5 h-3.5 ios-accordion-arrow ${
+                                className={`w-3.5 h-3.5 shrink-0 ios-accordion-arrow ${
                                   isBlockCollapsed ? 'rotated' : ''
                                 }`}
                                 viewBox="0 0 24 24"
@@ -1335,7 +1335,7 @@ export default function App() {
                               </svg>
                             </button>
 
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <span
                                 className="text-[10.5px] font-bold"
                                 style={{ color: 'var(--ios-label-sec)' }}
@@ -1394,7 +1394,7 @@ export default function App() {
                                       aria-checked={isTaskEnabled}
                                       aria-label={`Переключатель задания ${taskId}`}
                                       onClick={() => handleToggleTaskEnabled(taskId)}
-                                      className={`ios-switch shrink-0 mr-1.5 ${
+                                      className={`ios-switch shrink-0 ${
                                         isTaskEnabled ? 'is-active' : ''
                                       }`}
                                     >
