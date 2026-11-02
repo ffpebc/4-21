@@ -1587,122 +1587,124 @@ export default function App() {
                 <motion.div
                   key="workout-summary"
                   id="workout-summary-view"
-                  className="ios-screen-stack w-full"
+                  className="ios-screen-stack w-full h-full min-h-0 flex flex-col justify-between"
                   custom={workoutDirection}
                   variants={iosScreenSlideVariants}
                   initial="enter"
                   animate="center"
                   exit="exit"
                 >
-                  <div className="ios-inset-group p-2.5 py-2 text-center !mb-1 shrink-0">
-                    <div
-                      id="summary-percent-badge"
-                      className="text-[28px] font-black leading-none mb-0.5"
-                      style={{
-                        color:
-                          sessionAccuracy >= 80
-                            ? 'var(--ios-green)'
-                            : sessionAccuracy >= 50
-                            ? 'var(--ios-orange)'
-                            : 'var(--ios-red)',
-                      }}
-                    >
-                      {sessionAccuracy}%
-                    </div>
-                    <h2
-                      id="summary-headline"
-                      className="text-[17px] font-extrabold tracking-tight leading-tight mb-0.5"
-                    >
-                      {sessionAccuracy >= 85
-                        ? 'Отличный результат!'
-                        : sessionAccuracy >= 60
-                        ? 'Хорошая тренировка!'
-                        : 'Есть над чем поработать'}
-                    </h2>
-                    <p
-                      id="summary-subline"
-                      className="text-[11.5px] font-medium leading-tight mb-1.5"
-                      style={{ color: 'var(--ios-label-sec)' }}
-                    >
-                      Выполнено: {sessionTotalAnswered} · Правильных: {sessionCorrect} · Ошибок:{' '}
-                      {sessionWrong}
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-2">
+                  {/* Top scrollable area for result stats and mistake reviews */}
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col pr-0.5 ios-touch-scroll">
+                    <div className="ios-inset-group p-2.5 py-2 text-center !mb-1 shrink-0">
                       <div
-                        className="py-1.5 px-3 rounded-xl flex flex-col items-center justify-center"
+                        id="summary-percent-badge"
+                        className="text-[28px] font-black leading-none mb-0.5"
                         style={{
-                          background: 'var(--ios-green-soft)',
-                          color: 'var(--ios-green)',
+                          color:
+                            sessionAccuracy >= 80
+                              ? 'var(--ios-green)'
+                              : sessionAccuracy >= 50
+                              ? 'var(--ios-orange)'
+                              : 'var(--ios-red)',
                         }}
                       >
-                        <div className="text-[18px] font-black leading-none">{sessionCorrect}</div>
-                        <div className="text-[10.5px] font-bold mt-0.5">Правильно</div>
+                        {sessionAccuracy}%
                       </div>
-                      <div
-                        className="py-1.5 px-3 rounded-xl flex flex-col items-center justify-center"
-                        style={{
-                          background: 'var(--ios-red-soft)',
-                          color: 'var(--ios-red)',
-                        }}
+                      <h2
+                        id="summary-headline"
+                        className="text-[17px] font-extrabold tracking-tight leading-tight mb-0.5"
                       >
-                        <div className="text-[18px] font-black leading-none">{sessionWrong}</div>
-                        <div className="text-[10.5px] font-bold mt-0.5">Ошибок</div>
+                        {sessionAccuracy >= 85
+                          ? 'Отличный результат!'
+                          : sessionAccuracy >= 60
+                          ? 'Хорошая тренировка!'
+                          : 'Есть над чем поработать'}
+                      </h2>
+                      <p
+                        id="summary-subline"
+                        className="text-[11.5px] font-medium leading-tight mb-1.5"
+                        style={{ color: 'var(--ios-label-sec)' }}
+                      >
+                        Выполнено: {sessionTotalAnswered} · Правильных: {sessionCorrect} · Ошибок:{' '}
+                        {sessionWrong}
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div
+                          className="py-1.5 px-3 rounded-xl flex flex-col items-center justify-center"
+                          style={{
+                            background: 'var(--ios-green-soft)',
+                            color: 'var(--ios-green)',
+                          }}
+                        >
+                          <div className="text-[18px] font-black leading-none">{sessionCorrect}</div>
+                          <div className="text-[10.5px] font-bold mt-0.5">Правильно</div>
+                        </div>
+                        <div
+                          className="py-1.5 px-3 rounded-xl flex flex-col items-center justify-center"
+                          style={{
+                            background: 'var(--ios-red-soft)',
+                            color: 'var(--ios-red)',
+                          }}
+                        >
+                          <div className="text-[18px] font-black leading-none">{sessionWrong}</div>
+                          <div className="text-[10.5px] font-bold mt-0.5">Ошибок</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="ios-section-header !mt-0.5 !mb-1 text-[10.5px] font-bold uppercase tracking-wider shrink-0">
-                    Точность по заданиям в занятии
-                  </div>
+                    <div className="ios-section-header !mt-0.5 !mb-1 text-[10.5px] font-bold uppercase tracking-wider shrink-0">
+                      Точность по заданиям в занятии
+                    </div>
 
-                  <div className="ios-inset-group !mb-1.5 shrink-0">
-                    {TASK_IDS.map((taskId) => {
-                      const tally = sessionTaskTallies[taskId] || { solved: 0, correct: 0 };
-                      if (tally.solved === 0) return null;
-                      const acc = calculateAccuracyPercent(tally.correct, tally.solved);
-                      return (
-                        <div key={taskId} className="ios-cell !py-1 !min-h-[32px]">
-                          <div
-                            className="ios-row-icon !w-5 !h-5 !rounded-md !text-[10px] !font-black"
-                            style={{ background: TASK_META[taskId].gradient }}
-                          >
-                            {taskId}
-                          </div>
-                          <div className="flex-1 min-w-0 pr-2">
-                            <div className="text-[12.5px] font-bold truncate leading-tight">
-                              {TASK_META[taskId].title}
+                    <div className="ios-inset-group !mb-1.5 shrink-0">
+                      {TASK_IDS.map((taskId) => {
+                        const tally = sessionTaskTallies[taskId] || { solved: 0, correct: 0 };
+                        if (tally.solved === 0) return null;
+                        const acc = calculateAccuracyPercent(tally.correct, tally.solved);
+                        return (
+                          <div key={taskId} className="ios-cell !py-1 !min-h-[32px]">
+                            <div
+                              className="ios-row-icon !w-5 !h-5 !rounded-md !text-[10px] !font-black"
+                              style={{ background: TASK_META[taskId].gradient }}
+                            >
+                              {taskId}
+                            </div>
+                            <div className="flex-1 min-w-0 pr-2">
+                              <div className="text-[12.5px] font-bold truncate leading-tight">
+                                {TASK_META[taskId].title}
+                              </div>
+                              <div
+                                className="text-[10px] leading-tight"
+                                style={{ color: 'var(--ios-label-sec)' }}
+                              >
+                                Верно {tally.correct} из {tally.solved}
+                              </div>
                             </div>
                             <div
-                              className="text-[10px] leading-tight"
-                              style={{ color: 'var(--ios-label-sec)' }}
+                              className="text-[13px] font-extrabold shrink-0"
+                              style={{
+                                color:
+                                  acc >= 80
+                                    ? 'var(--ios-green)'
+                                    : acc >= 50
+                                    ? 'var(--ios-orange)'
+                                    : 'var(--ios-red)',
+                              }}
                             >
-                              Верно {tally.correct} из {tally.solved}
+                              {acc}%
                             </div>
                           </div>
-                          <div
-                            className="text-[13px] font-extrabold shrink-0"
-                            style={{
-                              color:
-                                acc >= 80
-                                  ? 'var(--ios-green)'
-                                  : acc >= 50
-                                  ? 'var(--ios-orange)'
-                                  : 'var(--ios-red)',
-                            }}
-                          >
-                            {acc}%
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
 
-                  <div className="flex flex-col gap-1.5 mt-auto pb-1 shrink-0">
                     {sessionMistakes.length > 0 && (
-                      <>
+                      <div className="mt-1 mb-1.5 shrink-0">
                         <button
                           type="button"
+                          id="toggle-session-mistakes-drawer-btn"
                           onClick={() => setShowSessionErrorsDrawer((v) => !v)}
                           className="ios-btn-primary"
                           style={{ background: 'var(--ios-orange)' }}
@@ -1716,47 +1718,11 @@ export default function App() {
                               : `Ошибки (${sessionMistakes.length}) — открыть разбор`}
                           </span>
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            startSessionWithQueue(sessionMistakes.map((m) => m.question))
-                          }
-                          className="ios-btn-primary"
-                          style={{ background: 'var(--ios-indigo)' }}
-                        >
-                          <svg className="w-5 h-5 shrink-0">
-                            <use href="#sf-refresh" />
-                          </svg>
-                          <span>Отработать ошибки этого занятия</span>
-                        </button>
-                      </>
+                      </div>
                     )}
 
-                    <button
-                      type="button"
-                      id="summary-repeat-random-btn"
-                      onClick={handleStartPlannedWorkout}
-                      className="ios-btn-primary"
-                    >
-                      <svg className="w-5 h-5 shrink-0">
-                        <use href="#sf-sparkles" />
-                      </svg>
-                      <span>Новый случайный вариант ({totalPlanned} зад.)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      id="back-to-builder-btn"
-                      onClick={() => setWorkoutView('builder')}
-                      className="ios-btn-glass-secondary"
-                    >
-                      <span>Настроить конструктор</span>
-                    </button>
-                  </div>
-
-                  <div className={`ios-accordion-grid ${showSessionErrorsDrawer && sessionMistakes.length > 0 ? 'open' : ''} mt-3 mb-4`}>
-                    <div className="ios-accordion-content">
+                    <div className={`ios-accordion-grid ${showSessionErrorsDrawer && sessionMistakes.length > 0 ? 'open' : ''} mb-2`}>
+                      <div className="ios-accordion-content">
                         <div className="flex items-center justify-between mb-2">
                           <div className="ios-section-header !mb-0">Подробный разбор допущенных ошибок</div>
                           <button
@@ -1784,68 +1750,110 @@ export default function App() {
                           </button>
                         </div>
                         <div className="flex flex-col gap-2.5">
-                        {sessionMistakes.map((m, idx) => {
-                          const q = m.question;
-                          const wordTitle =
-                            q.kind === 'sprint'
-                              ? q.task === '13' || q.task === '14'
-                                ? `${q.prefix.replace(/[()]/g, '')}${
-                                    q.answer === 'СЛИТНО'
-                                      ? ''
-                                      : q.answer === 'ДЕФИСНО'
-                                        ? '-'
-                                        : ' '
-                                  }${q.suffix}`
-                                : `${q.prefix}${q.answer.toLowerCase()}${q.suffix}`
-                              : `Задание № ${q.task} · ФИПИ`;
-                          const correctChoice =
-                            q.kind === 'sprint' ? q.answer : q.correctIndices.join('');
-                          const explanation =
-                            q.kind === 'sprint'
-                              ? q.explanation
-                              : q.rows
-                                  .map((r, rIdx) =>
-                                    r.isCorrectRow
-                                      ? `Строка ${rIdx + 1} (${r.letter}): ${r.solvedWords.join(', ')}`
-                                      : null
-                                  )
-                                  .filter(Boolean)
-                                  .join(' | ');
-                          return (
-                            <StructuredErrorCard
-                              key={`${q.id}-${idx}`}
-                              forceCollapsed={allMistakesCollapsed}
-                              task={q.task}
-                              topic={q.topic}
-                              wordTitle={wordTitle}
-                              context={q.kind === 'sprint' ? q.context : undefined}
-                              userChoice={m.userChoice}
-                              correctChoice={correctChoice}
-                              explanation={explanation}
-                              rule={q.rule}
-                              question={q}
-                              onInspectRule={() => {
-                                openRuleInspector(q, {
-                                  id: `err-${q.id}`,
-                                  task: q.task,
-                                  topic: q.topic,
-                                  wordDisplay: q.kind === 'sprint' ? `${q.prefix}..${q.suffix}` : wordTitle,
-                                  correctWord: wordTitle,
-                                  userChoice: m.userChoice,
-                                  correctChoice: correctChoice,
-                                  context: q.kind === 'sprint' ? q.context : undefined,
-                                  explanation: explanation,
-                                  rule: q.rule,
-                                  timestamp: Date.now(),
-                                  questionId: q.id,
-                                });
-                              }}
-                              staggerIndex={idx}
-                            />
-                          );
-                        })}
+                          {sessionMistakes.map((m, idx) => {
+                            const q = m.question;
+                            const wordTitle =
+                              q.kind === 'sprint'
+                                ? q.task === '13' || q.task === '14'
+                                  ? `${q.prefix.replace(/[()]/g, '')}${
+                                      q.answer === 'СЛИТНО'
+                                        ? ''
+                                        : q.answer === 'ДЕФИСНО'
+                                          ? '-'
+                                          : ' '
+                                    }${q.suffix}`
+                                  : `${q.prefix}${q.answer.toLowerCase()}${q.suffix}`
+                                : `Задание № ${q.task} · ФИПИ`;
+                            const correctChoice =
+                              q.kind === 'sprint' ? q.answer : q.correctIndices.join('');
+                            const explanation =
+                              q.kind === 'sprint'
+                                ? q.explanation
+                                : q.rows
+                                    .map((r, rIdx) =>
+                                      r.isCorrectRow
+                                        ? `Строка ${rIdx + 1} (${r.letter}): ${r.solvedWords.join(', ')}`
+                                        : null
+                                    )
+                                    .filter(Boolean)
+                                    .join(' | ');
+                            return (
+                              <StructuredErrorCard
+                                key={`${q.id}-${idx}`}
+                                forceCollapsed={allMistakesCollapsed}
+                                task={q.task}
+                                topic={q.topic}
+                                wordTitle={wordTitle}
+                                context={q.kind === 'sprint' ? q.context : undefined}
+                                userChoice={m.userChoice}
+                                correctChoice={correctChoice}
+                                explanation={explanation}
+                                rule={q.rule}
+                                question={q}
+                                onInspectRule={() => {
+                                  openRuleInspector(q, {
+                                    id: `err-${q.id}`,
+                                    task: q.task,
+                                    topic: q.topic,
+                                    wordDisplay: q.kind === 'sprint' ? `${q.prefix}..${q.suffix}` : wordTitle,
+                                    correctWord: wordTitle,
+                                    userChoice: m.userChoice,
+                                    correctChoice: correctChoice,
+                                    context: q.kind === 'sprint' ? q.context : undefined,
+                                    explanation: explanation,
+                                    rule: q.rule,
+                                    timestamp: Date.now(),
+                                    questionId: q.id,
+                                  });
+                                }}
+                                staggerIndex={idx}
+                              />
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Pinned Bottom Deck: Always sitting right above the bottom menu, no scrolling past it */}
+                  <div className="shrink-0 flex flex-col gap-1.5 pt-2 pb-1">
+                    {sessionMistakes.length > 0 && (
+                      <button
+                        type="button"
+                        id="summary-retry-mistakes-btn"
+                        onClick={() =>
+                          startSessionWithQueue(sessionMistakes.map((m) => m.question))
+                        }
+                        className="ios-btn-primary"
+                        style={{ background: 'var(--ios-indigo)' }}
+                      >
+                        <svg className="w-5 h-5 shrink-0">
+                          <use href="#sf-refresh" />
+                        </svg>
+                        <span>Отработать ошибки этого занятия</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      id="summary-repeat-random-btn"
+                      onClick={handleStartPlannedWorkout}
+                      className="ios-btn-primary"
+                    >
+                      <svg className="w-5 h-5 shrink-0">
+                        <use href="#sf-sparkles" />
+                      </svg>
+                      <span>Новый случайный вариант ({totalPlanned} зад.)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      id="back-to-builder-btn"
+                      onClick={() => setWorkoutView('builder')}
+                      className="ios-btn-glass-secondary"
+                    >
+                      <span>Настроить конструктор</span>
+                    </button>
                   </div>
                 </motion.div>
               )}
