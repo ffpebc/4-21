@@ -1377,10 +1377,10 @@ export default function App() {
                   animate="center"
                   exit="exit"
                 >
-                  <div className="ios-inset-group p-3 text-center !mb-1 shrink-0">
+                  <div className="ios-inset-group p-2.5 py-2 text-center !mb-1 shrink-0">
                     <div
                       id="summary-percent-badge"
-                      className="text-[30px] font-black leading-none mb-0.5"
+                      className="text-[28px] font-black leading-none mb-0.5"
                       style={{
                         color:
                           sessionAccuracy >= 80
@@ -1394,7 +1394,7 @@ export default function App() {
                     </div>
                     <h2
                       id="summary-headline"
-                      className="text-[18px] font-extrabold tracking-tight leading-tight mb-0.5"
+                      className="text-[17px] font-extrabold tracking-tight leading-tight mb-0.5"
                     >
                       {sessionAccuracy >= 85
                         ? 'Отличный результат!'
@@ -1404,7 +1404,7 @@ export default function App() {
                     </h2>
                     <p
                       id="summary-subline"
-                      className="text-[12px] font-medium leading-tight mb-2"
+                      className="text-[11.5px] font-medium leading-tight mb-1.5"
                       style={{ color: 'var(--ios-label-sec)' }}
                     >
                       Выполнено: {sessionTotalAnswered} · Правильных: {sessionCorrect} · Ошибок:{' '}
@@ -1419,8 +1419,8 @@ export default function App() {
                           color: 'var(--ios-green)',
                         }}
                       >
-                        <div className="text-[19px] font-black leading-none">{sessionCorrect}</div>
-                        <div className="text-[11px] font-bold mt-0.5">Правильно</div>
+                        <div className="text-[18px] font-black leading-none">{sessionCorrect}</div>
+                        <div className="text-[10.5px] font-bold mt-0.5">Правильно</div>
                       </div>
                       <div
                         className="py-1.5 px-3 rounded-xl flex flex-col items-center justify-center"
@@ -1429,13 +1429,13 @@ export default function App() {
                           color: 'var(--ios-red)',
                         }}
                       >
-                        <div className="text-[19px] font-black leading-none">{sessionWrong}</div>
-                        <div className="text-[11px] font-bold mt-0.5">Ошибок</div>
+                        <div className="text-[18px] font-black leading-none">{sessionWrong}</div>
+                        <div className="text-[10.5px] font-bold mt-0.5">Ошибок</div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="ios-section-header !mt-0.5 !mb-1 text-[11px] font-bold uppercase tracking-wider shrink-0">
+                  <div className="ios-section-header !mt-0.5 !mb-1 text-[10.5px] font-bold uppercase tracking-wider shrink-0">
                     Точность по заданиям в занятии
                   </div>
 
@@ -1487,10 +1487,10 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setShowSessionErrorsDrawer((v) => !v)}
-                          className="ios-btn-primary !min-h-[38px] !py-2 !text-[13px]"
+                          className="ios-btn-primary"
                           style={{ background: 'var(--ios-orange)' }}
                         >
-                          <svg className="w-4 h-4 shrink-0">
+                          <svg className="w-5 h-5 shrink-0">
                             <use href="#sf-warning-fill" />
                           </svg>
                           <span>
@@ -1505,10 +1505,10 @@ export default function App() {
                           onClick={() =>
                             startSessionWithQueue(sessionMistakes.map((m) => m.question))
                           }
-                          className="ios-btn-primary !min-h-[38px] !py-2 !text-[13px]"
+                          className="ios-btn-primary"
                           style={{ background: 'var(--ios-indigo)' }}
                         >
-                          <svg className="w-4 h-4 shrink-0">
+                          <svg className="w-5 h-5 shrink-0">
                             <use href="#sf-refresh" />
                           </svg>
                           <span>Отработать ошибки этого занятия</span>
@@ -1520,9 +1520,9 @@ export default function App() {
                       type="button"
                       id="summary-repeat-random-btn"
                       onClick={handleStartPlannedWorkout}
-                      className="ios-btn-primary !min-h-[38px] !py-2 !text-[13px]"
+                      className="ios-btn-primary"
                     >
-                      <svg className="w-4 h-4 shrink-0">
+                      <svg className="w-5 h-5 shrink-0">
                         <use href="#sf-sparkles" />
                       </svg>
                       <span>Новый случайный вариант ({totalPlanned} зад.)</span>
@@ -1532,7 +1532,7 @@ export default function App() {
                       type="button"
                       id="back-to-builder-btn"
                       onClick={() => setWorkoutView('builder')}
-                      className="ios-btn-glass-secondary !min-h-[38px] !py-2 !text-[13px]"
+                      className="ios-btn-glass-secondary"
                     >
                       <span>Настроить конструктор</span>
                     </button>
