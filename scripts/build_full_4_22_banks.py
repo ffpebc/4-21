@@ -60,6 +60,28 @@ DEFAULT_INSTRUCTIONS = {
     "22": "Установите соответствие между предложениями (выделенными фрагментами) и названиями изобразительно-выразительных средств языка, которые употреблены в них.",
 }
 
+TASK_RULES = {
+    "4": "Проверьте постановку ударения в соответствии с орфоэпическим словником ФИПИ.",
+    "5": "Подберите верный пароним в соответствии с контекстом предложения и лексическим значением.",
+    "6": "Устраните речевую ошибку (плеоназм, тавтологию или лексическую несочетаемость).",
+    "7": "Морфологические нормы: правила образования грамматических форм слов (род, число, падеж, степени сравнения, формы глаголов).",
+    "8": "Синтаксические нормы: грамматические ошибки в построении предложений различных типов.",
+    "9": "Правописание безударных проверяемых, непроверяемых и чередующихся гласных в корне слова.",
+    "10": "Правописание приставок (на -З/-С, ПРЕ-/ПРИ-, буквы Ы/И после приставок, разделительные Ъ и Ь).",
+    "11": "Правописание суффиксов различных частей речи (существительных, прилагательных, глаголов, наречий).",
+    "12": "Правописание личных окончаний глаголов и суффиксов причастий настоящего времени.",
+    "13": "Правописание НЕ и НИ с различными частями речи (слитное и раздельное написание).",
+    "14": "Слитное, дефисное и раздельное написание слов (предлоги, союзы, частицы, наречия, сложные слова).",
+    "15": "Правописание -Н- и -НН- в суффиксах различных частей речи.",
+    "16": "Пунктуация в сложносочинённом предложении (ССП) и в предложениях с однородными членами.",
+    "17": "Знаки препинания в предложениях с обособленными членами (причастными, деепричастными оборотами).",
+    "18": "Знаки препинания в предложениях с вводными словами, конструкциями и обращениями.",
+    "19": "Знаки препинания в сложноподчинённом предложении (СПП) с придаточными.",
+    "20": "Знаки препинания в сложных предложениях с разными видами связи (на стыке союзов).",
+    "21": "Пунктуационный анализ текста: постановка знака препинания по единому правилу синтаксиса.",
+    "22": "Языковые средства выразительности: распознавание тропов, фигур речи, лексических и синтаксических средств.",
+}
+
 PARONYM_FAMILIES = [
     ["абонемент", "абонент"],
     ["адресат", "адресант"],
@@ -335,7 +357,7 @@ def parse_task_4(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
                     "options": [clean_target, wrong_w],
                     "context": "Выберите слово с ВЕРНЫМ ударением",
                     "explanation": exp_clean,
-                    "rule": DEFAULT_INSTRUCTIONS["4"],
+                    "rule": TASK_RULES["4"],
                     "topic": "Орфоэпический словник ФИПИ (Ударения)",
                     "source": source_label,
                 })
@@ -346,7 +368,7 @@ def parse_task_4(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
         "questionKind": "rows",
         "task": "4",
         "topic": TASK_TITLES["4"],
-        "rule": instr_lines[0] if instr_lines else DEFAULT_INSTRUCTIONS["4"],
+        "rule": TASK_RULES["4"],
         "instruction": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["4"],
         "source": source_label,
         "rows": rows,
@@ -419,7 +441,7 @@ def parse_task_5(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
                 "options": [primary_ans, cw.lower()],
                 "context": s,
                 "explanation": sol_text[:280],
-                "rule": DEFAULT_INSTRUCTIONS["5"],
+                "rule": TASK_RULES["5"],
                 "topic": "Паронимы ФИПИ (Замена ошибки)",
                 "source": source_label,
             })
@@ -437,7 +459,7 @@ def parse_task_5(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
                 "options": [cw_low, alt_w],
                 "context": s,
                 "explanation": f"В предложении «{s}» пароним «{cw}» употреблён ВЕРНО.",
-                "rule": DEFAULT_INSTRUCTIONS["5"],
+                "rule": TASK_RULES["5"],
                 "topic": "Паронимы ФИПИ (Контекст)",
                 "source": source_label,
             })
@@ -448,7 +470,7 @@ def parse_task_5(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
         "questionKind": "word_input",
         "task": "5",
         "topic": TASK_TITLES["5"],
-        "rule": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["5"],
+        "rule": TASK_RULES["5"],
         "instruction": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["5"],
         "source": source_label,
         "rows": rows,
@@ -514,7 +536,7 @@ def parse_task_6(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
             "options": [primary_ans, choice_options[1]],
             "context": sentence,
             "explanation": sol_text[:280] or f"Ответ: {primary_ans}",
-            "rule": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["6"],
+            "rule": TASK_RULES["6"],
             "topic": "Плеоназмы и лексическая сочетаемость" if is_exclude else "Замена неверно употреблённого слова",
             "source": source_label,
         })
@@ -525,7 +547,7 @@ def parse_task_6(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
         "questionKind": "word_input",
         "task": "6",
         "topic": TASK_TITLES["6"],
-        "rule": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["6"],
+        "rule": TASK_RULES["6"],
         "instruction": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["6"],
         "sentence": sentence,
         "source": source_label,
@@ -606,7 +628,7 @@ def parse_task_7(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
                 "options": [primary_ans, cw.lower()],
                 "context": f"Исправьте форму в сочетании: «{ph}»",
                 "explanation": sol_text[:280] or f"Правильная форма: {primary_ans}",
-                "rule": DEFAULT_INSTRUCTIONS["7"],
+                "rule": TASK_RULES["7"],
                 "topic": "Морфологические нормы (Исправление ошибки)",
                 "source": source_label,
             })
@@ -620,7 +642,7 @@ def parse_task_7(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
                 "options": ["ВЕРНО", "ОШИБКА"],
                 "context": f"Оцените грамматическую форму в сочетании: «{ph}»",
                 "explanation": f"Сочетание «{ph}» образовано ВЕРНО по морфологическим нормам.",
-                "rule": DEFAULT_INSTRUCTIONS["7"],
+                "rule": TASK_RULES["7"],
                 "topic": "Морфологические нормы (Проверка формы)",
                 "source": source_label,
             })
@@ -631,7 +653,7 @@ def parse_task_7(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source_
         "questionKind": "word_input",
         "task": "7",
         "topic": TASK_TITLES["7"],
-        "rule": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["7"],
+        "rule": TASK_RULES["7"],
         "instruction": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["7"],
         "source": source_label,
         "rows": rows,
@@ -733,7 +755,7 @@ def parse_task_8_or_22(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_an
                             "options": [short_err0, short_err1],
                             "context": num_map[d0],
                             "explanation": f"В этом предложении допущена ошибка: {l0['text']}.",
-                            "rule": DEFAULT_INSTRUCTIONS["8"],
+                            "rule": TASK_RULES["8"],
                             "topic": "Синтаксические нормы (Задание 8)",
                             "source": source_label,
                         })
@@ -751,7 +773,7 @@ def parse_task_8_or_22(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_an
                             "options": [term0, term1],
                             "context": l0["text"],
                             "explanation": f"Правильный термин: {num_map[d0]}. {sol_text[:180]}",
-                            "rule": DEFAULT_INSTRUCTIONS["22"],
+                            "rule": TASK_RULES["22"],
                             "topic": "Тропы и фигуры речи (Задание 22)",
                             "source": source_label,
                         })
@@ -762,7 +784,7 @@ def parse_task_8_or_22(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_an
         "questionKind": "matching_grid",
         "task": task_num,
         "topic": TASK_TITLES[task_num],
-        "rule": DEFAULT_INSTRUCTIONS[task_num],
+        "rule": TASK_RULES[task_num],
         "instruction": DEFAULT_INSTRUCTIONS[task_num] + f" (Ответ из 5 цифр АБВГД)",
         "source": source_label,
         "matchingLetters": matching_letters,
@@ -822,7 +844,7 @@ def parse_task_16(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source
             "options": ["ОДНА ЗАПЯТАЯ", "БЕЗ / НЕСКОЛЬКО"],
             "context": sent,
             "explanation": sol_exp or ("В этом предложении ставится ровно одна запятая." if is_ok else "В этом предложении либо не нужна запятая, либо нужно несколько запятых."),
-            "rule": DEFAULT_INSTRUCTIONS["16"],
+            "rule": TASK_RULES["16"],
             "topic": "ССП и однородные члены (Задание 16)",
             "source": source_label,
         })
@@ -833,7 +855,7 @@ def parse_task_16(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source
         "questionKind": "rows",
         "task": "16",
         "topic": TASK_TITLES["16"],
-        "rule": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["16"],
+        "rule": TASK_RULES["16"],
         "instruction": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS["16"],
         "source": source_label,
         "rows": rows,
@@ -891,7 +913,7 @@ def parse_task_17_20(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_ans:
             "options": ["ЗАПЯТАЯ НУЖНА", "БЕЗ ЗАПЯТОЙ"],
             "context": f"[Позиция ({d1})] {sentence}",
             "explanation": f"Позиция ({d1}) — {'запятая ставится' if is_c1 else 'запятая не нужна'}. Все цифры в предложении: {''.join(map(str, correct_indices))}. {sol_text[:200]}",
-            "rule": DEFAULT_INSTRUCTIONS[task_num],
+            "rule": TASK_RULES[task_num],
             "topic": TASK_TITLES[task_num],
             "source": source_label,
         })
@@ -902,7 +924,7 @@ def parse_task_17_20(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_ans:
         "questionKind": "numbered_gaps",
         "task": task_num,
         "topic": TASK_TITLES[task_num],
-        "rule": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS[task_num],
+        "rule": TASK_RULES[task_num],
         "instruction": " ".join(instr_lines) if instr_lines else DEFAULT_INSTRUCTIONS[task_num],
         "sentence": sentence,
         "source": source_label,
@@ -970,7 +992,7 @@ def parse_task_21(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source
             "options": ["ВХОДИТ В ОТВЕТ", "ДРУГОЕ ПРАВИЛО"],
             "context": f"({n_sent}) {sent_map[n_sent]}",
             "explanation": sol_text[:260] if is_in_ans else f"Предложение ({n_sent}) не входит в основную группу ответа ({''.join(map(str, correct_indices))}).",
-            "rule": instr_str,
+            "rule": TASK_RULES["21"],
             "topic": f"Задание 21 ({sign_name})",
             "source": source_label,
         })
@@ -981,7 +1003,7 @@ def parse_task_21(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source
         "questionKind": "rows",
         "task": "21",
         "topic": f"{TASK_TITLES['21']} ({sign_name})",
-        "rule": instr_str,
+        "rule": TASK_RULES["21"],
         "instruction": instr_str,
         "sentence": full_text,
         "source": source_label,
@@ -1005,12 +1027,16 @@ def build_all():
 
     print(f"Loaded verified 9-15 banks: words={len(existing_words_9_15)}, fipi={len(existing_fipi_9_15)}, sprint={len(existing_sprint_9_15)}")
 
-    # Ensure questionKind is explicitly set on 9-15 FIPI tasks
+    # Ensure questionKind and clean pedagogical rules on 9-15 FIPI tasks
     for fq in existing_fipi_9_15:
-        if fq.get("task") == "15":
+        t = str(fq.get("task"))
+        if t == "15":
             fq["questionKind"] = "numbered_gaps"
         else:
             fq["questionKind"] = "rows"
+        r = fq.get("rule", "")
+        if re.match(r"^(?:Укажите|Расставьте|Найдите|В одном из|Отредактируйте|Установите)", r, re.I):
+            fq["rule"] = TASK_RULES.get(t, r)
 
     new_fipi = []
     new_sprint = []
@@ -1055,7 +1081,7 @@ def build_all():
                     "task": task_num,
                     "topic": sp["topic"],
                     "category": TASK_TITLES[task_num],
-                    "rule": sp["explanation"] or sp["rule"],
+                    "rule": sp["rule"] or TASK_RULES.get(task_num, ""),
                     "context": sp["context"],
                     "source": sp["source"],
                 })

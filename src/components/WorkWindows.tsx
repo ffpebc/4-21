@@ -1296,7 +1296,8 @@ export function parseStructuredExplanation(
   // Identify orthogramType badge if not yet set
   if (!orthogramType) {
     if (task === '13') {
-      const targetLower = (targetWord || '').toLowerCase().replace(/ё/g, 'е');
+      const targetLower = (targetWord || '').toLowerCase().replace(/ё/g, 'е').trim();
+      const cleanTargetUpper = (targetWord || '').replace(/[()]/g, '').trim().toUpperCase();
       const isParticiple =
         /причаст/i.test(ruleNote) ||
         /(?:ущ|ющ|ащ|ящ|вш|ш|ем|им|ом|енн|ённ|анн|янн|т)(?:ый|ая|ое|ые|ого|ому|ым|им|ом|ем|ую|юю|ой|ей|ых|их|ыми|ими)(?:ся|сь)?$/i.test(targetLower);
@@ -1304,12 +1305,28 @@ export function parseStructuredExplanation(
         /прилагательн/i.test(ruleNote) ||
         /(?:[а-яё]ая|[а-яё]яя|[а-яё]ья|ое|ее|ый|ий|ой|ые|ие|ого|его|ому|ему|ым|им|ом|ем|ую|юю|ей|ых|их|ыми|ими)$/i.test(targetLower);
 
+      const isSlitno13 =
+        /пишется\s+(?:с\s+не\s+)?слитно|поэтому\s+слитно/i.test(ruleNote) ||
+        (cleanTargetUpper.startsWith('НЕ') && !cleanTargetUpper.includes(' ') && !cleanTargetUpper.includes('-'));
+      const isRazdelno13 =
+        /пишется\s+(?:с\s+не\s+)?раздельно|поэтому\s+раздельно/i.test(ruleNote) ||
+        cleanTargetUpper.startsWith('НЕ ') ||
+        cleanTargetUpper.startsWith('НИ ');
+
       if (isParticiple) {
-        orthogramType = /зависим|противопоставл|раздельно/i.test(ruleNote)
-          ? 'Полные причастия с зависимыми словами (раздельно)'
-          : /кратк/i.test(ruleNote)
-          ? 'Краткие причастия с НЕ (всегда раздельно)'
-          : 'Одиночные причастия с НЕ (слитно)';
+        if (isSlitno13) {
+          orthogramType = 'Одиночные полные причастия с НЕ (слитно)';
+        } else if (/кратк/i.test(ruleNote)) {
+          orthogramType = 'Краткие причастия с НЕ (всегда раздельно)';
+        } else if (/противопоставл/i.test(ruleNote) || /\bа\s+[а-яё]+/i.test(ruleNote)) {
+          orthogramType = 'Полные причастия с противопоставлением (раздельно)';
+        } else if (/(?:есть|наличи[еи]|с)\s+зависим/i.test(ruleNote)) {
+          orthogramType = 'Полные причастия с зависимыми словами (раздельно)';
+        } else if (isRazdelno13) {
+          orthogramType = 'Полные причастия с НЕ (раздельно)';
+        } else {
+          orthogramType = 'Одиночные полные причастия с НЕ (слитно)';
+        }
       } else if (isAdjective) {
         orthogramType = 'Правописание НЕ с прилагательными';
       } else if (
@@ -1318,50 +1335,130 @@ export function parseStructuredExplanation(
           (/(?:[аеёиоуыэюя]ясь?|[жшчщ]ась?|[аяу]чи|вши?|вшись)$/i.test(targetLower) &&
             !/(?:ая|яя|ое|ее|ый|ий|ой|ые|ие)$/i.test(targetLower)))
       ) {
-        orthogramType = 'Правописание НЕ с деепричастиями';
+        orthogramType = isSlitno13
+          ? 'Деепричастия без НЕ не употребляющиеся (слитно)'
+          : 'Правописание НЕ с деепричастиями (раздельно)';
       } else if (/существительн/i.test(ruleNote)) {
-        orthogramType = 'Правописание НЕ с существительными';
+        orthogramType = isSlitno13
+          ? 'Правописание НЕ с существительными (слитно)'
+          : 'Правописание НЕ с существительными (раздельно)';
       } else if (/глагол/i.test(ruleNote)) {
-        orthogramType = 'Правописание НЕ и НИ с глаголами';
+        orthogramType = isSlitno13
+          ? 'Глаголы с приставкой НЕДО- или без НЕ (слитно)'
+          : 'Правописание НЕ и НИ с глаголами (раздельно)';
       } else if (/наречи/i.test(ruleNote)) {
-        orthogramType = 'Правописание НЕ и НИ с наречиями';
+        orthogramType = isSlitno13
+          ? 'Правописание НЕ и НИ с наречиями (слитно)'
+          : 'Правописание НЕ и НИ с наречиями (раздельно)';
       } else if (/местоимен/i.test(ruleNote)) {
-        orthogramType = 'Правописание НЕ и НИ с местоимениями';
+        orthogramType = isSlitno13
+          ? 'Правописание НЕ и НИ с местоимениями (слитно)'
+          : 'Правописание НЕ и НИ с местоимениями (раздельно)';
       } else if (/категори|состояни|рад|готов|должен/i.test(ruleNote)) {
-        orthogramType = 'Слова категории состояния с НЕ';
+        orthogramType = isSlitno13
+          ? 'Слова категории состояния на -О (слитно)'
+          : 'Слова категории состояния с НЕ (всегда раздельно)';
       } else {
-        orthogramType = 'Слитное и раздельное написание НЕ и НИ';
+        orthogramType = isSlitno13
+          ? 'Слитное написание НЕ и НИ'
+          : 'Раздельное написание НЕ и НИ';
       }
     } else if (task === '14') {
-      const lowerWord = (targetWord || '').toLowerCase().replace(/ё/g, 'е');
-      if (
-        /сложн.*прилаг/i.test(ruleNote) ||
-        /^(?:сорока|двадцати|тридцати|пяти|шести|семи|восьми|девяти|десяти|двух|трех|четырех|сто|тысяче)(?:минутн|летн|дневн|этажн|рублев|процентн|метров|километров|часов|кратн)/i.test(lowerWord) ||
-        /^(?:сельскохозяйственн|древнерусск|железнодорожн|машиностроительн)/i.test(lowerWord)
-      ) {
-        orthogramType = 'Сложные прилагательные';
-      } else if (/союз/i.test(ruleNote) || /^(?:чтобы|также|тоже|зато|притом|причем)$/i.test(lowerWord)) {
-        orthogramType = 'Сочинительные и подчинительные союзы';
-      } else if (/предлог/i.test(ruleNote) || /^(?:ввиду|вследствие|наподобие|вместо|навстречу|насчет)$/i.test(lowerWord)) {
-        orthogramType = 'Производные предлоги';
-      } else if (/пол-|полу-|юли/i.test(ruleNote) || lowerWord.startsWith('пол') || lowerWord.startsWith('полу')) {
-        orthogramType = 'Корень ПОЛ- и приставка ПОЛУ-';
-      } else if (/наречи/i.test(ruleNote) || /по-/i.test(ruleNote) || lowerWord.startsWith('по-') || lowerWord.startsWith('во-')) {
-        orthogramType = 'Слитное, дефисное и раздельное написание наречий';
-      } else if (/сочетан|в конце концов|в то же время/i.test(ruleNote) || lowerWord.includes('в конце концов')) {
-        orthogramType = 'Устойчивые сочетания (раздельно)';
+      const lowerWord = (targetWord || '').toLowerCase().replace(/ё/g, 'е').trim();
+      const cleanUpper = (targetWord || '').replace(/[()]/g, '').trim().toUpperCase();
+
+      const isDefis14 =
+        /пишется\s+через\s+дефис|поэтому\s+через\s+дефис|пишется\s+дефисно/i.test(ruleNote) ||
+        cleanUpper.includes('-');
+      const isRazdelno14 =
+        !isDefis14 &&
+        (/пишется\s+раздельно|поэтому\s+раздельно|пишутся\s+раздельно/i.test(ruleNote) ||
+          cleanUpper.includes(' '));
+      const isSlitno14 =
+        !isDefis14 &&
+        !isRazdelno14 &&
+        (/пишется\s+слитно|поэтому\s+слитно|пишутся\s+слитно/i.test(ruleNote) ||
+          (!cleanUpper.includes(' ') && !cleanUpper.includes('-')));
+
+      if (isDefis14) {
+        if (/оттенок цвета|цвет/i.test(ruleNote)) {
+          orthogramType = 'Сложные прилагательные (оттенки цветов, через дефис)';
+        } else if (/предлог|из-за|из-под/i.test(ruleNote) || /из-за|из-под/.test(lowerWord)) {
+          orthogramType = 'Сложные предлоги (через дефис)';
+        } else if (/пол-|юли/i.test(ruleNote) || lowerWord.startsWith('пол-')) {
+          orthogramType = 'Корень ПОЛ- (Правило ЮЛИ, через дефис)';
+        } else if (/наречи|по-/i.test(ruleNote) || lowerWord.startsWith('по-') || lowerWord.startsWith('во-')) {
+          orthogramType = 'Наречия с приставками ПО-, В-/ВО- (через дефис)';
+        } else if (/-то|-либо|-нибудь|-ка|-таки/i.test(ruleNote) || /(?:то|либо|нибудь|ка|таки)$/i.test(lowerWord)) {
+          orthogramType = 'Неопределённые местоимения и частицы (через дефис)';
+        } else {
+          orthogramType = 'Сложные слова (через дефис)';
+        }
+      } else if (isRazdelno14) {
+        if (/в конце концов|в то же время|рука об руку|бок о бок|устойчив/i.test(ruleNote) || lowerWord.includes('в конце концов')) {
+          orthogramType = 'Устойчивые сочетания (раздельно)';
+        } else if (/как будто/i.test(ruleNote) || lowerWord.includes('как будто')) {
+          orthogramType = 'Сравнительный союз «как будто» (раздельно)';
+        } else if (/в течение|в продолжение|в заключение|в виде|в связи с|на протяжении/i.test(ruleNote)) {
+          orthogramType = 'Производные предлоги и сочетания (раздельно)';
+        } else if (/союз|местоимен/i.test(ruleNote) || /^(?:что бы|так же|то же|за то|по этому|по тому)$/i.test(lowerWord)) {
+          orthogramType = 'Омонимичные местоимения с частицами или предлогами (раздельно)';
+        } else {
+          orthogramType = 'Раздельное написание слов';
+        }
       } else {
-        orthogramType = 'Слитное, дефисное или раздельное написание';
+        if (/союз/i.test(ruleNote) || /^(?:чтобы|также|тоже|зато|притом|причем|поэтому|потому|оттого)$/i.test(lowerWord)) {
+          orthogramType = 'Сочинительные и подчинительные союзы (слитно)';
+        } else if (/предлог/i.test(ruleNote) || /^(?:ввиду|вследствие|наподобие|вместо|навстречу|насчет)$/i.test(lowerWord)) {
+          orthogramType = 'Производные предлоги (слитно)';
+        } else if (/пол-|полу-/i.test(ruleNote) || lowerWord.startsWith('полу') || lowerWord.startsWith('пол')) {
+          orthogramType = 'Корень ПОЛ- и приставка ПОЛУ- (слитно)';
+        } else if (/сложн.*прилаг/i.test(ruleNote)) {
+          orthogramType = 'Сложные прилагательные (слитно)';
+        } else if (/наречи/i.test(ruleNote)) {
+          orthogramType = 'Наречия (слитно)';
+        } else {
+          orthogramType = 'Слитное написание слов';
+        }
       }
     } else if (task === '15') {
-      if (/кратк/i.test(ruleNote)) {
-        orthogramType = 'Краткие формы (Н и НН)';
-      } else if (/причаст|отглагольн/i.test(ruleNote)) {
-        orthogramType = 'Н и НН в причастиях и отглагольных прилагательных';
-      } else if (/исключен/i.test(ruleNote)) {
-        orthogramType = 'Исключения Н и НН';
+      const isOneN =
+        /пишется\s+одна\s+(?:буква\s+)?н\b|поэтому\s+одна\s+(?:буква\s+)?н\b|одна\s+буква\s+н\b/i.test(ruleNote);
+      const isTwoNN =
+        /пишется\s+две\s+(?:буквы\s+)?нн?\b|поэтому\s+две\s+(?:буквы\s+)?нн?\b|две\s+буквы\s+нн?\b/i.test(ruleNote);
+
+      if (isOneN && !isTwoNN) {
+        if (/кратк.*причаст/i.test(ruleNote)) {
+          orthogramType = 'Краткие страдательные причастия (одна буква Н)';
+        } else if (/-ин-|-ан-|-ян-/i.test(ruleNote)) {
+          orthogramType = 'Суффиксы -АН-, -ЯН-, -ИН- в прилагательных (одна буква Н)';
+        } else if (/отглагольн|несовершенн/i.test(ruleNote)) {
+          orthogramType = 'Отглагольные прилагательные несовершенного вида (одна буква Н)';
+        } else if (/ветрен/i.test(ruleNote)) {
+          orthogramType = 'Исключение: ветреный (одна буква Н)';
+        } else {
+          orthogramType = 'Правописание одной буквы Н';
+        }
+      } else if (isTwoNN && !isOneN) {
+        if (/стеклян|оловян|деревян/i.test(ruleNote)) {
+          orthogramType = 'Исключения: стеклянный, оловянный, деревянный (две буквы НН)';
+        } else if (/стык|основы на н/i.test(ruleNote)) {
+          orthogramType = 'Стык основы на -Н- и суффикса -Н- (две буквы НН)';
+        } else if (/-енн-|-онн-/i.test(ruleNote)) {
+          orthogramType = 'Суффиксы -ЕНН-, -ОНН- в прилагательных (две буквы НН)';
+        } else if (/причаст|отглагольн/i.test(ruleNote)) {
+          orthogramType = 'Причастия и отглагольные прилагательные (две буквы НН)';
+        } else {
+          orthogramType = 'Правописание двух букв НН';
+        }
       } else {
-        orthogramType = 'Правописание Н и НН в суффиксах';
+        if (/кратк/i.test(ruleNote)) {
+          orthogramType = 'Краткие формы (Н и НН)';
+        } else if (/причаст|отглагольн/i.test(ruleNote)) {
+          orthogramType = 'Н и НН в причастиях и отглагольных прилагательных';
+        } else {
+          orthogramType = 'Правописание Н и НН в суффиксах';
+        }
       }
     } else {
       const chgMatch = ruleNote.match(/чередовани[ея]\s+(?:корней\s+|в корне\s+)?([А-Яа-яЁё\-\/()\s]+?)(?=[:;,.]|$)/i);
@@ -1452,6 +1549,8 @@ export function parseStructuredExplanation(
       if (!steps.some((s) => /пишется\s+РАЗДЕЛЬНО/i.test(s))) {
         steps.push(`Поэтому пишется РАЗДЕЛЬНО${splitTarget ? ` — «${splitTarget}»` : ''}.`);
       }
+    } else if (steps.some((s) => /нет\s+зависимых|отсутстви[еи]\s+зависимых|пишется\s+(?:с\s+не\s+)?слитно/i.test(s))) {
+      steps = steps.filter((s) => !/пишется\s+РАЗДЕЛЬНО/i.test(s));
     }
   } else if (task === '14') {
     const nonHyphenWords = [
@@ -2085,10 +2184,12 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
           solvedWordPreview
         )
       )
-    : '';
+    : cleanDisplayText(activeError?.rule || activeQuestion?.rule || '');
+  const isExamInstruction =
+    /^(?:Укажите|Расставьте|Найдите|В одном из|Отредактируйте|Установите)/i.test(rawRuleCandidate);
   const displayRule =
     rawRuleCandidate &&
-    !rawRuleCandidate.startsWith('Укажите варианты') &&
+    !isExamInstruction &&
     rawRuleCandidate !== parsedExplanation.ruleNote
       ? rawRuleCandidate
       : '';

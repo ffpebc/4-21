@@ -234,8 +234,8 @@ body::before {
 /* Dedicated Physical Bottom Clearance Spacer for Truly Scrollable Long Views */
 .ios-bottom-clearance {
   width: 100%;
-  height: 24px;
-  min-height: 24px;
+  height: 80px;
+  min-height: 80px;
   flex-shrink: 0;
   pointer-events: none;
 }

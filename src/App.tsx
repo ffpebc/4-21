@@ -1469,6 +1469,7 @@ export default function App() {
                       </span>
                     </button>
                   </div>
+                  <div className="ios-bottom-clearance" aria-hidden="true" />
                 </motion.div>
               )}
 
