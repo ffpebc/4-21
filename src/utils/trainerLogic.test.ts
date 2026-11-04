@@ -1074,10 +1074,16 @@ test('Pure FIPI standard: default workoutMode is fipi, legacy states migrate to 
   const initial = createInitialState();
   assert.equal(initial.workoutMode, 'fipi', 'createInitialState() must default to fipi mode');
 
-  // 2. Legacy sprint states migrate to fipi
+  // 2. Legacy sprint and mixed states migrate to fipi
   const legacySprintState = { ...initial, workoutMode: 'sprint' as const };
-  const sanitized = sanitizeLoadedState(legacySprintState);
-  assert.equal(sanitized.workoutMode, 'fipi', 'sanitizeLoadedState must migrate legacy sprint mode to fipi');
+  assert.equal(sanitizeLoadedState(legacySprintState).workoutMode, 'fipi', 'sanitizeLoadedState must migrate legacy sprint mode to fipi');
+  const legacyMixedState = { ...initial, workoutMode: 'mixed' as const };
+  assert.equal(sanitizeLoadedState(legacyMixedState).workoutMode, 'fipi', 'sanitizeLoadedState must migrate legacy mixed mode to fipi');
+
+  // Backup code decoding migrates to fipi
+  const code = encodeBackupCode({ ...initial, workoutMode: 'sprint' as any });
+  const restored = decodeBackupCode(code);
+  assert.equal(restored?.workoutMode, 'fipi', 'decodeBackupCode must restore to fipi mode');
 
   // 3. buildWorkoutQueue in fipi mode generates 100% FIPI questions with 0 sprint questions
   const quantities: Record<string, number> = {

@@ -211,6 +211,8 @@ def strip_html_lines(raw_html: str) -> list[str]:
     text = re.sub(r"<[^>]+>", "", text)
     text = html.unescape(text)
     text = text.replace("\xa0", " ").replace("\u202f", " ")
+    text = re.sub(r"\(([Зз])\)", "(3)", text)
+    text = re.sub(r"(?<=[\s\n(])([Зз])(?=\))", "3", text)
     lines = []
     for line in text.split("\n"):
         clean = re.sub(r"\s+", " ", line).strip()
@@ -682,15 +684,19 @@ def parse_task_8_or_22(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_an
     current_letter = None
     current_num = None
 
+    in_nums_section = False
     for ln in lines:
+        if in_nums_section and re.match(r"^б[\)\.]\s*", ln):
+            ln = re.sub(r"^б([\)\.])", r"6\1", ln)
         m_let = re.match(r"^([АБВГДABVGD])[\)\.]\s*(.+)$", ln)
         m_num = re.match(r"^([1-9])[\)\.]\s*(.+)$", ln)
-        if m_let:
+        if m_let and not in_nums_section:
             raw_l = m_let.group(1).translate(str.maketrans("ABVGD", "АБВГД"))
             current_letter = raw_l
             current_num = None
             letters_map[raw_l] = m_let.group(2).strip()
         elif m_num:
+            in_nums_section = True
             n = int(m_num.group(1))
             current_num = n
             current_letter = None
@@ -705,7 +711,7 @@ def parse_task_8_or_22(task_num: str, qid: str, raw_q: str, raw_sol: str, raw_an
             elif current_num and current_num in num_map:
                 num_map[current_num] += " " + ln
 
-    if len(letters_map) < 5 or len(num_map) < 7:
+    if len(letters_map) < 5 or any(n not in num_map for n in range(1, 10)):
         return None, []
 
     matching_letters = []
@@ -962,7 +968,9 @@ def parse_task_21(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source
         if m:
             sent_map[int(m.group(1))] = m.group(2).strip()
 
-    if len(sent_map) < max(correct_indices):
+    if not sent_map or len(sent_map) < max(correct_indices):
+        return None, []
+    if sorted(sent_map.keys()) != list(range(1, max(sent_map.keys()) + 1)):
         return None, []
 
     rows = []
@@ -1187,9 +1195,10 @@ def build_all():
     starter_fipi = []
     starter_sprint = []
     for t in [str(x) for x in range(4, 23)]:
-        t_fipi = [fq for fq in all_fipi if str(fq.get("task")) == t][:4]
-        t_words = [w for w in all_words if str(w.get("task")) == t][:4]
-        t_sprint = [sq for sq in all_sprint if str(sq.get("task")) == t][:4]
+        k = 4 if t in ("5", "8", "21") else (6 if t in ("4", "6", "7", "15") else 5)
+        t_fipi = [fq for fq in all_fipi if str(fq.get("task")) == t][:k]
+        t_words = [w for w in all_words if str(w.get("task")) == t][:1]
+        t_sprint = [sq for sq in all_sprint if str(sq.get("task")) == t][:1]
         starter_fipi.extend(t_fipi)
         starter_words.extend(t_words)
         starter_sprint.extend(t_sprint)

@@ -4215,7 +4215,7 @@ export function decodeBackupCode(
       ...fallbackState,
       quantities,
       enabledTasks,
-      workoutMode: data.m === 'mixed' || data.m === 'sprint' ? data.m : 'fipi',
+      workoutMode: 'fipi',
       isShuffled: data.sh === undefined ? true : Boolean(data.sh),
       totalSolved: Math.max(0, Number(data.ts || 0)),
       totalCorrect: Math.max(0, Number(data.tc || 0)),

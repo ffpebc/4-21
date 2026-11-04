@@ -1177,7 +1177,7 @@ export default function App() {
                     <motion.div
                       key="workout-builder"
                       id="workout-builder-view"
-                      className="ios-screen-stack"
+                      className="ios-screen-stack is-scrollable"
                       custom={workoutDirection}
                       variants={iosScreenSlideVariants}
                       initial="enter"
