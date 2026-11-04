@@ -25,6 +25,7 @@ import {
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
+import { sanitizeLoadedState } from './storageSync.ts';
 
 test('FIPI bank generates sprint questions + FIPI sets + KIM variants + flashcards & homophones', () => {
   const bank = getTrainerBank();
@@ -1068,7 +1069,38 @@ test('RuleInspector and sprint word formatting across all official EGE tasks (4-
   }
 });
 
+test('Pure FIPI standard: default workoutMode is fipi, legacy states migrate to fipi, and fipi queue is 100% fipi', () => {
+  // 1. Initial state defaults to FIPI standard
+  const initial = createInitialState();
+  assert.equal(initial.workoutMode, 'fipi', 'createInitialState() must default to fipi mode');
 
+  // 2. Legacy sprint states migrate to fipi
+  const legacySprintState = { ...initial, workoutMode: 'sprint' as const };
+  const sanitized = sanitizeLoadedState(legacySprintState);
+  assert.equal(sanitized.workoutMode, 'fipi', 'sanitizeLoadedState must migrate legacy sprint mode to fipi');
 
+  // 3. buildWorkoutQueue in fipi mode generates 100% FIPI questions with 0 sprint questions
+  const quantities: Record<string, number> = {
+    '4': 2, '5': 2, '6': 2, '7': 2, '8': 2,
+    '9': 3, '10': 3, '11': 3, '12': 3, '13': 3, '14': 3, '15': 3,
+    '16': 2, '17': 2, '18': 2, '19': 2, '20': 2, '21': 2, '22': 2,
+  };
+  const fipiQueue = buildWorkoutQueue(quantities, 'fipi', { randomize: true });
+  assert.ok(fipiQueue.length > 0, 'fipiQueue must not be empty');
+  assert.equal(
+    fipiQueue.every((q) => q.kind === 'fipi'),
+    true,
+    'All questions in FIPI mode must have kind === "fipi" (pure FIPI standard)'
+  );
 
+  // 4. Verify each task has its exact requested number of FIPI questions
+  for (const [taskId, expectedCount] of Object.entries(quantities)) {
+    const taskQuestions = fipiQueue.filter((q) => q.task === taskId);
+    assert.equal(
+      taskQuestions.length,
+      expectedCount,
+      `Task ${taskId} must have exactly ${expectedCount} questions in fipi mode`
+    );
+  }
+});
 

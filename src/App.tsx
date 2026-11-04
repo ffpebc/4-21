@@ -970,7 +970,7 @@ export default function App() {
   };
 
   const modeIndex =
-    state.workoutMode === 'sprint' ? 0 : state.workoutMode === 'fipi' ? 1 : 2;
+    state.workoutMode === 'fipi' ? 0 : state.workoutMode === 'mixed' ? 1 : 2;
   const sprintModeIndex =
     sprintGameMode === 'endless' ? 0 : sprintGameMode === 'blitz60' ? 1 : 2;
   const labModeIndex =
@@ -1229,9 +1229,9 @@ export default function App() {
                           setState((prev) => ({ ...prev, workoutMode: modeKey }))
                         }
                         options={[
-                          { key: 'sprint', label: '1 слово (Игра)' },
-                          { key: 'fipi', label: 'ФИПИ' },
+                          { key: 'fipi', label: 'ФИПИ стандарт' },
                           { key: 'mixed', label: 'Смешанный' },
+                          { key: 'sprint', label: '1 слово' },
                         ]}
                       />
                     </div>

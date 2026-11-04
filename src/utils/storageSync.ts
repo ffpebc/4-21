@@ -19,6 +19,7 @@ export function sanitizeLoadedState(state: TrainerState): TrainerState {
   if (!state || !Array.isArray(state.errorBank)) return state;
   return {
     ...state,
+    workoutMode: state.workoutMode === 'sprint' ? 'fipi' : (state.workoutMode || 'fipi'),
     isShuffled: typeof state.isShuffled === 'boolean' ? state.isShuffled : true,
     enabledTasks: {
       ...createDefaultEnabledTasks(),

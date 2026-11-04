@@ -1187,11 +1187,11 @@ def build_all():
     starter_fipi = []
     starter_sprint = []
     for t in [str(x) for x in range(4, 23)]:
-        t_words = [w for w in all_words if str(w.get("task")) == t][:8]
-        t_fipi = [fq for fq in all_fipi if str(fq.get("task")) == t][:2]
-        t_sprint = [sq for sq in all_sprint if str(sq.get("task")) == t][:8]
-        starter_words.extend(t_words)
+        t_fipi = [fq for fq in all_fipi if str(fq.get("task")) == t][:4]
+        t_words = [w for w in all_words if str(w.get("task")) == t][:4]
+        t_sprint = [sq for sq in all_sprint if str(sq.get("task")) == t][:4]
         starter_fipi.extend(t_fipi)
+        starter_words.extend(t_words)
         starter_sprint.extend(t_sprint)
 
     starter_obj = {
@@ -1201,7 +1201,7 @@ def build_all():
     }
     starter_path = SRC_DATA / "starterBank.json"
     with open(starter_path, "w", encoding="utf-8") as f:
-        json.dump(starter_obj, f, ensure_ascii=False)
+        json.dump(starter_obj, f, ensure_ascii=False, separators=(",", ":"))
 
     size_kb = starter_path.stat().st_size / 1024
     print(f"Saved lightweight src/data/starterBank.json: {size_kb:.1f} KB (words={len(starter_words)}, fipi={len(starter_fipi)}, sprint={len(starter_sprint)})")

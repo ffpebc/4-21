@@ -3500,7 +3500,7 @@ export function createInitialState(): TrainerState {
   return {
     quantities,
     enabledTasks: createDefaultEnabledTasks(),
-    workoutMode: 'sprint',
+    workoutMode: 'fipi',
     isShuffled: true,
     totalSolved: 0,
     totalCorrect: 0,
@@ -3846,6 +3846,15 @@ export function buildWorkoutQueue(
             }
           }
         }
+      }
+
+      // Pass C: If pool has fewer items than fipiNeed (e.g. cold start with small pool), reuse with unique instanceId
+      while (pickedFipi.length < fipiNeed && candidates.length > 0) {
+        const recycled = candidates[pickedFipi.length % candidates.length];
+        pickedFipi.push({
+          ...recycled,
+          instanceId: `${recycled.id}-inst-${pickedFipi.length + 1}`,
+        });
       }
     }
 
@@ -4206,7 +4215,7 @@ export function decodeBackupCode(
       ...fallbackState,
       quantities,
       enabledTasks,
-      workoutMode: data.m === 'fipi' || data.m === 'mixed' ? data.m : 'sprint',
+      workoutMode: data.m === 'mixed' || data.m === 'sprint' ? data.m : 'fipi',
       isShuffled: data.sh === undefined ? true : Boolean(data.sh),
       totalSolved: Math.max(0, Number(data.ts || 0)),
       totalCorrect: Math.max(0, Number(data.tc || 0)),
