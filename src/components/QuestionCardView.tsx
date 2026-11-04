@@ -595,7 +595,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
         style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label)' }}
       >
         <div className="text-[12.5px] sm:text-[13.5px] font-semibold leading-snug">
-          <FormattedInstruction rule={fipiQ.rule} task={fipiQ.task} />
+          <FormattedInstruction rule={fipiQ.instruction || fipiQ.rule} task={fipiQ.task} />
         </div>
       </div>
 

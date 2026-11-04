@@ -3062,7 +3062,18 @@ export function cleanExplanation(str: string | undefined): string {
   return res.replace(/;\s*;/g, ';').replace(/\.\s*\./g, '.').trim();
 }
 
-export function cleanQuestionRule(rule: string | undefined, task: string): string {
+export function cleanQuestionRule(rule: string | undefined, task: string, instruction?: string): string {
+  if (instruction && instruction.length >= 10) {
+    let cleanedInstr = instruction.replace(/\s*Предложение:\s*«?.*$/is, '').trim();
+    cleanedInstr = cleanScraperArtifacts(cleanedInstr).replace(/[«»]/g, '').trim();
+    if (task === '15') {
+      if (/пишется\s+(?:одна\s+буква\s+)?Н(?!Н)/i.test(cleanedInstr) || /одна\s+буква\s+Н/i.test(cleanedInstr)) {
+        return 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.';
+      }
+      return 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.';
+    }
+    return cleanedInstr;
+  }
   if (task === '15') {
     if (rule) {
       if (/пишется\s+(?:одна\s+буква\s+)?Н(?!Н)/i.test(rule) || /одна\s+буква\s+Н/i.test(rule)) {
@@ -3162,7 +3173,7 @@ export function getTrainerBank() {
         if (rawFq.correctIndices.some((c) => c < 1 || c > rawFq.rows.length)) continue;
       }
 
-      const rule = cleanQuestionRule(rawFq.rule, rawFq.task);
+      const rule = cleanQuestionRule(rawFq.rule, rawFq.task, rawFq.instruction);
       const isNumberedGapTask = ['15', '17', '18', '19', '20'].includes(rawFq.task);
       const sentence =
         rawFq.task === '15'
@@ -3186,11 +3197,13 @@ export function getTrainerBank() {
           ? 'numbered_gaps'
           : 'rows');
 
+      const instruction = rawFq.instruction || (rawFq.task === '15' ? rule : undefined);
+
       const fq: FipiQuestion = {
         ...rawFq,
         questionKind,
         rule,
-        instruction: sentence || rawFq.instruction,
+        instruction: instruction || rule,
         sentence,
         rows,
       };
