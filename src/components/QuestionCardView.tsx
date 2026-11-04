@@ -1039,7 +1039,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                 <div className="flex-1 min-w-0 text-left">
                   <div className="text-[12.5px] sm:text-[13px] font-bold leading-tight">
                     {(fipiSubmitted ? row.solvedWords : row.words)
-                      .map((w) => (['9', '10', '11', '12', '13', '14', '15'].includes(fipiQ.task) ? cleanWord(w) : w))
+                      .map((w) => cleanWord(w))
                       .join(', ')}
                   </div>
                   {fipiSubmitted && (

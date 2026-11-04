@@ -22,6 +22,8 @@ import {
   formatTask14SolvedWord,
   TASK_IDS,
   TASK_BLOCKS,
+  getOfficialTaskInstruction,
+  isTheoryOrExplanationText,
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
@@ -1109,4 +1111,47 @@ test('Pure FIPI standard: default workoutMode is fipi, legacy states migrate to 
     );
   }
 });
+
+test('Clean official FIPI instructions & zero double-parentheses across entire trainer bank (user screenshot fix)', () => {
+  // 1. isTheoryOrExplanationText detects spoiler grammar text
+  const spoilerTask12 = 'От глаголов I спряжения (включая брить, стелить и глаголы на -ЯТЬ: сеять, веять, лелеять, таять, каяться, чуять) — -УЩ-/-ЮЩ-. От глаголов II спряжения — -АЩ-/-ЯЩ-.';
+  assert.equal(isTheoryOrExplanationText(spoilerTask12), true, 'Spoiler rule must be recognized as theory');
+  assert.equal(isTheoryOrExplanationText('Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква.'), false, 'Official instruction must not be recognized as theory');
+
+  // 2. cleanQuestionRule sanitizes spoiler rule into official exam prompt
+  const cleanedTask12 = cleanQuestionRule(spoilerTask12, '12');
+  assert.equal(cleanedTask12, 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.');
+
+  // 3. getOfficialTaskInstruction covers tasks 4-22 accurately
+  assert.equal(getOfficialTaskInstruction('9'), 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.');
+  assert.equal(getOfficialTaskInstruction('13', { target: 'РАЗДЕЛЬНО' }), 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО. Запишите номера ответов.');
+  assert.equal(getOfficialTaskInstruction('14', { target: 'СЛИТНО' }), 'Укажите варианты ответов, в которых все выделенные слова пишутся СЛИТНО. Запишите номера ответов.');
+  assert.equal(getOfficialTaskInstruction('15'), 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.');
+
+  // 4. cleanWord collapses double parens and OCR artifacts
+  assert.equal(cleanWord('ка..тся ((враги))'), 'ка..тся (враги)');
+  assert.equal(cleanWord('пропиш..т ((он) (в квартире))'), 'пропиш..т (он в квартире)');
+  assert.equal(cleanWord('(((((ВО ЧТО БЫ ТО НИ СТАЛО)))))'), '(ВО ЧТО БЫ ТО НИ СТАЛО)');
+
+  // 5. Entire question bank has 0 leaked theory rules in question prompts and 0 double parens
+  const bank = getTrainerBank();
+  const theoryWords = ['спряжени', 'правило «окна»', 'перед -нн-', 'приставка', 'суффикс', 'корень', 'исключени'];
+  for (const q of bank.fipiQuestions) {
+    const prompt = q.instruction || q.rule || '';
+    for (const tw of theoryWords) {
+      assert.equal(prompt.toLowerCase().includes(tw), false, `FIPI Task ${q.task} ${q.id} must not leak rule: ${prompt}`);
+    }
+    for (const r of q.rows || []) {
+      for (const w of [...(r.words || []), ...(r.solvedWords || [])]) {
+        assert.equal(w.includes('((') || w.includes('))'), false, `Word must not have double parens in Task ${q.task} ${q.id}: ${w}`);
+      }
+    }
+  }
+
+  for (const q of bank.sprintQuestions) {
+    const full = `${q.prefix || ''} ${q.suffix || ''} ${q.context || ''}`;
+    assert.equal(full.includes('((') || full.includes('))'), false, `Sprint word must not have double parens in ${q.id}: ${full}`);
+  }
+});
+
 

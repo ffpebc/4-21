@@ -138,16 +138,37 @@ const createEmptyKimAnswers = (): Record<TaskId, string> => {
 export default function App() {
   const [bankRev, setBankRev] = useState(0);
   useEffect(() => {
+    const syncAppViewport = () => {
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      if (h && h > 0) {
+        document.documentElement.style.setProperty('--app-height', `${Math.round(h)}px`);
+      }
+    };
+    syncAppViewport();
+    window.addEventListener('resize', syncAppViewport, { passive: true });
+    window.addEventListener('orientationchange', syncAppViewport, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', syncAppViewport, { passive: true });
+      window.visualViewport.addEventListener('scroll', syncAppViewport, { passive: true });
+    }
+
     const onLoaded = () => setBankRev((r) => r + 1);
     window.addEventListener('ege-bank-loaded', onLoaded);
 
     const onFocusOut = () => {
       window.scrollTo(0, 0);
       document.body.scrollTop = 0;
+      syncAppViewport();
     };
     window.addEventListener('focusout', onFocusOut);
 
     return () => {
+      window.removeEventListener('resize', syncAppViewport);
+      window.removeEventListener('orientationchange', syncAppViewport);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', syncAppViewport);
+        window.visualViewport.removeEventListener('scroll', syncAppViewport);
+      }
       window.removeEventListener('ege-bank-loaded', onLoaded);
       window.removeEventListener('focusout', onFocusOut);
     };

@@ -26,8 +26,7 @@
         height: 100%;
         min-height: 100%;
         min-height: -webkit-fill-available;
-        height: 100vh;
-        height: 100dvh;
+        height: var(--app-height, 100dvh);
         overflow: hidden;
         background-color: #E6ECF8;
         color: #0B0F19;
@@ -39,7 +38,10 @@
         height: 100%;
         min-height: 100%;
         min-height: -webkit-fill-available;
+        height: var(--app-height, 100dvh);
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
       html.dark, html.dark body {
         background-color: #000000;
@@ -48,6 +50,19 @@
     </style>
     <script>
       (function () {
+        function syncAppViewport() {
+          var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+          if (h && h > 0) {
+            document.documentElement.style.setProperty('--app-height', Math.round(h) + 'px');
+          }
+        }
+        syncAppViewport();
+        window.addEventListener('resize', syncAppViewport, { passive: true });
+        window.addEventListener('orientationchange', syncAppViewport, { passive: true });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', syncAppViewport, { passive: true });
+        }
+
         try {
           var raw = localStorage.getItem('ege_ortho_ios27_v6');
           if (raw && (raw.indexOf('"darkMode":true') !== -1 || raw.indexOf('"d":1') !== -1)) {

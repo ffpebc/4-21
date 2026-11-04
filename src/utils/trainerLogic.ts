@@ -2969,7 +2969,7 @@ export function invalidateQuestionBankCache() {
 
 export function cleanScraperArtifacts(text: string | undefined): string {
   if (!text) return '';
-  return text
+  let res = text
     .replace(/\([Зз]\)/g, '(3)')
     .replace(/«\.\.\.—\s*«\.\.\./g, '')
     .replace(/—\s*«\.\.\.[^»]*»*/g, '')
@@ -2978,11 +2978,18 @@ export function cleanScraperArtifacts(text: string | undefined): string {
     .replace(/\.\.\.»/g, '')
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
     .trim();
+
+  res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2 $3)');
+  res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2)');
+  res = res.replace(/\(\s*\(([^()]+)\)\s*\)/g, '($1)');
+  res = res.replace(/\({2,}/g, '(').replace(/\){2,}/g, ')');
+
+  return res.trim();
 }
 
 export function cleanWord(str: string | undefined): string {
   if (!str) return '';
-  return str
+  let res = str
     .replace(/\([Зз]\)/g, '(3)')
     .replace(/«\.\.\.—\s*«\.\.\./g, '')
     .replace(/—\s*«\.\.\.[^»]*»*/g, '')
@@ -2991,6 +2998,13 @@ export function cleanWord(str: string | undefined): string {
     .replace(/[«»]/g, '')
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
     .trim();
+
+  res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2 $3)');
+  res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2)');
+  res = res.replace(/\(\s*\(([^()]+)\)\s*\)/g, '($1)');
+  res = res.replace(/\({2,}/g, '(').replace(/\){2,}/g, ')');
+
+  return res.trim();
 }
 
 export function cleanExplanation(str: string | undefined): string {
@@ -3059,39 +3073,124 @@ export function cleanExplanation(str: string | undefined): string {
   res = res.replace(/;\s*Остальные слова пишутся[^.;]*/gi, '');
   res = res.replace(/;\s*В остальных вариантах[^.;]*/gi, '');
 
+  res = res.replace(/\({2,}/g, '(').replace(/\){2,}/g, ')');
+  res = res.replace(/\(\(([^()]+)\)\)/g, '($1)');
+
   return res.replace(/;\s*;/g, ';').replace(/\.\s*\./g, '.').trim();
 }
 
-export function cleanQuestionRule(rule: string | undefined, task: string, instruction?: string): string {
-  if (instruction && instruction.length >= 10) {
-    let cleanedInstr = instruction.replace(/\s*Предложение:\s*«?.*$/is, '').trim();
-    cleanedInstr = cleanScraperArtifacts(cleanedInstr).replace(/[«»]/g, '').trim();
-    if (task === '15') {
-      if (/пишется\s+(?:одна\s+буква\s+)?Н(?!Н)/i.test(cleanedInstr) || /одна\s+буква\s+Н/i.test(cleanedInstr)) {
+export function isTheoryOrExplanationText(text: string | undefined): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return (
+    lower.includes('спряжени') ||
+    lower.includes('правило «окна»') ||
+    lower.includes('перед -нн-') ||
+    lower.includes('в корнях') ||
+    lower.includes('приставки') ||
+    lower.includes('суффиксы') ||
+    lower.includes('исключения') ||
+    lower.includes('союзы тоже') ||
+    lower.includes('не пишется раздельно с глаголами') ||
+    lower.includes('в -чив-/-лив-') ||
+    lower.includes('под ударением') ||
+    lower.includes('без ударения') ||
+    lower.includes('от глаголов') ||
+    lower.includes('чередование') ||
+    lower.includes('правило:') ||
+    lower.includes('исключение:')
+  );
+}
+
+export function getOfficialTaskInstruction(
+  task: TaskId | string,
+  variant?: { target?: string; ruleOrInstruction?: string }
+): string {
+  const t = String(task);
+  const context = (variant?.ruleOrInstruction || variant?.target || '').toLowerCase();
+
+  switch (t) {
+    case '4':
+      if (context.includes('неверно')) {
+        return 'Укажите варианты ответов, в которых НЕВЕРНО выделена буква, обозначающая ударный гласный звук. Запишите номера ответов.';
+      }
+      return 'Укажите варианты ответов, в которых верно выделена буква, обозначающая ударный гласный звук. Запишите номера ответов.';
+    case '5':
+      return 'В одном из приведённых ниже предложений НЕВЕРНО употреблено выделенное слово. Исправьте лексическую ошибку, подобрав к выделенному слову пароним. Запишите подобранное слово.';
+    case '6':
+      if (context.includes('заменив') || context.includes('замена')) {
+        return 'Отредактируйте предложение: исправьте лексическую ошибку, заменив неверно употреблённое слово. Запишите подобранное слово.';
+      }
+      return 'Отредактируйте предложение: исправьте лексическую ошибку, исключив лишнее слово. Запишите это слово.';
+    case '7':
+      return 'В одном из выделенных ниже слов допущена ошибка в образовании формы слова. Исправьте ошибку и запишите слово правильно.';
+    case '8':
+      return 'Установите соответствие между грамматическими ошибками и предложениями, в которых они допущены: к каждой позиции первого столбца подберите соответствующую позицию из второго столбца.';
+    case '9':
+    case '10':
+    case '11':
+    case '12':
+      return 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.';
+    case '13':
+      if (context.includes('слитно') && !context.includes('раздельно')) {
+        return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется СЛИТНО. Запишите номера ответов.';
+      }
+      return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО. Запишите номера ответов.';
+    case '14':
+      if (context.includes('дефис')) {
+        return 'Укажите варианты ответов, в которых все выделенные слова пишутся ЧЕРЕЗ ДЕФИС. Запишите номера ответов.';
+      }
+      if (context.includes('раздельно')) {
+        return 'Укажите варианты ответов, в которых все выделенные слова пишутся РАЗДЕЛЬНО. Запишите номера ответов.';
+      }
+      return 'Укажите варианты ответов, в которых все выделенные слова пишутся СЛИТНО. Запишите номера ответов.';
+    case '15':
+      if (context.includes('одна буква н') || /пишется\s+(?:одна\s+буква\s+)?н(?!н)/i.test(context)) {
         return 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.';
       }
       return 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.';
-    }
-    return cleanedInstr;
-  }
-  if (task === '15') {
-    if (rule) {
-      if (/пишется\s+(?:одна\s+буква\s+)?Н(?!Н)/i.test(rule) || /одна\s+буква\s+Н/i.test(rule)) {
-        return 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.';
+    case '16':
+      return 'Расставьте знаки препинания. Укажите предложения, в которых нужно поставить ОДНУ запятую. Запишите номера этих предложений.';
+    case '17':
+    case '18':
+    case '19':
+    case '20':
+      return 'Расставьте знаки препинания: укажите все цифры, на месте которых в предложении должны стоять запятые.';
+    case '21':
+      if (context.includes('двоеточи')) {
+        return 'Найдите предложения, в которых двоеточие ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений.';
       }
-      if (/пишется\s+НН/i.test(rule) || /две\s+буквы\s+НН/i.test(rule)) {
+      if (context.includes('запят')) {
+        return 'Найдите предложения, в которых запятая ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений.';
+      }
+      return 'Найдите предложения, в которых тире ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений.';
+    case '22':
+      return 'Прочитайте фрагмент рецензии. Запишите в таблицу выбранные цифры под соответствующими буквами.';
+    default:
+      return 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.';
+  }
+}
+
+export function cleanQuestionRule(rule: string | undefined, task: string, instruction?: string): string {
+  const cand = instruction && instruction.trim().length >= 10 ? instruction : rule;
+  if (cand && !isTheoryOrExplanationText(cand)) {
+    let cleaned = cand.replace(/\s*Предложение:\s*«?.*$/is, '').trim();
+    cleaned = cleanScraperArtifacts(cleaned).replace(/[«»]/g, '').trim();
+    if (
+      cleaned.length >= 15 &&
+      /^(укажите|найдите|расставьте|отредактируйте|в одном из|прочитайте|установите|запишите)/i.test(cleaned)
+    ) {
+      if (task === '15') {
+        if (/пишется\s+(?:одна\s+буква\s+)?Н(?!Н)/i.test(cleaned) || /одна\s+буква\s+Н/i.test(cleaned)) {
+          return 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.';
+        }
         return 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.';
       }
+      return cleaned;
     }
-    return 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.';
   }
-  if (!rule) {
-    if (task === '13') return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО (или СЛИТНО).';
-    return 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква.';
-  }
-  let cleaned = rule.replace(/\s*Предложение:\s*«?.*$/is, '').trim();
-  cleaned = cleanScraperArtifacts(cleaned).replace(/[«»]/g, '').trim();
-  return cleaned || rule;
+
+  return getOfficialTaskInstruction(task, { ruleOrInstruction: cand });
 }
 
 export function resolveTask15Sentence(question: any): string {
@@ -3403,23 +3502,53 @@ export function getTrainerBank() {
           ? pickNextFromAnswer(primaryAns)
           : pickNextFromAnswer(otherAns);
 
-        const formatGap = (w: SprintQuestion) => {
-          if (task === '13' || task === '14') {
-            return `${w.prefix} ${w.suffix} ${w.context}`.trim();
+        const cleanContextParen = (ctx: string | undefined): string => {
+          if (!ctx) return '';
+          let c = ctx.trim();
+          while (c.startsWith('(') && c.endsWith(')')) {
+            c = c.slice(1, -1).trim();
           }
-          return w.context ? `${w.prefix}..${w.suffix} (${w.context})` : `${w.prefix}..${w.suffix}`;
+          c = c.replace(/\(+/g, '(').replace(/\)+/g, ')');
+          return c;
+        };
+
+        const formatGap = (w: SprintQuestion) => {
+          const rawCtx = cleanContextParen(w.context);
+          if (task === '13' || task === '14') {
+            if (rawCtx) {
+              if (rawCtx.includes('(НЕ)') || rawCtx.includes(w.suffix)) {
+                return cleanWord(rawCtx);
+              }
+              return cleanWord(`${w.prefix} ${w.suffix} (${rawCtx})`);
+            }
+            return cleanWord(`${w.prefix} ${w.suffix}`);
+          }
+          return rawCtx ? `${w.prefix}..${w.suffix} (${rawCtx})` : `${w.prefix}..${w.suffix}`;
         };
         const formatSolved = (w: SprintQuestion) => {
+          const rawCtx = cleanContextParen(w.context);
           if (task === '13' || task === '14') {
-            if (w.answer === 'СЛИТНО') {
-              return `${w.prefix.replace(/[()]/g, '')}${w.suffix} (${w.context})`;
-            } else if (w.answer === 'ДЕФИСНО') {
-              return `${w.prefix.replace(/[()]/g, '')}-${w.suffix} (${w.context})`;
-            } else {
-              return `${w.prefix.replace(/[()]/g, '')} ${w.suffix} (${w.context})`;
+            const prefixClean = w.prefix.replace(/[()]/g, '').trim();
+            const suffixClean = w.suffix.replace(/[()]/g, '').trim();
+            const solvedWord =
+              w.answer === 'СЛИТНО'
+                ? `${prefixClean}${suffixClean}`
+                : w.answer === 'ДЕФИСНО'
+                ? `${prefixClean}-${suffixClean}`
+                : `${prefixClean} ${suffixClean}`;
+            if (rawCtx) {
+              const escPrefix = prefixClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const escSuffix = suffixClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const re = new RegExp(`\\(${escPrefix}\\)\\s*${escSuffix}|\\b${escPrefix}\\s*${escSuffix}\\b`, 'gi');
+              if (re.test(rawCtx)) {
+                return cleanWord(rawCtx.replace(re, solvedWord));
+              }
+              return cleanWord(`${solvedWord} (${rawCtx})`);
             }
+            return solvedWord;
           }
-          return `${w.prefix}${w.answer.toLowerCase()}${w.suffix}`;
+          const ctxSuffix = rawCtx ? ` (${rawCtx})` : '';
+          return `${w.prefix}${w.answer.toLowerCase()}${w.suffix}${ctxSuffix}`;
         };
 
         rows.push({
@@ -3435,13 +3564,15 @@ export function getTrainerBank() {
         }
       }
 
+      const officialInstruction = getOfficialTaskInstruction(task);
       const fq: FipiQuestion = {
         id: `fipi-${task}-${setNum}`,
         kind: 'fipi',
         questionKind: 'rows',
         task,
         topic: TASK_META[task].title,
-        rule: taskGroups[0]?.rule || '',
+        instruction: officialInstruction,
+        rule: officialInstruction,
         rows,
         correctIndices,
       };
