@@ -1173,5 +1173,111 @@ test('Clean official FIPI instructions & zero double-parentheses across entire t
   }
 });
 
+test('Authentic prototype coverage and punctuation sentence integrity across tasks 4-22', () => {
+  const bank = getTrainerBank();
+
+  // 1. Check all official prototypes exist across all tasks 4-22
+  const tasksFound = new Set(bank.fipiQuestions.map((q) => q.task));
+  for (const t of TASK_IDS) {
+    assert.equal(tasksFound.has(t), true, `Task ${t} must be present in bank`);
+  }
+
+  // Task 6: both prototypes (исключив / заменив)
+  const t6Inst = bank.fipiQuestions.filter((q) => q.task === '6').map((q) => q.instruction || q.rule);
+  assert.equal(t6Inst.some((s) => s.includes('исключив')), true, 'Task 6 must have "исключив" prototype');
+  assert.equal(t6Inst.some((s) => s.includes('заменив')), true, 'Task 6 must have "заменив" prototype');
+
+  // Task 13: both prototypes (РАЗДЕЛЬНО / СЛИТНО)
+  const t13Inst = bank.fipiQuestions.filter((q) => q.task === '13').map((q) => q.instruction || q.rule);
+  assert.equal(t13Inst.some((s) => s.includes('РАЗДЕЛЬНО')), true, 'Task 13 must have "РАЗДЕЛЬНО" prototype');
+  assert.equal(t13Inst.some((s) => s.includes('СЛИТНО')), true, 'Task 13 must have "СЛИТНО" prototype');
+
+  // Task 14: all three prototypes (ЧЕРЕЗ ДЕФИС / РАЗДЕЛЬНО / СЛИТНО)
+  const t14Inst = bank.fipiQuestions.filter((q) => q.task === '14').map((q) => q.instruction || q.rule);
+  assert.equal(t14Inst.some((s) => s.includes('ЧЕРЕЗ ДЕФИС')), true, 'Task 14 must have "ЧЕРЕЗ ДЕФИС" prototype');
+  assert.equal(t14Inst.some((s) => s.includes('РАЗДЕЛЬНО')), true, 'Task 14 must have "РАЗДЕЛЬНО" prototype');
+  assert.equal(t14Inst.some((s) => s.includes('СЛИТНО')), true, 'Task 14 must have "СЛИТНО" prototype');
+
+  // Task 15: both prototypes (НН / Н)
+  const t15Inst = bank.fipiQuestions.filter((q) => q.task === '15').map((q) => q.instruction || q.rule);
+  assert.equal(t15Inst.some((s) => s.includes('НН')), true, 'Task 15 must have "НН" prototype');
+  assert.equal(t15Inst.some((s) => s.includes(' Н.') || s.includes('одна буква Н') || /пишется\s+Н\./i.test(s)), true, 'Task 15 must have "Н" prototype');
+
+  // Task 21: all three prototypes (ТИРЕ / ЗАПЯТАЯ / ДВОЕТОЧИЕ)
+  const t21Inst = bank.fipiQuestions.filter((q) => q.task === '21').map((q) => q.instruction || q.rule);
+  assert.equal(t21Inst.some((s) => s.includes('ТИРЕ') || s.includes('тире')), true, 'Task 21 must have "ТИРЕ" prototype');
+  assert.equal(t21Inst.some((s) => s.includes('ЗАПЯТАЯ') || s.includes('запятая')), true, 'Task 21 must have "ЗАПЯТАЯ" prototype');
+  assert.equal(t21Inst.some((s) => s.includes('ДВОЕТОЧИЕ') || s.includes('двоеточие')), true, 'Task 21 must have "ДВОЕТОЧИЕ" prototype');
+
+  // 2. Numbered gap tasks (15, 17, 18, 19, 20) preserve authentic sentences without placeholder corruption
+  for (const q of bank.fipiQuestions) {
+    if (['15', '17', '18', '19', '20'].includes(q.task)) {
+      const resolved = resolveTask15Sentence(q);
+      assert.equal(resolved.includes('Позиция (1)(1)'), false, `Task ${q.task} question ${q.id} must not have double position digits`);
+      assert.equal(resolved.includes('пропущены буквы') && ['17', '18', '19', '20'].includes(q.task), false, `Punctuation task ${q.task} must not say "пропущены буквы"`);
+      assert.equal(resolved.length >= 15, true, `Task ${q.task} sentence must not be empty`);
+    }
+  }
+
+  // 3. cleanWord must never truncate sentences at em-dash
+  const punctSentence = '«Мы обязательно вернёмся, ждите нас!» — писали солдаты в письмах с фронта.';
+  assert.equal(cleanWord(punctSentence).includes('писали солдаты'), true, 'cleanWord must not truncate sentence after dash');
+  assert.equal(cleanWord('Москва — столица России, крупнейший мегаполис.').includes('крупнейший'), true);
+
+  // 4. Task 4 all questions have authentic orthoepic stress norms for incorrect rows
+  for (const q of bank.fipiQuestions.filter((item) => item.task === '4')) {
+    for (const r of q.rows) {
+      if (!r.isCorrectRow) {
+        const solved = (r.solvedWords || [''])[0];
+        assert.ok(solved && solved.length > 0, `Task 4 row must have solvedWords: ${r.words[0]}`);
+        assert.ok(/[А-ЯЁ]/.test(solved), `Task 4 solved word must have uppercase stress letter: ${solved}`);
+        // Norm letter must match uppercase vowel in solvedWord
+        const solvedStress = solved.match(/[А-ЯЁ]/)?.[0];
+        assert.equal(r.letter, solvedStress, `Task 4 row letter must match solved stress for ${r.words[0]}`);
+      }
+    }
+  }
+
+  // Specific Task 4 checks
+  const q4_82032 = bank.fipiQuestions.find((q) => q.id === 'nf-4-82032');
+  if (q4_82032) {
+    assert.equal(q4_82032.rows[1].solvedWords[0], 'жалюзИ');
+    assert.equal(q4_82032.rows[1].letter, 'И');
+  }
+  const q4_82029 = bank.fipiQuestions.find((q) => q.id === 'nf-4-82029');
+  if (q4_82029) {
+    assert.equal(q4_82029.rows[0].solvedWords[0], 'облегчИт');
+    assert.equal(q4_82029.rows[0].letter, 'И');
+    assert.equal(q4_82029.rows[2].solvedWords[0], 'добралАсь');
+    assert.equal(q4_82029.rows[3].solvedWords[0], 'слИвовый');
+  }
+
+  // 5. Task 22 zero leaked section headers & official instruction matches matching format
+  assert.equal(getOfficialTaskInstruction('22').includes('рецензии'), false, 'Task 22 instruction must not mention рецензия');
+  assert.equal(getOfficialTaskInstruction('22').includes('соответствие между предложениями'), true, 'Task 22 instruction must be matching format');
+  for (const q of bank.fipiQuestions.filter((item) => item.task === '22')) {
+    for (const ml of q.matchingLetters || []) {
+      const txt = typeof ml === 'string' ? ml : ml.text || '';
+      assert.equal(txt.includes('Изобразительно-выразительные средства языка'), false, `Matching letter in Task 22 ${q.id} must not leak header`);
+    }
+    for (const r of q.rows) {
+      assert.equal((r.explanation || '').includes('Изобразительно-выразительные средства языка'), false, `Row explanation in Task 22 ${q.id} must not leak header`);
+    }
+  }
+
+  // 6. Task 5 nf-5-82033 explanation is authentic paronym comparison
+  const q5 = bank.fipiQuestions.find((q) => q.id === 'nf-5-82033');
+  if (q5) {
+    const errorRow = q5.rows.find((r) => r.isCorrectRow);
+    assert.ok(errorRow?.explanation?.includes('Нетерпимый') || errorRow?.explanation?.includes('нетерпимо'), 'Task 5 nf-5-82033 must have paronym explanation');
+  }
+
+  // 7. cleanScraperArtifacts cleans broken XML entity and section header
+  assert.equal(cleanScraperArtifacts('мир (ТАК ЖЕ) &#х2013;">— видеть его').includes('&#х2013;'), false);
+  assert.equal(cleanScraperArtifacts('мир (ТАК ЖЕ) &#х2013;">— видеть его'), 'мир (ТАК ЖЕ) — видеть его');
+  assert.equal(cleanScraperArtifacts('Пушкин Изобразительно-выразительные средства языка'), 'Пушкин');
+});
+
+
 
 

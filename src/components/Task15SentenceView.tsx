@@ -53,18 +53,23 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
 
     if (isSubmitted && row) {
       const displayLetter = row.letter || (row.isCorrectRow ? ',' : '—');
+      const stateBadge = isWordGap
+        ? displayLetter
+        : row.isCorrectRow
+          ? `, (${digit})`
+          : `(${digit})`;
       if (row.isCorrectRow && isSelected) {
         badgeClass += 'bg-[var(--ios-green-soft)] text-[var(--ios-green)] border border-[rgba(52,199,89,0.35)] shadow-xs';
-        badgeText = `${displayLetter} (${digit})`;
+        badgeText = stateBadge;
       } else if (row.isCorrectRow && !isSelected) {
         badgeClass += 'bg-[var(--ios-orange-soft)] text-[var(--ios-orange)] border border-[rgba(255,149,0,0.35)]';
-        badgeText = `${displayLetter} (${digit})`;
+        badgeText = stateBadge;
       } else if (!row.isCorrectRow && isSelected) {
         badgeClass += 'bg-[var(--ios-red-soft)] text-[var(--ios-red)] border border-[rgba(255,59,48,0.35)]';
-        badgeText = `${displayLetter} (${digit})`;
+        badgeText = stateBadge;
       } else {
         badgeClass += 'bg-[var(--ios-bg-tertiary)] text-[var(--ios-label-sec)] border border-transparent opacity-75';
-        badgeText = `${displayLetter} (${digit})`;
+        badgeText = stateBadge;
       }
     } else if (isSelected) {
       badgeClass += 'bg-[var(--ios-blue)] text-white shadow-xs scale-105 active:scale-95';

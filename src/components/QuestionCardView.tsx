@@ -475,6 +475,8 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
   const assignMatchingDigit = (digit: number) => {
     if (fipiSubmitted) return;
+    let slotCleared = false;
+    let nextDigits: number[] = [];
     setFipiMatchingDigits((prev) => {
       const next = [...prev];
       // If digit is already used in another slot, clear that slot first
@@ -482,19 +484,27 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       if (existingSlot !== -1 && existingSlot !== activeMatchSlot) {
         next[existingSlot] = 0;
       }
-      next[activeMatchSlot] = next[activeMatchSlot] === digit ? 0 : digit;
+      if (next[activeMatchSlot] === digit) {
+        next[activeMatchSlot] = 0;
+        slotCleared = true;
+      } else {
+        next[activeMatchSlot] = digit;
+      }
+      nextDigits = next;
       return next;
     });
-    // Advance active slot to next empty slot
-    setActiveMatchSlot((prevSlot) => {
-      for (let offset = 1; offset <= 5; offset++) {
-        const cand = (prevSlot + offset) % 5;
-        if (cand !== prevSlot && fipiMatchingDigits[cand] === 0) {
-          return cand;
+    // Advance active slot only when digit is assigned, staying if deselected
+    if (!slotCleared) {
+      setActiveMatchSlot((prevSlot) => {
+        for (let offset = 1; offset <= 5; offset++) {
+          const cand = (prevSlot + offset) % 5;
+          if (cand !== prevSlot && nextDigits[cand] === 0) {
+            return cand;
+          }
         }
-      }
-      return Math.min(4, prevSlot + 1);
-    });
+        return prevSlot;
+      });
+    }
   };
 
   const getUserAnswerPayload = (): string => {
@@ -550,7 +560,9 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
   const getRowFeedbackLabel = (row: FipiQuestion['rows'][number]): string => {
     if (fipiQ.task === '4') {
-      return row.isCorrectRow ? `Верное ударение: ${row.letter}` : `Неверно (норма: ${row.letter})`;
+      return row.isCorrectRow
+        ? 'Верное ударение'
+        : `Неверно (норма: ${row.solvedWords[0] || row.letter})`;
     }
     if (fipiQ.task === '16') {
       return row.isCorrectRow ? 'Подходит: одна запятая' : `Не подходит (${row.letter})`;
@@ -703,47 +715,69 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
             {fipiSubmitted && (
               <div className="flex flex-col gap-1.5 mt-2 text-left max-h-[220px] overflow-y-auto pr-1">
-                {fipiQ.rows.map((row, idx) => {
-                  const digit = idx + 1;
-                  const solvedWord = cleanWord(row.solvedWords[0] || row.words[0]);
+                {(() => {
+                  const isSharedExplanation =
+                    ['17', '18', '19', '20'].includes(fipiQ.task) ||
+                    fipiQ.rows.every((r) => r.explanation === fipiQ.rows[0]?.explanation);
                   return (
-                    <div
-                      key={digit}
-                      className="p-2.5 rounded-2xl border border-[var(--ios-separator)] text-[12px]"
-                      style={{ background: 'var(--ios-bg-secondary)' }}
-                    >
-                      <div className="flex items-center gap-2 font-bold mb-0.5">
-                        <span
-                          className="w-5 h-5 rounded-full text-[11px] font-extrabold flex items-center justify-center shrink-0"
-                          style={{
-                            background: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-bg-tertiary)',
-                            color: row.isCorrectRow ? '#fff' : 'var(--ios-label-sec)',
-                          }}
+                    <>
+                      {fipiQ.rows.map((row, idx) => {
+                        const digit = idx + 1;
+                        const solvedWord = fipiQ.task === '15'
+                          ? cleanWord(row.solvedWords[0] || row.words[0])
+                          : `Позиция (${digit})`;
+                        return (
+                          <div
+                            key={digit}
+                            className="p-2.5 rounded-2xl border border-[var(--ios-separator)] text-[12px]"
+                            style={{ background: 'var(--ios-bg-secondary)' }}
+                          >
+                            <div className="flex items-center gap-2 font-bold mb-0.5">
+                              <span
+                                className="w-5 h-5 rounded-full text-[11px] font-extrabold flex items-center justify-center shrink-0"
+                                style={{
+                                  background: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-bg-tertiary)',
+                                  color: row.isCorrectRow ? '#fff' : 'var(--ios-label-sec)',
+                                }}
+                              >
+                                {digit}
+                              </span>
+                              <span className="font-extrabold" style={{ color: 'var(--ios-label)' }}>
+                                {solvedWord}
+                              </span>
+                              <span
+                                className="text-[11px] ml-auto font-semibold"
+                                style={{ color: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-label-sec)' }}
+                              >
+                                {fipiQ.task === '15'
+                                  ? `пишется «${row.letter}»`
+                                  : row.isCorrectRow
+                                    ? 'запятая ставится'
+                                    : 'без запятой'}
+                              </span>
+                            </div>
+                            {!isSharedExplanation && row.explanation && (
+                              <div className="text-[11px] opacity-85 leading-snug pl-7" style={{ color: 'var(--ios-label-sec)' }}>
+                                {cleanExplanation(row.explanation)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {isSharedExplanation && fipiQ.rows[0]?.explanation && (
+                        <div
+                          className="p-2.5 rounded-2xl border border-[var(--ios-separator)] text-[11px] opacity-90 leading-snug mt-1"
+                          style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label-sec)' }}
                         >
-                          {digit}
-                        </span>
-                        <span className="font-extrabold" style={{ color: 'var(--ios-label)' }}>
-                          {solvedWord}
-                        </span>
-                        <span
-                          className="text-[11px] ml-auto font-semibold"
-                          style={{ color: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-label-sec)' }}
-                        >
-                          {fipiQ.task === '15'
-                            ? `пишется «${row.letter}»`
-                            : row.isCorrectRow
-                              ? 'запятая ставится'
-                              : 'без запятой'}
-                        </span>
-                      </div>
-                      {row.explanation && (
-                        <div className="text-[11px] opacity-85 leading-snug pl-7" style={{ color: 'var(--ios-label-sec)' }}>
-                          {cleanExplanation(row.explanation)}
+                          <div className="font-bold mb-1" style={{ color: 'var(--ios-blue)' }}>
+                            Пояснение к знакам препинания:
+                          </div>
+                          {cleanExplanation(fipiQ.rows[0].explanation)}
                         </div>
                       )}
-                    </div>
+                    </>
                   );
-                })}
+                })()}
               </div>
             )}
           </div>
@@ -842,14 +876,52 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                   : 'var(--ios-separator)',
               }}
             />
+            {fipiSubmitted && !fipiResultOk && (
+              <div
+                className="text-[12px] font-extrabold text-left px-1 mt-0.5"
+                style={{ color: 'var(--ios-green)' }}
+              >
+                Верный ответ: {(fipiQ.textAnswers || []).join(' / ') || fipiQ.rows.find((r) => r.isCorrectRow)?.letter}
+              </div>
+            )}
           </div>
 
-          {fipiSubmitted && fipiQ.rows[0]?.explanation && (
+          {fipiSubmitted && (
             <div
               className="p-3 rounded-2xl border border-[var(--ios-separator)] text-[11.5px] leading-snug text-left"
               style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label-sec)' }}
             >
-              {cleanExplanation(fipiQ.rows[0].explanation)}
+              {(() => {
+                const targetRow =
+                  fipiQ.rows.find(
+                    (r) =>
+                      r.isCorrectRow &&
+                      r.explanation &&
+                      !r.explanation.includes('употреблён верно') &&
+                      !r.explanation.includes('образована верно')
+                  ) ||
+                  fipiQ.rows.find((r) => r.isCorrectRow) ||
+                  fipiQ.rows.find(
+                    (r) =>
+                      r.explanation &&
+                      !r.explanation.includes('употреблён верно') &&
+                      !r.explanation.includes('образована верно')
+                  ) ||
+                  fipiQ.rows[0];
+                let expl = cleanExplanation(targetRow?.explanation);
+                if (!expl || expl.includes('употреблён верно') || expl.includes('образована верно')) {
+                  const correctAns =
+                    (fipiQ.textAnswers || [])[0] ||
+                    (fipiQ.rows.find((r) => r.isCorrectRow)?.solvedWords || [])[0] ||
+                    '';
+                  if (fipiQ.task === '5') {
+                    expl = `Ошибка в употреблении паронима. Правильный пароним: ${correctAns}.`;
+                  } else if (fipiQ.task === '7') {
+                    expl = `Ошибка в образовании формы слова. Правильная форма: ${correctAns}.`;
+                  }
+                }
+                return expl;
+              })()}
             </div>
           )}
         </div>
@@ -989,7 +1061,17 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                   >
                     {digit}
                   </span>
-                  <span className="flex-1">{cleanScraperArtifacts(row.words.join(' ').replace(/^\d+\)\s*/, ''))}</span>
+                  <div className="flex-1 min-w-0">
+                    <div>{cleanScraperArtifacts(row.words.join(' ').replace(/^\d+\)\s*/, ''))}</div>
+                    {fipiSubmitted && row.explanation && (
+                      <div
+                        className="text-[10px] mt-0.5 opacity-90 leading-tight font-semibold"
+                        style={{ color: row.isCorrectRow ? 'var(--ios-blue)' : 'var(--ios-label-sec)' }}
+                      >
+                        {cleanExplanation(row.explanation)}
+                      </div>
+                    )}
+                  </div>
                   {assignedLetter && (
                     <span
                       className="px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0"
@@ -1040,7 +1122,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                 <div className="flex-1 min-w-0 text-left">
                   <div className="text-[12.5px] sm:text-[13px] font-bold leading-tight">
                     {(fipiSubmitted ? row.solvedWords : row.words)
-                      .map((w) => cleanWord(w))
+                      .map((w) => cleanScraperArtifacts(w).replace(/^\(\d+\)\s*/, ''))
                       .join(', ')}
                   </div>
                   {fipiSubmitted && (

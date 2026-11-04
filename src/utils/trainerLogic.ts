@@ -2981,7 +2981,6 @@ export function cleanScraperArtifacts(text: string | undefined): string {
 
   res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2 $3)');
   res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2)');
-  res = res.replace(/\(\s*\(([^()]+)\)\s*\)/g, '($1)');
   res = res.replace(/\({2,}/g, '(').replace(/\){2,}/g, ')');
 
   // Strip orphan closing paren before period or at the end
@@ -2993,6 +2992,12 @@ export function cleanScraperArtifacts(text: string | undefined): string {
     return opens > closes ? `${word}).` : `${word}.`;
   });
 
+  // Strip broken XML/HTML entity artifacts and section headers
+  res = res
+    .replace(/&#[хx]2013;\s*\"?>\s*—?/gi, '—')
+    .replace(/\s*Изобразительно-выразительные средства языка\s*$/i, '')
+    .trim();
+
   return res.trim();
 }
 
@@ -3002,8 +3007,14 @@ export function cleanWord(str: string | undefined): string {
     .replace(/\([Зз]\)/g, '(3)')
     .replace(/«\.\.\.—\s*«\.\.\./g, '')
     .replace(/—\s*«\.\.\.[^»]*»*/g, '')
-    .replace(/\s*—\s*«?\.\.\..*$/, '')
-    .replace(/\s*—\s*.*$/, '') // In a single word, strip any trailing dash context or scraper snippet
+    .replace(/\s*—\s*«?\.\.\..*$/, '');
+
+  const isMultiWordSentence = res.includes(' ') && (res.length > 30 || /[.,:;!?]/.test(res.slice(0, res.indexOf('—') !== -1 ? res.indexOf('—') : undefined)));
+  if (!isMultiWordSentence) {
+    res = res.replace(/\s*—\s*.*$/, ''); // In a single word, strip any trailing dash context or scraper snippet
+  }
+
+  res = res
     .replace(/[«»]/g, '')
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
     .trim();
@@ -3040,6 +3051,7 @@ export function cleanExplanation(str: string | undefined): string {
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    .replace(/\s*Изобразительно-выразительные средства языка\s*$/i, '')
     .trim();
 
   // Normalize digit 3 inside Russian words
@@ -3185,7 +3197,7 @@ export function getOfficialTaskInstruction(
       }
       return 'Найдите предложения, в которых тире ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений.';
     case '22':
-      return 'Прочитайте фрагмент рецензии. Запишите в таблицу выбранные цифры под соответствующими буквами.';
+      return 'Установите соответствие между предложениями (выделенными фразами) и средствами выразительности: к каждой позиции первого столбца подберите соответствующую позицию из второго столбца.';
     default:
       return 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.';
   }
@@ -3232,9 +3244,12 @@ export function resolveTask15Sentence(question: any): string {
   const rows = Array.isArray(question.rows) ? question.rows : [];
   const gapDigits = new Set<number>();
   if (sent) {
-    const matches = [...sent.matchAll(/([А-Яа-яЁё-]+)\((\d+)\)([А-Яа-яЁё-]*)/g)];
+    const matches = [...sent.matchAll(/([А-Яа-яЁё-]+)\((\d+)\)([А-Яа-яЁё-]*)|(?:\((\d+)\))/g)];
     for (const m of matches) {
-      gapDigits.add(parseInt(m[2], 10));
+      const d = parseInt(m[2] || m[4], 10);
+      if (!isNaN(d)) {
+        gapDigits.add(d);
+      }
     }
   }
 
@@ -3245,17 +3260,25 @@ export function resolveTask15Sentence(question: any): string {
   // If missing, corrupted, or missing any of the row gap numbers, reconstruct cleanly from question.rows
   if (!sent || !hasAllRowGaps || sent.length < 15) {
     if (rows.length > 0) {
-      const parts = rows.map((r: any, i: number) => {
-        const raw = (r.words?.[0] || '').replace(/\([Зз]\)/g, '(3)');
-        const m = raw.match(/([А-Яа-яЁё-]+)\((\d+)\)([А-Яа-яЁё-]*)/);
-        if (m) return `${m[1]}(${m[2]})${m[3]}`;
-        const clean = cleanWord(raw);
-        if (/\.{2,}|…/.test(clean)) {
-          return clean.replace(/\.{2,}|…/, `(${i + 1})`);
-        }
-        return `${clean}(${i + 1})`;
-      });
-      sent = `В данном предложении пропущены буквы: ${parts.join(', ')}.`;
+      const isPunctTask = ['17', '18', '19', '20'].includes(String(question.task));
+      if (isPunctTask) {
+        sent = 'Расставьте знаки препинания в предложении: укажите все цифры, на месте которых должны стоять запятые.';
+      } else {
+        const parts = rows.map((r: any, i: number) => {
+          const raw = (r.words?.[0] || '').replace(/\([Зз]\)/g, '(3)');
+          const m = raw.match(/([А-Яа-яЁё-]+)\((\d+)\)([А-Яа-яЁё-]*)/);
+          if (m) return `${m[1]}(${m[2]})${m[3]}`;
+          const clean = cleanWord(raw);
+          if (/\.{2,}|…/.test(clean)) {
+            return clean.replace(/\.{2,}|…/, `(${i + 1})`);
+          }
+          if (/\(\d+\)/.test(clean)) {
+            return clean;
+          }
+          return `${clean}(${i + 1})`;
+        });
+        sent = `В данном предложении пропущены буквы: ${parts.join(', ')}.`;
+      }
     } else {
       sent = 'Укажите цифры на месте пропусков в словах предложения.';
     }

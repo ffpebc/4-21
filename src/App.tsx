@@ -2596,7 +2596,10 @@ export default function App() {
                           style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label)' }}
                         >
                           <div className="text-[14px] sm:text-[15.5px] font-semibold leading-relaxed">
-                            <FormattedInstruction rule={currentKimTaskQuestion.rule} task={kimActiveTask} />
+                            <FormattedInstruction
+                              rule={currentKimTaskQuestion.instruction || currentKimTaskQuestion.rule}
+                              task={kimActiveTask}
+                            />
                           </div>
                         </div>
 
