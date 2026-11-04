@@ -4,6 +4,7 @@ import {
   FipiQuestion,
   resolveTask15Sentence,
   cleanWord,
+  cleanScraperArtifacts,
   cleanExplanation,
   checkFipiQuestionAnswer,
 } from '../utils/trainerLogic';
@@ -770,7 +771,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                   }}
                 >
                   <span className="opacity-60 font-extrabold mr-1.5">{idx + 1})</span>
-                  <span>{(fipiSubmitted ? row.solvedWords : row.words).join(' ')}</span>
+                  <span>{(fipiSubmitted ? row.solvedWords : row.words).map(cleanScraperArtifacts).join(' ')}</span>
                 </div>
               ))}
             </div>
@@ -779,7 +780,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               className="p-3.5 rounded-2xl border border-[var(--ios-separator)] text-[13.5px] sm:text-[14.5px] font-semibold leading-relaxed text-left whitespace-pre-line"
               style={{ background: 'var(--ios-bg-secondary)', color: 'var(--ios-label)' }}
             >
-              {fipiQ.sentence || (fipiQ.rows[0]?.words || []).join(' ')}
+              {cleanScraperArtifacts(fipiQ.sentence || (fipiQ.rows[0]?.words || []).join(' '))}
             </div>
           )}
 
@@ -988,7 +989,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                   >
                     {digit}
                   </span>
-                  <span className="flex-1">{row.words.join(' ').replace(/^\d+\)\s*/, '')}</span>
+                  <span className="flex-1">{cleanScraperArtifacts(row.words.join(' ').replace(/^\d+\)\s*/, ''))}</span>
                   {assignedLetter && (
                     <span
                       className="px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0"

@@ -2984,6 +2984,15 @@ export function cleanScraperArtifacts(text: string | undefined): string {
   res = res.replace(/\(\s*\(([^()]+)\)\s*\)/g, '($1)');
   res = res.replace(/\({2,}/g, '(').replace(/\){2,}/g, ')');
 
+  // Strip orphan closing paren before period or at the end
+  res = res.replace(/(?<=[А-Яа-яЁёA-Za-z0-9])\)\s*\)\./g, ').');
+  res = res.replace(/([А-Яа-яЁёA-Za-z0-9])\)\./g, (m, word, offset, full) => {
+    const prefix = full.slice(0, offset);
+    const opens = (prefix.match(/\(/g) || []).length;
+    const closes = (prefix.match(/\)/g) || []).length;
+    return opens > closes ? `${word}).` : `${word}.`;
+  });
+
   return res.trim();
 }
 
@@ -3003,6 +3012,15 @@ export function cleanWord(str: string | undefined): string {
   res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2)');
   res = res.replace(/\(\s*\(([^()]+)\)\s*\)/g, '($1)');
   res = res.replace(/\({2,}/g, '(').replace(/\){2,}/g, ')');
+
+  // Strip orphan closing paren before period or at the end
+  res = res.replace(/(?<=[А-Яа-яЁёA-Za-z0-9])\)\s*\)\./g, ').');
+  res = res.replace(/([А-Яа-яЁёA-Za-z0-9])\)\./g, (m, word, offset, full) => {
+    const prefix = full.slice(0, offset);
+    const opens = (prefix.match(/\(/g) || []).length;
+    const closes = (prefix.match(/\)/g) || []).length;
+    return opens > closes ? `${word}).` : `${word}.`;
+  });
 
   return res.trim();
 }
@@ -3083,20 +3101,22 @@ export function isTheoryOrExplanationText(text: string | undefined): boolean {
   if (!text) return false;
   const lower = text.toLowerCase();
   return (
-    lower.includes('спряжени') ||
+    lower.includes('спряжен') ||
     lower.includes('правило «окна»') ||
     lower.includes('перед -нн-') ||
-    lower.includes('в корнях') ||
-    lower.includes('приставки') ||
-    lower.includes('суффиксы') ||
-    lower.includes('исключения') ||
+    lower.includes('перед нн') ||
+    lower.includes('в корн') ||
+    lower.includes('приставк') ||
+    lower.includes('суффикс') ||
+    lower.includes('исключен') ||
+    lower.includes('чередован') ||
+    lower.includes('чередующ') ||
     lower.includes('союзы тоже') ||
     lower.includes('не пишется раздельно с глаголами') ||
     lower.includes('в -чив-/-лив-') ||
     lower.includes('под ударением') ||
     lower.includes('без ударения') ||
     lower.includes('от глаголов') ||
-    lower.includes('чередование') ||
     lower.includes('правило:') ||
     lower.includes('исключение:')
   );
@@ -3502,31 +3522,30 @@ export function getTrainerBank() {
           ? pickNextFromAnswer(primaryAns)
           : pickNextFromAnswer(otherAns);
 
-        const cleanContextParen = (ctx: string | undefined): string => {
+        const cleanClarifyingContext = (ctx: string | undefined): string => {
           if (!ctx) return '';
-          let c = ctx.trim();
-          while (c.startsWith('(') && c.endsWith(')')) {
-            c = c.slice(1, -1).trim();
-          }
-          c = c.replace(/\(+/g, '(').replace(/\)+/g, ')');
-          return c;
+          return ctx.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
         };
 
         const formatGap = (w: SprintQuestion) => {
-          const rawCtx = cleanContextParen(w.context);
           if (task === '13' || task === '14') {
-            if (rawCtx) {
-              if (rawCtx.includes('(НЕ)') || rawCtx.includes(w.suffix)) {
-                return cleanWord(rawCtx);
+            if (w.context) {
+              const isFullSentence = w.context.length > 25 || /[.?!,;]/.test(w.context);
+              if (isFullSentence) {
+                return cleanWord(w.context);
               }
-              return cleanWord(`${w.prefix} ${w.suffix} (${rawCtx})`);
+              const cleanCtx = cleanClarifyingContext(w.context);
+              return cleanCtx
+                ? cleanWord(`${w.prefix} ${w.suffix} (${cleanCtx})`)
+                : cleanWord(`${w.prefix} ${w.suffix}`);
             }
             return cleanWord(`${w.prefix} ${w.suffix}`);
           }
-          return rawCtx ? `${w.prefix}..${w.suffix} (${rawCtx})` : `${w.prefix}..${w.suffix}`;
+          const cleanCtx = cleanClarifyingContext(w.context);
+          return cleanCtx ? `${w.prefix}..${w.suffix} (${cleanCtx})` : `${w.prefix}..${w.suffix}`;
         };
+
         const formatSolved = (w: SprintQuestion) => {
-          const rawCtx = cleanContextParen(w.context);
           if (task === '13' || task === '14') {
             const prefixClean = w.prefix.replace(/[()]/g, '').trim();
             const suffixClean = w.suffix.replace(/[()]/g, '').trim();
@@ -3536,18 +3555,33 @@ export function getTrainerBank() {
                 : w.answer === 'ДЕФИСНО'
                 ? `${prefixClean}-${suffixClean}`
                 : `${prefixClean} ${suffixClean}`;
-            if (rawCtx) {
-              const escPrefix = prefixClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              const escSuffix = suffixClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              const re = new RegExp(`\\(${escPrefix}\\)\\s*${escSuffix}|\\b${escPrefix}\\s*${escSuffix}\\b`, 'gi');
-              if (re.test(rawCtx)) {
-                return cleanWord(rawCtx.replace(re, solvedWord));
+
+            if (w.context) {
+              const isFullSentence = w.context.length > 25 || /[.?!,;]/.test(w.context);
+              if (isFullSentence) {
+                const parts = `${w.prefix} ${w.suffix}`
+                  .replace(/[()\-–—]/g, ' ')
+                  .trim()
+                  .split(/\s+/)
+                  .filter(Boolean);
+                if (parts.length > 0) {
+                  const tokenPattern = parts
+                    .map((p) => `\\(?${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?`)
+                    .join('[\\s\\-–—()]*');
+                  const re = new RegExp(tokenPattern, 'gi');
+                  if (re.test(w.context)) {
+                    return cleanWord(w.context.replace(re, solvedWord));
+                  }
+                }
+                return cleanWord(w.context);
               }
-              return cleanWord(`${solvedWord} (${rawCtx})`);
+              const cleanCtx = cleanClarifyingContext(w.context);
+              return cleanCtx ? cleanWord(`${solvedWord} (${cleanCtx})`) : solvedWord;
             }
             return solvedWord;
           }
-          const ctxSuffix = rawCtx ? ` (${rawCtx})` : '';
+          const cleanCtx = cleanClarifyingContext(w.context);
+          const ctxSuffix = cleanCtx ? ` (${cleanCtx})` : '';
           return `${w.prefix}${w.answer.toLowerCase()}${w.suffix}${ctxSuffix}`;
         };
 

@@ -139,7 +139,8 @@ export default function App() {
   const [bankRev, setBankRev] = useState(0);
   useEffect(() => {
     const syncAppViewport = () => {
-      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const h = Math.max(vh || 0, window.innerHeight || 0);
       if (h && h > 0) {
         document.documentElement.style.setProperty('--app-height', `${Math.round(h)}px`);
       }
@@ -147,10 +148,14 @@ export default function App() {
     syncAppViewport();
     window.addEventListener('resize', syncAppViewport, { passive: true });
     window.addEventListener('orientationchange', syncAppViewport, { passive: true });
+    window.addEventListener('pageshow', syncAppViewport, { passive: true });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', syncAppViewport, { passive: true });
       window.visualViewport.addEventListener('scroll', syncAppViewport, { passive: true });
     }
+    const t1 = window.setTimeout(syncAppViewport, 60);
+    const t2 = window.setTimeout(syncAppViewport, 250);
+    const t3 = window.setTimeout(syncAppViewport, 600);
 
     const onLoaded = () => setBankRev((r) => r + 1);
     window.addEventListener('ege-bank-loaded', onLoaded);
@@ -163,8 +168,12 @@ export default function App() {
     window.addEventListener('focusout', onFocusOut);
 
     return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
       window.removeEventListener('resize', syncAppViewport);
       window.removeEventListener('orientationchange', syncAppViewport);
+      window.removeEventListener('pageshow', syncAppViewport);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', syncAppViewport);
         window.visualViewport.removeEventListener('scroll', syncAppViewport);

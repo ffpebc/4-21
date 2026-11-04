@@ -1152,6 +1152,26 @@ test('Clean official FIPI instructions & zero double-parentheses across entire t
     const full = `${q.prefix || ''} ${q.suffix || ''} ${q.context || ''}`;
     assert.equal(full.includes('((') || full.includes('))'), false, `Sprint word must not have double parens in ${q.id}: ${full}`);
   }
+
+  // 6. Orphan closing paren removal before period or end
+  assert.equal(cleanWord('ПО-СВОЕМУ).'), 'ПО-СВОЕМУ.');
+  assert.equal(cleanWord('(ПО-СВОЕМУ).'), '(ПО-СВОЕМУ).');
+  assert.equal(cleanWord('В КОНЦЕ(КОНЦОВ).'), 'В КОНЦЕ(КОНЦОВ).');
+
+  // 7. Verify Task 13 and Task 14 have zero unbalanced parentheses in solvedWords and zero wrapped sentences
+  for (const q of bank.fipiQuestions) {
+    if (q.task === '13' || q.task === '14') {
+      for (const r of q.rows || []) {
+        for (const w of [...(r.words || []), ...(r.solvedWords || [])]) {
+          const openCount = (w.match(/\(/g) || []).length;
+          const closeCount = (w.match(/\)/g) || []).length;
+          assert.equal(openCount, closeCount, `Task ${q.task} question ${q.id} must have balanced parens: ${w}`);
+          assert.equal(/\b[А-Яа-яЁёA-Za-z-]+\s+\([^)]*$/.test(w), false, `Must not wrap entire sentence in parens: ${w}`);
+        }
+      }
+    }
+  }
 });
+
 
 
