@@ -3206,25 +3206,13 @@ export function getOfficialTaskInstruction(
 }
 
 export function cleanQuestionRule(rule: string | undefined, task: string, instruction?: string): string {
-  const cand = instruction && instruction.trim().length >= 10 ? instruction : rule;
-  if (cand && !isTheoryOrExplanationText(cand)) {
-    let cleaned = cand.replace(/\s*Предложение:\s*«?.*$/is, '').trim();
-    cleaned = cleanScraperArtifacts(cleaned).replace(/[«»]/g, '').trim();
-    if (
-      cleaned.length >= 15 &&
-      /^(укажите|найдите|расставьте|отредактируйте|в одном из|прочитайте|установите|запишите)/i.test(cleaned)
-    ) {
-      if (task === '15') {
-        if (/пишется\s+(?:одна\s+буква\s+)?Н(?!Н)/i.test(cleaned) || /одна\s+буква\s+Н/i.test(cleaned)) {
-          return 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.';
-        }
-        return 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.';
-      }
-      return cleaned;
-    }
+  const t = String(task);
+  if (['9', '10', '11', '12'].includes(t)) {
+    return 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.';
   }
 
-  return getOfficialTaskInstruction(task, { ruleOrInstruction: cand });
+  const cand = (instruction && instruction.trim().length > 0) ? instruction : rule;
+  return getOfficialTaskInstruction(t, { ruleOrInstruction: cand });
 }
 
 export function resolveTask15Sentence(question: any): string {

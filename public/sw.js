@@ -14,7 +14,12 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : Promise.resolve()))
+          keys.map((key) => {
+            if (key !== CACHE_NAME && !key.startsWith('ege-bank-cache-v28')) {
+              return caches.delete(key);
+            }
+            return Promise.resolve();
+          })
         )
       )
       .then(() => self.clients.claim())

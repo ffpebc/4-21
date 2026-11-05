@@ -97,16 +97,21 @@ export function refreshMaps() {
 refreshMaps();
 
 // Очищаем устаревший кэш с урезанной или поврежденной базой
+const CURRENT_BANK_CACHE = 'ege-bank-cache-v28';
 if (typeof window !== 'undefined' && 'caches' in window) {
   try {
-    for (let v = 1; v <= 23; v++) {
-      window.caches.delete(`ege-bank-cache-v${v}`);
-    }
+    window.caches.keys().then((keys) => {
+      keys.forEach((key) => {
+        if (key.startsWith('ege-bank-cache-') && key !== CURRENT_BANK_CACHE) {
+          window.caches.delete(key).catch(() => {});
+        }
+      });
+    }).catch(() => {});
   } catch {}
 }
 
 async function fetchJsonWithCache(url: string, fallbackUrls: string[] = []): Promise<any> {
-  const cacheName = 'ege-bank-cache-v24';
+  const cacheName = CURRENT_BANK_CACHE;
   let cache: Cache | null = null;
   if (typeof window !== 'undefined' && 'caches' in window) {
     try {
@@ -115,7 +120,7 @@ async function fetchJsonWithCache(url: string, fallbackUrls: string[] = []): Pro
       if (cached) {
         const cachedData = await cached.json();
         const count = Array.isArray(cachedData) ? cachedData.length : cachedData?.words?.length || 0;
-        if (count >= 20000 || (url.includes('fipiTasks') && count >= 5000) || (url.includes('sprint') && count >= 20000)) {
+        if (count >= 20000 || (url.includes('fipiTasks') && count >= 6000) || (url.includes('sprint') && count >= 20000)) {
           return cachedData;
         }
       }
@@ -155,7 +160,7 @@ export async function loadFullDataBank(): Promise<boolean> {
     const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
     const cdnBase = 'https://cdn.jsdelivr.net/gh/ffpebc/9-15@data/public/data';
-    const vParam = '?v=24';
+    const vParam = '?v=28';
     const [allWordsData, fipiData, sprintData] = await Promise.all([
       fetchJsonWithCache(`${localBase}/allWordsBank9_15.json${vParam}`, [
         `${rawGithubBase}/allWordsBank9_15.json${vParam}`,

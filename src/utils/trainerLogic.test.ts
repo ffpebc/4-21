@@ -1371,6 +1371,64 @@ test('Exhaustive task-by-task verification across all 19 tasks (4–22): grading
   }
 });
 
+test('cleanQuestionRule strictly returns official FIPI instructions and prevents theory leakage across tasks 4-22', () => {
+  // Task 12 spoiler rule from user screenshot
+  const spoilerTask12 = 'От глаголов I спряжения (включая брить, стелить и глаголы на -ЯТЬ: сеять, веять, лелеять, таять, каяться, чуять) — -УЩ-/-ЮЩ-. От глаголов II спряжения — -АЩ-/-ЯЩ-.';
+  const clean12 = cleanQuestionRule(spoilerTask12, '12');
+  assert.equal(clean12, 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.');
+
+  // Tasks 9, 10, 11
+  assert.equal(cleanQuestionRule('Любое правило корней', '9'), 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.');
+  assert.equal(cleanQuestionRule('Любое правило приставок', '10'), 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.');
+  assert.equal(cleanQuestionRule('Любое правило суффиксов', '11'), 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.');
+
+  // Task 4
+  assert.equal(cleanQuestionRule('', '4', 'Укажите варианты ответов, в которых верно'), 'Укажите варианты ответов, в которых верно выделена буква, обозначающая ударный гласный звук. Запишите номера ответов.');
+  assert.equal(cleanQuestionRule('', '4', 'Укажите варианты ответов, в которых неверно'), 'Укажите варианты ответов, в которых НЕВЕРНО выделена буква, обозначающая ударный гласный звук. Запишите номера ответов.');
+
+  // Task 5, 6, 7, 8
+  assert.ok(cleanQuestionRule('', '5').includes('пароним'));
+  assert.ok(cleanQuestionRule('', '6', 'заменив').includes('заменив'));
+  assert.ok(cleanQuestionRule('', '6', 'исключив').includes('исключив'));
+  assert.ok(cleanQuestionRule('', '7').includes('образовании формы'));
+  assert.ok(cleanQuestionRule('', '8').includes('грамматическими ошибками'));
+
+  // Task 13, 14, 15
+  assert.ok(cleanQuestionRule('', '13', 'слитно').includes('СЛИТНО'));
+  assert.ok(cleanQuestionRule('', '13', 'раздельно').includes('РАЗДЕЛЬНО'));
+  assert.ok(cleanQuestionRule('', '14', 'дефис').includes('ЧЕРЕЗ ДЕФИС'));
+  assert.ok(cleanQuestionRule('', '14', 'раздельно').includes('РАЗДЕЛЬНО'));
+  assert.ok(cleanQuestionRule('', '14', 'слитно').includes('СЛИТНО'));
+  assert.ok(cleanQuestionRule('', '15', 'одна буква н').includes(' Н.'));
+  assert.ok(cleanQuestionRule('', '15', 'две буквы нн').includes(' НН.'));
+
+  // Task 16, 17-20, 21, 22
+  assert.ok(cleanQuestionRule('', '16').includes('ОДНУ запятую'));
+  assert.ok(cleanQuestionRule('', '17').includes('должны стоять запятые'));
+  assert.ok(cleanQuestionRule('', '21', 'тире').includes('тире'));
+  assert.ok(cleanQuestionRule('', '21', 'двоеточие').includes('двоеточие'));
+  assert.ok(cleanQuestionRule('', '21', 'запятая').includes('запятая'));
+  assert.ok(cleanQuestionRule('', '22').includes('средствами выразительности'));
+});
+
+test('cleanScraperArtifacts normalizes all nested double parens from user screenshot', () => {
+  const row1 = 'ка..тся ((враги)), ма..тся ((они)), оглядыва..тся ((он))';
+  assert.equal(cleanScraperArtifacts(row1), 'ка..тся (враги), ма..тся (они), оглядыва..тся (он)');
+
+  const row2 = 'возненавид..вший ((всех)), пропиш..т ((он) (в квартире)), подброш..нный ((мяч))';
+  assert.equal(cleanScraperArtifacts(row2), 'возненавид..вший (всех), пропиш..т (он в квартире), подброш..нный (мяч)');
+
+  const row3 = 'грохоч..щие ((волны)), завяж..т ((дети) (шнурки)), подерж..нный ((автомобиль))';
+  assert.equal(cleanScraperArtifacts(row3), 'грохоч..щие (волны), завяж..т (дети шнурки), подерж..нный (автомобиль)');
+
+  const row4 = 'обеспеч..т ((они)), скач..нный ((документ)), передерж..нные ((овощи))';
+  assert.equal(cleanScraperArtifacts(row4), 'обеспеч..т (они), скач..нный (документ), передерж..нные (овощи)');
+
+  const row5 = 'подмет..вший ((недостатки)), завис..м ((мы)), стро..те ((вы долго))';
+  assert.equal(cleanScraperArtifacts(row5), 'подмет..вший (недостатки), завис..м (мы), стро..те (вы долго)');
+});
+
+
 
 
 
