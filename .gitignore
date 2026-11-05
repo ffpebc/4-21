@@ -16,3 +16,6 @@ push.sh
 __pycache__/
 *.pyc
 
+*allWordsBank*.json
+src/data/allWordsBank*.json
+public/data/allWordsBank*.json
