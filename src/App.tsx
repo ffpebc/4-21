@@ -33,6 +33,7 @@ import {
   cleanWord,
   cleanExplanation,
   resolveTask15Sentence,
+  formatTask14SolvedWord,
   BALANCED_30_QUANTITIES,
 } from './utils/trainerLogic';
 import {
@@ -1952,16 +1953,19 @@ export default function App() {
                         <div className="flex flex-col gap-2.5">
                           {sessionMistakes.map((m, idx) => {
                             const q = m.question;
+                            const isOrthoSprint = ['9', '10', '11', '12', '13', '14', '15'].includes(q.task);
                             const wordTitle =
                               q.kind === 'sprint'
-                                ? q.task === '13' || q.task === '14'
+                                ? !isOrthoSprint
+                                  ? ['4', '5', '6', '7'].includes(q.task)
+                                    ? q.answer
+                                    : q.suffix || q.context || q.answer
+                                  : q.task === '13'
                                   ? `${q.prefix.replace(/[()]/g, '')}${
-                                      q.answer === 'СЛИТНО'
-                                        ? ''
-                                        : q.answer === 'ДЕФИСНО'
-                                          ? '-'
-                                          : ' '
+                                      q.answer === 'СЛИТНО' ? '' : ' '
                                     }${q.suffix}`
+                                  : q.task === '14'
+                                  ? formatTask14SolvedWord(q.prefix, q.suffix, q.answer)
                                   : `${q.prefix}${q.answer.toLowerCase()}${q.suffix}`
                                 : `Задание № ${q.task} · ФИПИ`;
                             const correctChoice =
@@ -1971,10 +1975,10 @@ export default function App() {
                                 ? q.explanation
                                 : q.rows
                                     .map((r, rIdx) =>
-                                      r.isCorrectRow
-                                        ? `Строка ${rIdx + 1} (${r.letter}): ${r.solvedWords.join(', ')}`
-                                        : null
-                                    )
+                                       r.isCorrectRow
+                                         ? `Строка ${rIdx + 1} (${r.letter}): ${r.solvedWords.join(', ')}`
+                                         : null
+                                     )
                                     .filter(Boolean)
                                     .join(' | ');
                             return (
@@ -1995,7 +1999,7 @@ export default function App() {
                                     id: `err-${q.id}`,
                                     task: q.task,
                                     topic: q.topic,
-                                    wordDisplay: q.kind === 'sprint' ? `${q.prefix}..${q.suffix}` : wordTitle,
+                                    wordDisplay: q.kind === 'sprint' ? (!isOrthoSprint ? wordTitle : `${q.prefix}..${q.suffix}`) : wordTitle,
                                     correctWord: wordTitle,
                                     userChoice: m.userChoice,
                                     correctChoice: correctChoice,

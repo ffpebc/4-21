@@ -102,9 +102,21 @@ async function run() {
     const consoleErrors = [];
     client.events = [];
 
-    console.log('[CDP] Navigating to http://127.0.0.1:3000/ ...');
-    await client.send('Page.navigate', { url: 'http://127.0.0.1:3000/' });
-    await wait(3000);
+    const PORT = process.env.PORT || (await (async () => {
+      try {
+        await new Promise((res, rej) => {
+          const r = http.get('http://127.0.0.1:3333/', (s) => (s.statusCode === 200 ? res(3333) : rej()));
+          r.on('error', rej);
+        });
+        return 3333;
+      } catch {
+        return 3000;
+      }
+    })());
+
+    console.log(`[CDP] Navigating to http://127.0.0.1:${PORT}/ ...`);
+    await client.send('Page.navigate', { url: `http://127.0.0.1:${PORT}/` });
+    await wait(4000);
 
     // 1. Check title and loaded state
     const appInfo = await client.send('Runtime.evaluate', {
@@ -119,6 +131,9 @@ async function run() {
       returnByValue: true,
     });
     console.log('[CDP] Page Info:', appInfo.result.value);
+    if (!appInfo.result.value?.hasRoot) {
+      throw new Error('App root element #root was not found! App failed to render.');
+    }
 
     // 2. Test Tab Navigation across all 5 tabs
     const tabs = ['Занятие', 'Спринт', 'Лаб 4–22', 'Ошибки', 'Статистика'];
@@ -137,6 +152,9 @@ async function run() {
         returnByValue: true,
       });
       console.log(`  Tab "${tabName}" clicked:`, tabClicked.result.value);
+      if (!tabClicked.result.value?.found) {
+        throw new Error(`Tab "${tabName}" was not found!`);
+      }
       await wait(1000);
     }
 
@@ -155,13 +173,16 @@ async function run() {
       returnByValue: true,
     });
     console.log('[CDP] Словарь clicked:', dictOpen.result.value);
+    if (!dictOpen.result.value?.clicked) {
+      throw new Error('Словарь modal button was not found or could not be clicked!');
+    }
     await wait(1500);
 
     const dictContent = await client.send('Runtime.evaluate', {
       expression: `(() => {
         const bodyText = document.body.innerText;
         return {
-          hasDictionaryHeader: bodyText.includes('Словарь') || bodyText.includes('база'),
+          hasDictionaryHeader: bodyText.includes('Словарь') || bodyText.includes('база') || bodyText.includes('База'),
           itemsCount: document.querySelectorAll('button, div, span').length,
           snippet: bodyText.slice(0, 200),
         };
@@ -169,6 +190,9 @@ async function run() {
       returnByValue: true,
     });
     console.log('[CDP] Словарь content info:', dictContent.result.value);
+    if (!dictContent.result.value?.hasDictionaryHeader) {
+      throw new Error('Словарь modal did not display dictionary content!');
+    }
 
     // Close modal (by pressing Escape or clicking close button)
     await client.send('Runtime.evaluate', {
@@ -204,6 +228,9 @@ async function run() {
       returnByValue: true,
     });
     console.log('[CDP] Start workout result:', startResult.result.value);
+    if (!startResult.result.value?.started) {
+      throw new Error(`Start workout button failed: ${JSON.stringify(startResult.result.value)}`);
+    }
     await wait(2000);
 
     // Check workout active state
@@ -212,13 +239,16 @@ async function run() {
         const questionCard = document.querySelector('[data-testid="question-card"]') || document.querySelector('.liquid-glass-card') || document.body;
         return {
           hasText: document.body.innerText.length,
-          containsInstruction: document.body.innerText.includes('Укажите') || document.body.innerText.includes('Расставьте') || document.body.innerText.includes('Отредактируйте') || document.body.innerText.includes('найдите'),
+          containsInstruction: document.body.innerText.includes('Укажите') || document.body.innerText.includes('Расставьте') || document.body.innerText.includes('Отредактируйте') || document.body.innerText.includes('найдите') || document.body.innerText.includes('Задание'),
           snippet: document.body.innerText.slice(0, 300),
         };
       })()`,
       returnByValue: true,
     });
     console.log('[CDP] Active workout state:', workoutActiveState.result.value);
+    if (!workoutActiveState.result.value?.containsInstruction) {
+      throw new Error('Active workout question did not render instruction properly!');
+    }
 
     // Capture screenshot
     const scr = await client.send('Page.captureScreenshot', { format: 'png' });

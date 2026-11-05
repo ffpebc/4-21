@@ -23,15 +23,32 @@ const ALL_TASK_IDS_LIST: TaskId[] = [
   '16', '17', '18', '19', '20', '21', '22',
 ];
 
-export function sprintToWordEntry(sq: SprintQuestion, index: number): WordEntry {
+export function sprintToWordEntry(sq: SprintQuestion, index: number): WordEntry | null {
   const task = String(sq.task);
   const pref = sq.prefix || '';
   const suff = sq.suffix || '';
   const ans = sq.answer || '';
+
+  // Skip punctuation-drill choices that don't represent words or terms
+  if (
+    ans === 'ЗАПЯТАЯ НУЖНА' ||
+    ans === 'БЕЗ ЗАПЯТОЙ' ||
+    ans === 'ОДНА ЗАПЯТАЯ' ||
+    ans === 'БЕЗ / НЕСКОЛЬКО' ||
+    ans === 'ВХОДИТ В ОТВЕТ' ||
+    ans === 'ДРУГОЕ ПРАВИЛО'
+  ) {
+    return null;
+  }
+
   let word = '';
+  let missingLetter = ans;
+  let wordGap = '';
 
   if (['9', '10', '11', '12', '15'].includes(task)) {
     word = pref + ans + suff;
+    wordGap = (sq as any).wordGap || (pref && suff ? `${pref}..${suff}` : word);
+    missingLetter = ans;
   } else if (['13', '14'].includes(task)) {
     const pClean = pref.replace(/[()]/g, '').trim();
     const sClean = suff.replace(/[()]/g, '').trim();
@@ -44,31 +61,60 @@ export function sprintToWordEntry(sq: SprintQuestion, index: number): WordEntry 
     } else {
       word = (sq as any).word || ans;
     }
+    wordGap = (sq as any).wordGap || (pClean && sClean ? `${pClean}..${sClean}` : word);
+    missingLetter = ans;
+  } else if (task === '4') {
+    word = ans;
+    const stressedMatch = ans.match(/[А-ЯЁ]/);
+    missingLetter = stressedMatch ? stressedMatch[0] : ans;
+    wordGap = pref || word.toLowerCase();
+  } else if (task === '5') {
+    word = (sq as any).word || ans;
+    missingLetter = 'Пароним';
+    wordGap = word;
+  } else if (task === '6') {
+    word = (sq as any).word || ans;
+    missingLetter = 'Лексика';
+    wordGap = word;
   } else if (task === '7') {
     const m = pref.match(/«([^»]+)»/);
     if (m && ans === 'ВЕРНО') {
       word = m[1].trim();
+      missingLetter = 'Норма';
     } else {
       word = (sq as any).word || (pref ? `${pref} ${ans}`.trim() : ans);
+      missingLetter = ans === 'ВЕРНО' ? 'Норма' : ans;
     }
+    wordGap = word;
+  } else if (task === '8') {
+    word = ans;
+    missingLetter = 'Синтаксис';
+    wordGap = word;
+  } else if (task === '22') {
+    word = ans;
+    missingLetter = 'Троп';
+    wordGap = word;
   } else {
     word = (sq as any).word || ans;
+    wordGap = (sq as any).wordGap || (pref && suff ? `${pref}..${suff}` : word);
+    missingLetter = ans;
   }
 
-  const wordGap = (sq as any).wordGap || (pref && suff ? `${pref}..${suff}` : word);
+  const cleanContext = (sq.context || '').replace(/^\[Позиция \(\d+\)\]\s*/i, '').trim();
+  const ruleText = sq.explanation || sq.rule || '';
 
   return {
     id: sq.id ? sq.id.replace(/^sp-/, 'w-') : `w-${task}-${index + 1}`,
     word: word || '—',
-    wordGap,
+    wordGap: wordGap || word || '—',
     prefix: pref,
-    missingLetter: ans,
+    missingLetter,
     suffix: suff,
     task: sq.task,
     topic: sq.topic || '',
     category: sq.topic || '',
-    rule: sq.rule || '',
-    context: sq.context || '',
+    rule: ruleText,
+    context: cleanContext,
     source: sq.source || '',
     isTrap: sq.isTrap,
   };
@@ -78,7 +124,7 @@ let initialFipi: FipiQuestion[] = (starterBank.fipi || []) as FipiQuestion[];
 let initialSprint: SprintQuestion[] = (starterBank.sprint || []) as SprintQuestion[];
 let initialWords: WordEntry[] = ((starterBank as any).words && (starterBank as any).words.length > 0)
   ? ((starterBank as any).words as WordEntry[])
-  : initialSprint.map(sprintToWordEntry);
+  : (initialSprint.map(sprintToWordEntry).filter(Boolean) as WordEntry[]);
 
 // В среде Node.js (при прогоне тестов) считываем полную базу заданий из локальных файлов
 if (typeof window === 'undefined' && typeof process !== 'undefined') {
@@ -111,7 +157,7 @@ if (typeof window === 'undefined' && typeof process !== 'undefined') {
         : path.join(dataDir, 'sprintBank.json');
       if (fs.existsSync(sprintPath)) {
         initialSprint = JSON.parse(fs.readFileSync(sprintPath, 'utf8'));
-        initialWords = initialSprint.map(sprintToWordEntry);
+        initialWords = initialSprint.map(sprintToWordEntry).filter(Boolean) as WordEntry[];
       }
     }
   } catch (err) {
@@ -150,7 +196,7 @@ export function refreshMaps() {
 refreshMaps();
 
 // Очищаем устаревший кэш с урезанной или поврежденной базой
-const CURRENT_BANK_CACHE = 'ege-bank-cache-v31';
+const CURRENT_BANK_CACHE = 'ege-bank-cache-v32';
 if (typeof window !== 'undefined' && 'caches' in window) {
   try {
     window.caches.keys().then((keys) => {
@@ -213,7 +259,7 @@ export async function loadFullDataBank(): Promise<boolean> {
     const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
     const cdnBase = 'https://cdn.jsdelivr.net/gh/ffpebc/9-15@data/public/data';
-    const vParam = '?v=31';
+    const vParam = '?v=32';
     const [fipiData, sprintData] = await Promise.all([
       fetchJsonWithCache(`${localBase}/fipiTasksBank9_15.json${vParam}`, [
         `${rawGithubBase}/fipiTasksBank9_15.json${vParam}`,
@@ -241,7 +287,7 @@ export async function loadFullDataBank(): Promise<boolean> {
       PARSED_SPRINT_QUESTIONS.length = 0;
       PARSED_SPRINT_QUESTIONS.push(...sprintData);
       PARSED_WORDS.length = 0;
-      PARSED_WORDS.push(...sprintData.map(sprintToWordEntry));
+      PARSED_WORDS.push(...(sprintData.map(sprintToWordEntry).filter(Boolean) as WordEntry[]));
       updated = true;
     }
 

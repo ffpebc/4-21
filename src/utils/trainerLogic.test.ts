@@ -28,6 +28,7 @@ import {
   type TaskId,
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
+import { sprintToWordEntry, PARSED_WORDS } from '../data/tasksBankData.ts';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
 import { sanitizeLoadedState } from './storageSync.ts';
 
@@ -1574,6 +1575,50 @@ test('All 35 authentic KIM variants have complete 19-task structure (4–22)', (
       assert.ok(taskQ.rows && taskQ.rows.length > 0, `Task ${taskId} in ${v.id} must have rows`);
     }
   }
+});
+
+test('sprintToWordEntry and PARSED_WORDS: authentic formatting, zero punctuation spam, zero deformed strings', () => {
+  const bank = getTrainerBank();
+  assert.ok(bank.sprintQuestions.length > 0, 'Sprint bank must not be empty');
+
+  // Verify sprintToWordEntry on all sprint questions
+  for (let i = 0; i < Math.min(bank.sprintQuestions.length, 500); i++) {
+    const sq = bank.sprintQuestions[i];
+    const entry = sprintToWordEntry(sq, i);
+    if (!entry) {
+      // Must only be punctuation drill choices
+      assert.ok(
+        ['16', '17', '18', '19', '20', '21'].includes(sq.task),
+        `sprintToWordEntry returned null for non-punctuation task ${sq.task}`
+      );
+      continue;
+    }
+
+    // Word must never be a punctuation answer token
+    assert.notEqual(entry.word, 'ЗАПЯТАЯ НУЖНА');
+    assert.notEqual(entry.word, 'ОДНА ЗАПЯТАЯ');
+    assert.notEqual(entry.word, 'ВХОДИТ В ОТВЕТ');
+    assert.notEqual(entry.word, 'БЕЗ ЗАПЯТОЙ');
+
+    // Word must never have duplicated prefix or unhandled parens
+    if (sq.task === '4') {
+      assert.equal(entry.word, sq.answer);
+      assert.notEqual(entry.word.toLowerCase(), `${sq.prefix.toLowerCase()}${sq.prefix.toLowerCase()}`);
+      assert.equal(/^[А-ЯЁ]$/.test(entry.missingLetter), true, `Task 4 highlight must be stressed vowel: ${entry.missingLetter}`);
+    }
+
+    if (sq.task === '13' || sq.task === '14') {
+      assert.equal(entry.word.includes('(НЕ)'), false);
+      assert.equal(entry.word.includes('(ИЗ)'), false);
+    }
+  }
+
+  // Check in-memory PARSED_WORDS
+  assert.ok(PARSED_WORDS.length > 0, 'PARSED_WORDS must be populated');
+  const bogusPunctuation = PARSED_WORDS.filter((w) =>
+    ['ЗАПЯТАЯ НУЖНА', 'ОДНА ЗАПЯТАЯ', 'ВХОДИТ В ОТВЕТ', 'БЕЗ ЗАПЯТОЙ'].includes(w.word)
+  );
+  assert.equal(bogusPunctuation.length, 0, `PARSED_WORDS contains ${bogusPunctuation.length} bogus punctuation items`);
 });
 
 

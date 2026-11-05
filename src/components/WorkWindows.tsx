@@ -13,7 +13,7 @@ import {
   BALANCED_30_QUANTITIES,
 } from '../utils/trainerLogic';
 import { SwipeableSheet, LiquidGlassSegmented } from './LiquidGlassControls';
-import { PARSED_WORDS, PARSED_WORDS_DATABASE, PARSED_SPRINT_QUESTIONS } from '../data/tasksBankData.ts';
+import { PARSED_WORDS, PARSED_WORDS_DATABASE, PARSED_SPRINT_QUESTIONS, sprintToWordEntry } from '../data/tasksBankData.ts';
 import { classifyWordSubtopicAndException } from '../utils/wordClassifier.ts';
 
 /* ============================================================================
@@ -2912,47 +2912,50 @@ const buildFullDatabaseEntries = (): DictEntry[] => {
 
   // 3. Fallback: only if main words bank is empty, populate from sprint questions
   if (wordsList.length === 0 && Array.isArray(PARSED_SPRINT_QUESTIONS)) {
-    PARSED_SPRINT_QUESTIONS.forEach((sq) => {
-      const fullWord = (sq.prefix || '') + (sq.answer || '') + (sq.suffix || '');
-      const cleanContext = sq.context
-        ? (sq.context.startsWith('(') ? sq.context : `(${sq.context})`)
+    PARSED_SPRINT_QUESTIONS.forEach((sq, idx) => {
+      const entry = sprintToWordEntry(sq, idx);
+      if (!entry) return;
+      const displayWord = entry.word || '—';
+      const cleanContext = entry.context
+        ? (entry.context.startsWith('(') ? entry.context : `(${entry.context})`)
         : '';
-      const fullLabel = cleanContext ? `${fullWord} ${cleanContext}` : fullWord;
-      const key = (fullWord + '_' + sq.task + '_' + cleanContext).toLowerCase().trim();
+      const fullLabel = cleanContext ? `${displayWord} ${cleanContext}` : displayWord;
+      const key = entry.id || (displayWord + '_' + entry.task + '_' + cleanContext).toLowerCase().trim();
       if (!map.has(key)) {
-        const explicitRule = sq.rule || '';
         map.set(key, {
-          task: sq.task,
+          task: entry.task as TaskId,
           word: fullLabel,
-          highlight: sq.answer || '—',
-          category: sq.topic || TASK_META[sq.task]?.title || `Задание № ${sq.task}`,
-          note: cleanDisplayText(explicitRule || isolateTargetWordExplanation(sq.explanation || '', fullWord)),
-          source: sq.source || 'Банк ФИПИ / Школково',
+          highlight: entry.missingLetter || '—',
+          category: entry.category || TASK_META[entry.task as TaskId]?.title || `Задание № ${entry.task}`,
+          note: cleanDisplayText(entry.rule),
+          source: entry.source || 'Банк ФИПИ / Школково',
         });
       }
     });
   }
 
-  // 4. Ensure bank fills to 5000+ words across all tasks
+  // 4. Ensure bank fills across all tasks if needed
   try {
     const bank = getTrainerBank();
     if (bank && Array.isArray(bank.sprintQuestions)) {
       bank.sprintQuestions.forEach((sq, idx) => {
-        const fullWord = (sq.prefix || '') + (sq.answer || '') + (sq.suffix || '');
-        const cleanContext = sq.context
-          ? (sq.context.startsWith('(') ? sq.context : `(${sq.context})`)
+        if (map.size >= 5000) return;
+        const entry = sprintToWordEntry(sq, idx);
+        if (!entry) return;
+        const displayWord = entry.word || '—';
+        const cleanContext = entry.context
+          ? (entry.context.startsWith('(') ? entry.context : `(${entry.context})`)
           : '';
-        const fullLabel = cleanContext ? `${fullWord} ${cleanContext}` : fullWord;
-        const key = (fullWord + '_' + sq.task + '_' + cleanContext + '_' + idx).toLowerCase().trim();
-        if (map.size < 5000 && !map.has(key)) {
-          const explicitRule = sq.rule || '';
+        const fullLabel = cleanContext ? `${displayWord} ${cleanContext}` : displayWord;
+        const key = (displayWord + '_' + entry.task + '_' + cleanContext + '_' + idx).toLowerCase().trim();
+        if (!map.has(key)) {
           map.set(key, {
-            task: sq.task,
+            task: entry.task as TaskId,
             word: fullLabel,
-            highlight: sq.answer || '—',
-            category: sq.topic || TASK_META[sq.task]?.title || `Задание № ${sq.task}`,
-            note: cleanDisplayText(explicitRule || isolateTargetWordExplanation(sq.explanation || '', fullWord)),
-            source: sq.source || 'Банк заданий ФИПИ 2026–2027',
+            highlight: entry.missingLetter || '—',
+            category: entry.category || TASK_META[entry.task as TaskId]?.title || `Задание № ${entry.task}`,
+            note: cleanDisplayText(entry.rule),
+            source: entry.source || 'Банк заданий ФИПИ 2026–2027',
           });
         }
       });

@@ -3007,6 +3007,8 @@ export function cleanScraperArtifacts(text: string | undefined): string {
     .replace(/«\.\.\./g, '')
     .replace(/\.\.\.»/g, '')
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
+    .replace(/\u00cb/g, 'Ё')
+    .replace(/\u00eb/g, 'ё')
     .trim();
 
   res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2 $3)');
@@ -3048,6 +3050,8 @@ export function cleanWord(str: string | undefined): string {
   res = res
     .replace(/[«»]/g, '')
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
+    .replace(/\u00cb/g, 'Ё')
+    .replace(/\u00eb/g, 'ё')
     .replace(/\s*\((?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
     .trim();
 
@@ -3235,10 +3239,60 @@ export function getOfficialTaskInstruction(
   }
 }
 
-export function cleanQuestionRule(rule: string | undefined, task: string, instruction?: string): string {
+export function cleanQuestionRule(
+  rule: string | undefined,
+  task: string,
+  instruction?: string,
+  rawQuestion?: any
+): string {
   const t = String(task);
   if (['9', '10', '11', '12'].includes(t)) {
     return 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.';
+  }
+
+  // If task 13 and instruction doesn't clearly distinguish or is ambiguous
+  if (t === '13' && rawQuestion?.rows && rawQuestion?.correctIndices) {
+    const correctRows = (rawQuestion.correctIndices as number[])
+      .map((idx: number) => rawQuestion.rows[idx - 1])
+      .filter(Boolean);
+    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase());
+    if (letters.every((l: string) => l === 'СЛИТНО') && letters.length > 0) {
+      return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется СЛИТНО. Запишите номера ответов.';
+    }
+    if (letters.every((l: string) => l === 'РАЗДЕЛЬНО' || l === 'РАЗД.') && letters.length > 0) {
+      return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО. Запишите номера ответов.';
+    }
+  }
+
+  // If task 14 and instruction doesn't clearly distinguish
+  if (t === '14' && rawQuestion?.rows && rawQuestion?.correctIndices) {
+    const correctRows = (rawQuestion.correctIndices as number[])
+      .map((idx: number) => rawQuestion.rows[idx - 1])
+      .filter(Boolean);
+    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase());
+    if (letters.every((l: string) => l.includes('ДЕФИС')) && letters.length > 0) {
+      return 'Укажите варианты ответов, в которых все выделенные слова пишутся ЧЕРЕЗ ДЕФИС. Запишите номера ответов.';
+    }
+    if (letters.every((l: string) => l === 'РАЗДЕЛЬНО' || l === 'РАЗД.') && letters.length > 0) {
+      return 'Укажите варианты ответов, в которых все выделенные слова пишутся РАЗДЕЛЬНО. Запишите номера ответов.';
+    }
+    if (letters.every((l: string) => l === 'СЛИТНО') && letters.length > 0) {
+      return 'Укажите варианты ответов, в которых все выделенные слова пишутся СЛИТНО. Запишите номера ответов.';
+    }
+  }
+
+  // If task 15 and instruction doesn't clearly distinguish
+  if (t === '15' && rawQuestion?.rows && rawQuestion?.correctIndices) {
+    const correctRows = (rawQuestion.correctIndices as number[])
+      .map((idx: number) => rawQuestion.rows[idx - 1])
+      .filter(Boolean);
+    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase());
+    if (letters.every((l: string) => l === 'Н') && letters.length > 0) {
+      return 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.';
+    }
+    if (letters.every((l: string) => l === 'НН') && letters.length > 0) {
+      return 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.';
+    }
   }
 
   const cand = (instruction && instruction.trim().length > 0) ? instruction : rule;
@@ -3335,7 +3389,7 @@ export function getTrainerBank() {
         if (rawFq.correctIndices.some((c) => c < 1 || c > rawFq.rows.length)) continue;
       }
 
-      const rule = cleanQuestionRule(rawFq.rule, rawFq.task, rawFq.instruction);
+      const rule = cleanQuestionRule(rawFq.rule, rawFq.task, rawFq.instruction, rawFq);
       const isNumberedGapTask = ['15', '17', '18', '19', '20'].includes(rawFq.task);
       const rawSent = (rawFq as any).sentence;
       const sentence =
@@ -3344,26 +3398,39 @@ export function getTrainerBank() {
           : rawSent
             ? cleanScraperArtifacts(rawSent)
             : isNumberedGapTask
-              ? cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction)
+              ? cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction, rawFq)
               : undefined;
 
       const rows: FipiRow[] = rawFq.rows.map((r) => {
         let solvedWords = r.solvedWords.map((w) => (rawFq.task === '15' ? cleanWord(w) : cleanScraperArtifacts(w)));
         let letter = r.letter;
 
-        if (rawFq.task === '4' && !r.isCorrectRow) {
-          const expl = r.explanation || '';
-          const m =
-            expl.match(/\(([^()]*[А-ЯЁ][^()]*)\)/) ||
-            expl.match(/правильный вариант\s*[-–—:]*\s*«?([а-яёА-ЯЁ]*[А-ЯЁ][а-яёА-ЯЁ]*)»?/i) ||
-            expl.match(/правильно\s*[-–—:]*\s*«?([а-яёА-ЯЁ]*[А-ЯЁ][а-яёА-ЯЁ]*)»?/i) ||
-            expl.match(/вариант\s*[-–—:]*\s*«?([а-яёА-ЯЁ]*[А-ЯЁ][а-яёА-ЯЁ]*)»?/i);
-          if (m && m[1]) {
-            const candidate = m[1].replace(/[«»]/g, '').trim();
-            const stressedLetter = candidate.match(/[А-ЯЁ]/)?.[0];
-            if (stressedLetter) {
-              solvedWords = [candidate];
-              letter = stressedLetter;
+        if (rawFq.task === '4') {
+          if (!r.isCorrectRow) {
+            const expl = r.explanation || '';
+            const m =
+              expl.match(/(?:правильный вариант|правильно|вариант)\s*[-–—:]*\s*«?(?:\([^()]+\)\s*)?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?/) ||
+              expl.match(/неверно\s*\(\s*«?(?:\([^()]+\)\s*)?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?\s*\)/) ||
+              expl.match(/\(\s*«?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?\s*\)/);
+            if (m && m[1]) {
+              const candidate = m[1].replace(/[«»]/g, '').trim();
+              const stressedVowel = candidate.match(/[АЕЁИОУЫЭЮЯ]/)?.[0];
+              if (stressedVowel) {
+                solvedWords = [candidate];
+                letter = stressedVowel;
+              }
+            } else if (r.words[0] && r.words[0].toLowerCase().includes('бралась')) {
+              solvedWords = ['бралАсь'];
+              letter = 'А';
+            }
+            const sVowel = solvedWords[0]?.match(/[АЕЁИОУЫЭЮЯ]/)?.[0];
+            if (sVowel) {
+              letter = sVowel;
+            }
+          } else {
+            const wVowel = r.words[0]?.match(/[АЕЁИОУЫЭЮЯ]/)?.[0];
+            if (wVowel) {
+              letter = wVowel;
             }
           }
         }
@@ -3387,7 +3454,7 @@ export function getTrainerBank() {
           ? 'numbered_gaps'
           : 'rows');
 
-      const instruction = cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction);
+      const instruction = cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction, rawFq);
 
       const matchingLetters = rawFq.matchingLetters?.map((ml) => {
         if (typeof ml === 'string') {
@@ -4412,24 +4479,27 @@ export function decodeBackupCode(
         const [qId, userChoice] = item;
         const q = bank.byId.get(String(qId));
         if (q && q.kind === 'sprint') {
+          const isOrthoSprint = ['9', '10', '11', '12', '13', '14', '15'].includes(q.task);
           restoredErrors.push({
             id: `err-${q.id}`,
             task: q.task,
             topic: q.topic,
-            wordDisplay:
-              q.task === '13'
-                ? `${q.prefix} ${q.suffix}`
-                : q.task === '14'
-                ? `${q.prefix} ${q.suffix}`
-                : `${q.prefix}..${q.suffix}`,
-            correctWord:
-              q.task === '13'
-                ? q.answer === 'СЛИТНО'
-                  ? `${questionPrefixClean(q.prefix)}${q.suffix}`
-                  : `${questionPrefixClean(q.prefix)} ${q.suffix}`
-                : q.task === '14'
-                ? formatTask14SolvedWord(q.prefix, q.suffix, q.answer)
-                : `${q.prefix}${q.answer.toLowerCase()}${q.suffix}`,
+            wordDisplay: !isOrthoSprint
+              ? `${q.prefix} ${q.suffix}`.trim() || q.context.slice(0, 65)
+              : q.task === '13'
+              ? `${q.prefix} ${q.suffix}`
+              : q.task === '14'
+              ? `${q.prefix} ${q.suffix}`
+              : `${q.prefix}..${q.suffix}`,
+            correctWord: !isOrthoSprint
+              ? q.answer
+              : q.task === '13'
+              ? q.answer === 'СЛИТНО'
+                ? `${questionPrefixClean(q.prefix)}${q.suffix}`
+                : `${questionPrefixClean(q.prefix)} ${q.suffix}`
+              : q.task === '14'
+              ? formatTask14SolvedWord(q.prefix, q.suffix, q.answer)
+              : `${q.prefix}${q.answer.toLowerCase()}${q.suffix}`,
             userChoice: String(userChoice || '?'),
             correctChoice: q.answer,
             context: q.context,
