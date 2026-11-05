@@ -224,7 +224,7 @@ body::before {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: none;
   padding-top: calc(env(safe-area-inset-top, 0px) + 52px);
-  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(64px + max(10px, calc(env(safe-area-inset-bottom, 0px) - 14px)));
 }
 
 /* Dedicated Lock for Screens that fit 100% on iPhone 16 */
@@ -328,7 +328,7 @@ body::before {
    ============================================================================ */
 .ios-tabbar {
   position: fixed;
-  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 18px));
   left: 50%;
   transform: translate3d(-50%, 0, 0);
   width: calc(100% - 20px);
@@ -1369,7 +1369,7 @@ html.dark .choice-card-btn.bad {
   will-change: transform, opacity;
 }
 
-/* Official KIM 9-13 Blank Answer Box */
+/* Official KIM 4-22 Blank Answer Box */
 .ege-blank-input {
   letter-spacing: 5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

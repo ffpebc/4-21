@@ -1,0 +1,42 @@
+{
+  "name": "ЕГЭ Русский 4–22 — iOS 27 Тренажёр",
+  "short_name": "ЕГЭ 4–22",
+  "description": "Интерактивный тренажёр ЕГЭ по русскому языку (задания 4–22, база ФИПИ 2026–2027) с мгновенным запуском офлайн.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E6ECF8",
+  "theme_color": "#E6ECF8",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

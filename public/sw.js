@@ -1,5 +1,15 @@
-const CACHE_NAME = 'ege-9-13-ios27-v7';
-const CORE_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg'];
+const CACHE_NAME = 'ege-4-22-ios27-v8';
+const CORE_SHELL = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/manifest.json',
+  '/icon.svg',
+  '/favicon.svg',
+  '/apple-touch-icon.png',
+  '/icon-192.png',
+  '/icon-512.png',
+];
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -82,7 +92,9 @@ self.addEventListener('fetch', (event) => {
   if (
     url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.webmanifest') ||
+    url.pathname.endsWith('.json') ||
     url.pathname.endsWith('.woff2')
   ) {
     event.respondWith(

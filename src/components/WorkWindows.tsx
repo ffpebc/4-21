@@ -2710,7 +2710,7 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
 });
 
 /* ============================================================================
-   3. ОКНО «СЛОВАРЬ ИСКЛЮЧЕНИЙ И ЛОВУШЕК ФИПИ 9–13» (DictionaryModal)
+   3. ОКНО «СЛОВАРЬ ИСКЛЮЧЕНИЙ И ЛОВУШЕК ФИПИ 4–22» (DictionaryModal)
    ============================================================================ */
 interface DictionaryModalProps {
   isOpen: boolean;

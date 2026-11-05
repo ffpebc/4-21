@@ -3467,7 +3467,7 @@ export default function App() {
         ]}
       />
 
-      {/* Window 1: Full Cheatsheet Modal (Шпаргалка по заданиям 9–13) */}
+      {/* Window 1: Full Cheatsheet Modal (Шпаргалка по заданиям 4–22) */}
       <CheatsheetModal
         isOpen={isRulesOpen}
         onClose={() => setIsRulesOpen(false)}

@@ -1,7 +1,7 @@
 {
-  "name": "ЕГЭ Русский 9–13 — iOS 27 Тренажёр",
-  "short_name": "ЕГЭ 9–13",
-  "description": "Интерактивный тренажёр орфографии ЕГЭ по русскому языку (задания 9–13, база ФИПИ 2026–2027) с мгновенным запуском офлайн.",
+  "name": "ЕГЭ Русский 4–22 — iOS 27 Тренажёр",
+  "short_name": "ЕГЭ 4–22",
+  "description": "Интерактивный тренажёр ЕГЭ по русскому языку (задания 4–22, база ФИПИ 2026–2027) с мгновенным запуском офлайн.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -17,16 +17,26 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icon.svg",
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.svg",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
