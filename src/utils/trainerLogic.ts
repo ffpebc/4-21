@@ -3820,13 +3820,13 @@ export function checkFipiQuestionAnswer(
       ? userRawInput.map((d) => (d > 0 ? String(d) : '_')).join('')
       : String(userRawInput || '').replace(/\D/g, '');
     let matchCount = 0;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < targetDigits.length; i++) {
       if (rawStr[i] && rawStr[i] === targetDigits[i]) {
         matchCount++;
       }
     }
-    const isCorrect = matchCount === 5 && rawStr.replace(/\D/g, '').length === 5;
-    const pointsEarned = isCorrect ? 2 : matchCount >= 3 ? 1 : 0;
+    const isCorrect = matchCount === targetDigits.length && rawStr.replace(/\D/g, '').length === targetDigits.length;
+    const pointsEarned = isCorrect ? 2 : matchCount >= Math.ceil(targetDigits.length * 0.6) ? 1 : 0;
     return {
       isCorrect,
       pointsEarned,

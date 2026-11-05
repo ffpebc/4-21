@@ -495,9 +495,10 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     });
     // Advance active slot only when digit is assigned, staying if deselected
     if (!slotCleared) {
+      const slotsCount = fipiQ.correctIndices.length || 5;
       setActiveMatchSlot((prevSlot) => {
-        for (let offset = 1; offset <= 5; offset++) {
-          const cand = (prevSlot + offset) % 5;
+        for (let offset = 1; offset <= slotsCount; offset++) {
+          const cand = (prevSlot + offset) % slotsCount;
           if (cand !== prevSlot && nextDigits[cand] === 0) {
             return cand;
           }
@@ -512,7 +513,8 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       return fipiWordInput.trim();
     }
     if (effectiveKind === 'matching_grid') {
-      return fipiMatchingDigits.map((d) => (d > 0 ? String(d) : '')).join('');
+      const slotsCount = fipiQ.correctIndices.length || 5;
+      return fipiMatchingDigits.slice(0, slotsCount).map((d) => (d > 0 ? String(d) : '')).join('');
     }
     return fipiSelectedRows.slice().sort((a, b) => a - b).join('');
   };
@@ -523,7 +525,8 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       return fipiWordInput.trim().length > 0;
     }
     if (effectiveKind === 'matching_grid') {
-      return fipiMatchingDigits.every((d) => d >= 1 && d <= 9);
+      const slotsCount = fipiQ.correctIndices.length || 5;
+      return fipiMatchingDigits.slice(0, slotsCount).every((d) => d >= 1 && d <= 9);
     }
     return fipiSelectedRows.length > 0;
   };
@@ -947,8 +950,8 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-5 gap-1.5">
-              {['А', 'Б', 'В', 'Г', 'Д'].map((letter, slotIdx) => {
+            <div className={`grid ${fipiQ.correctIndices.length === 4 ? 'grid-cols-4' : 'grid-cols-5'} gap-1.5`}>
+              {['А', 'Б', 'В', 'Г', 'Д'].slice(0, fipiQ.correctIndices.length || 5).map((letter, slotIdx) => {
                 const userDigit = fipiMatchingDigits[slotIdx];
                 const expectedDigit = fipiQ.correctIndices[slotIdx];
                 const isSlotActive = !fipiSubmitted && activeMatchSlot === slotIdx;
