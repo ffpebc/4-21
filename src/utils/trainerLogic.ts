@@ -399,6 +399,36 @@ export const TASK_META: Record<
   },
 };
 
+/**
+ * Balanced 30-task official FIPI workout preset covering all 19 exam tasks (4–22):
+ * - Culture of speech (4–8): 5 tasks (1 each)
+ * - Orthography (9–15): 14 tasks (2 each)
+ * - Punctuation (16–21): 8 tasks (16: 2, 17: 1, 18: 1, 19: 1, 20: 1, 21: 2)
+ * - Expressive means / text (22): 3 tasks
+ * Total = 5 + 14 + 8 + 3 = 30 tasks.
+ */
+export const BALANCED_30_QUANTITIES: Readonly<Record<TaskId, number>> = {
+  '4': 1,
+  '5': 1,
+  '6': 1,
+  '7': 1,
+  '8': 1,
+  '9': 2,
+  '10': 2,
+  '11': 2,
+  '12': 2,
+  '13': 2,
+  '14': 2,
+  '15': 2,
+  '16': 2,
+  '17': 1,
+  '18': 1,
+  '19': 1,
+  '20': 1,
+  '21': 2,
+  '22': 3,
+};
+
 interface CompactGroup {
   task: TaskId;
   topic: string;

@@ -868,7 +868,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                 }
               }}
               placeholder="Введите слово в бланк без пробелов..."
-              className="w-full px-3.5 py-2.5 rounded-xl text-[15px] font-extrabold tracking-wide uppercase outline-none border transition-all"
+              className="w-full px-3.5 py-2.5 rounded-xl text-[16px] font-extrabold tracking-wide uppercase outline-none border transition-all"
               style={{
                 background: 'var(--ios-bg-secondary)',
                 color: 'var(--ios-label)',

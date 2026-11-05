@@ -10,6 +10,7 @@ import {
   ErrorBankEntry,
   getTrainerBank,
   formatTask14SolvedWord,
+  BALANCED_30_QUANTITIES,
 } from '../utils/trainerLogic';
 import { SwipeableSheet, LiquidGlassSegmented } from './LiquidGlassControls';
 import { PARSED_WORDS, PARSED_WORDS_DATABASE, PARSED_SPRINT_QUESTIONS } from '../data/tasksBankData.ts';
@@ -24,6 +25,7 @@ interface PresetsModalProps {
   state: TrainerState;
   onApplyPreset: (qtyEach: number) => void;
   onApplyCustomQuantities: (quantities: Partial<Record<TaskId, number>>) => void;
+  onApplyBalanced30?: () => void;
   onStartFipiTraps: () => void;
   onStartWeakestTaskWorkout: (taskId: TaskId) => void;
   onStartRealKimWorkout?: () => void;
@@ -36,6 +38,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
   state,
   onApplyPreset,
   onApplyCustomQuantities,
+  onApplyBalanced30,
   onStartFipiTraps,
   onStartWeakestTaskWorkout,
   onStartRealKimWorkout,
@@ -168,6 +171,46 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
 
         <button
           type="button"
+          id="smart-30-tasks-btn"
+          onClick={() => {
+            onClose();
+            if (onApplyBalanced30) {
+              onApplyBalanced30();
+            } else {
+              onApplyCustomQuantities(BALANCED_30_QUANTITIES);
+            }
+          }}
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0"
+              style={{ background: 'linear-gradient(135deg, #30D158, #0A84FF)' }}
+            >
+              30
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-extrabold leading-tight whitespace-nowrap truncate">
+                30 заданий (сбалансированный вариант)
+              </div>
+              <div
+                className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
+                style={{ color: 'var(--ios-label-sec)' }}
+              >
+                Оптимальный баланс всех 4 блоков ЕГЭ (№ 4–22)
+              </div>
+            </div>
+          </div>
+          <span
+            className="text-[11.5px] font-bold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
+            style={{ background: 'var(--ios-blue-soft)', color: 'var(--ios-blue)' }}
+          >
+            Выбрать →
+          </span>
+        </button>
+
+        <button
+          type="button"
           id="smart-real-kim-btn"
           onClick={() => {
             onClose();
@@ -176,7 +219,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             } else {
               const allActive: Record<TaskId, number> = {} as Record<TaskId, number>;
               TASK_IDS.forEach((id) => {
-                allActive[id] = state.enabledTasks?.[id] === false ? 0 : 1;
+                allActive[id] = 1;
               });
               onApplyCustomQuantities(allActive);
             }
@@ -192,13 +235,13 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[13.5px] font-extrabold leading-tight whitespace-nowrap truncate">
-                Полный КИМ ЕГЭ (4–22)
+                Полный КИМ ЕГЭ (19 заданий)
               </div>
               <div
                 className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
                 style={{ color: 'var(--ios-label-sec)' }}
               >
-                По 1 заданию каждого активного типа (№ 4–22)
+                По 1 заданию каждого типа экзамена (№ 4–22)
               </div>
             </div>
           </div>
@@ -269,41 +312,79 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       <div className="grid grid-cols-2 gap-2 mb-2.5">
         <button
           type="button"
-          id="preset-modal-5"
+          id="preset-modal-30"
+          onClick={() => {
+            if (onApplyBalanced30) {
+              onApplyBalanced30();
+            } else {
+              onApplyCustomQuantities(BALANCED_30_QUANTITIES);
+            }
+            onClose();
+          }}
+          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+        >
+          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-green)' }}>
+            30 заданий
+          </div>
+          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
+            Готовый вариант ЕГЭ (4–22)
+          </div>
+        </button>
+
+        <button
+          type="button"
+          id="preset-modal-kim"
+          onClick={() => {
+            onApplyPreset(1);
+            onClose();
+          }}
+          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+        >
+          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-blue)' }}>
+            По 1 заданию (КИМ)
+          </div>
+          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
+            19 заданий (по 1 на тему)
+          </div>
+        </button>
+
+        <button
+          type="button"
+          id="preset-modal-3"
           onClick={() => {
             onApplyPreset(3);
             onClose();
           }}
           className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
         >
-          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-blue)' }}>
+          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-indigo)' }}>
             По 3 задания
           </div>
           <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            На все включённые темы
+            Углублённый вариант (57 зад.)
           </div>
         </button>
 
         <button
           type="button"
-          id="preset-modal-15"
+          id="preset-modal-10"
           onClick={() => {
             onApplyPreset(10);
             onClose();
           }}
           className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
         >
-          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-indigo)' }}>
+          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-purple)' }}>
             По 10 заданий
           </div>
           <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Стандартная тренировка
+            Марафон по всем темам
           </div>
         </button>
 
         <button
           type="button"
-          id="preset-modal-30"
+          id="preset-modal-speech"
           onClick={() => {
             const q: Record<TaskId, number> = {} as Record<TaskId, number>;
             TASK_IDS.forEach((id) => {
@@ -324,7 +405,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
 
         <button
           type="button"
-          id="preset-modal-100"
+          id="preset-modal-ortho"
           onClick={() => {
             const q: Record<TaskId, number> = {} as Record<TaskId, number>;
             TASK_IDS.forEach((id) => {
@@ -347,6 +428,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
+          id="preset-modal-punct"
           onClick={() => {
             const q: Record<TaskId, number> = {} as Record<TaskId, number>;
             TASK_IDS.forEach((id) => {

@@ -33,6 +33,7 @@ import {
   cleanWord,
   cleanExplanation,
   resolveTask15Sentence,
+  BALANCED_30_QUANTITIES,
 } from './utils/trainerLogic';
 import {
   loadInitialStateSync,
@@ -161,9 +162,17 @@ export default function App() {
     window.addEventListener('ege-bank-loaded', onLoaded);
 
     const onFocusOut = () => {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
+      const resetScroll = () => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        if (document.body) document.body.scrollTop = 0;
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+      };
+      resetScroll();
       syncAppViewport();
+      window.setTimeout(resetScroll, 50);
+      window.setTimeout(resetScroll, 150);
+      window.setTimeout(resetScroll, 300);
+      window.setTimeout(syncAppViewport, 320);
     };
     window.addEventListener('focusout', onFocusOut);
 
@@ -187,6 +196,7 @@ export default function App() {
   const [state, setState] = useState<TrainerState>(() => loadInitialStateSync());
   const [activeTab, setActiveTab] = useState<ActiveTab>('workout');
   const [workoutView, setWorkoutView] = useState<WorkoutSubView>('builder');
+  const [constructorMode, setConstructorMode] = useState<'custom' | 'preset30'>('custom');
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<TaskBlockId, boolean>>({
     speech: false,
     ortho: false,
@@ -234,7 +244,7 @@ export default function App() {
   const [pairSelectedOption, setPairSelectedOption] = useState<string | null>(null);
 
   const [kimVariantIdx, setKimVariantIdx] = useState(0);
-  const [kimActiveTask, setKimActiveTask] = useState<TaskId>('9');
+  const [kimActiveTask, setKimActiveTask] = useState<TaskId>('4');
   const [kimAnswers, setKimAnswers] = useState<Record<TaskId, string>>(createEmptyKimAnswers);
   const [kimChecked, setKimChecked] = useState(false);
 
@@ -430,15 +440,23 @@ export default function App() {
   }, [activeTab, sprintGameMode, blitzFinished]);
 
   const resetViewportOnBlur = useCallback(() => {
-    window.scrollTo(0, 0);
-    document.body.scrollTop = 0;
-    const vp = document.querySelector('meta[name="viewport"]');
-    if (vp) {
-      vp.setAttribute(
-        'content',
-        'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
-      );
-    }
+    const restore = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.body) document.body.scrollTop = 0;
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      const vp = document.querySelector('meta[name="viewport"]');
+      if (vp) {
+        vp.setAttribute(
+          'content',
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+        );
+      }
+    };
+    restore();
+    window.setTimeout(restore, 50);
+    window.setTimeout(restore, 150);
+    window.setTimeout(restore, 300);
+    window.setTimeout(restore, 500);
   }, []);
 
   useEffect(() => {
@@ -538,10 +556,33 @@ export default function App() {
     bank.kimVariants[0];
   const currentKimTaskQuestion =
     currentKimVariant?.tasks?.[kimActiveTask] ||
-    currentKimVariant?.tasks?.['9'] ||
+    currentKimVariant?.tasks?.['4'] ||
     bank.fipiQuestions[0];
 
+  const handleApplyBalanced30 = useCallback(() => {
+    const allEnabled = {} as Record<TaskId, boolean>;
+    TASK_IDS.forEach((id) => {
+      allEnabled[id] = true;
+    });
+    setState((prev) => ({
+      ...prev,
+      enabledTasks: allEnabled,
+      quantities: { ...BALANCED_30_QUANTITIES },
+      workoutMode: 'fipi',
+    }));
+    setConstructorMode('preset30');
+  }, []);
+
+  const handleSelectConstructorMode = (mode: 'custom' | 'preset30') => {
+    if (mode === 'preset30') {
+      handleApplyBalanced30();
+    } else {
+      setConstructorMode('custom');
+    }
+  };
+
   const handleToggleTaskEnabled = (task: TaskId) => {
+    setConstructorMode('custom');
     setState((prev) => {
       const currEnabled = prev.enabledTasks?.[task] !== false;
       const nextEnabled = !currEnabled;
@@ -566,6 +607,7 @@ export default function App() {
   const handleToggleBlockEnabled = (blockId: TaskBlockId) => {
     const block = TASK_BLOCKS.find((b) => b.id === blockId);
     if (!block) return;
+    setConstructorMode('custom');
     setState((prev) => {
       const currMap = { ...createDefaultEnabledTasks(), ...(prev.enabledTasks || {}) };
       const allActive = block.tasks.every((t) => currMap[t] !== false);
@@ -586,6 +628,7 @@ export default function App() {
 
   const handleSetTaskQty = (task: TaskId, newQty: number) => {
     const clamped = clampTaskQty(newQty);
+    setConstructorMode('custom');
     setState((prev) => ({
       ...prev,
       enabledTasks: {
@@ -601,6 +644,7 @@ export default function App() {
   };
 
   const handleStepTask = (task: TaskId, delta: number) => {
+    setConstructorMode('custom');
     setState((prev) => {
       const nextQty = stepTaskQty(prev.quantities[task] || 0, delta);
       return {
@@ -622,15 +666,23 @@ export default function App() {
     const clamped = clampTaskQty(qtyEach);
     setState((prev) => {
       const currEnabled = { ...createDefaultEnabledTasks(), ...(prev.enabledTasks || {}) };
+      const nextEnabled = { ...currEnabled };
       const nextQuantities = {} as Record<TaskId, number>;
       TASK_IDS.forEach((id) => {
-        nextQuantities[id] = clamped === 0 ? 0 : currEnabled[id] !== false ? clamped : 0;
+        if (clamped === 0) {
+          nextQuantities[id] = 0;
+        } else {
+          nextQuantities[id] = clamped;
+          nextEnabled[id] = true;
+        }
       });
       return {
         ...prev,
+        enabledTasks: nextEnabled,
         quantities: nextQuantities,
       };
     });
+    setConstructorMode('custom');
   };
 
   const handleApplyCustomQuantities = (quantities: Partial<Record<TaskId, number>>) => {
@@ -640,7 +692,9 @@ export default function App() {
       TASK_IDS.forEach((id) => {
         const v = clampTaskQty(quantities[id] ?? 0);
         nextQuantities[id] = v;
-        nextEnabled[id] = v > 0;
+        if (v > 0) {
+          nextEnabled[id] = true;
+        }
       });
       return {
         ...prev,
@@ -648,6 +702,7 @@ export default function App() {
         quantities: nextQuantities,
       };
     });
+    setConstructorMode('custom');
   };
 
   const startSessionWithQueue = (queue: TrainerQuestion[]) => {
@@ -686,23 +741,21 @@ export default function App() {
 
   const handleStartRealKimWorkout = () => {
     const kimQty = {} as Record<TaskId, number>;
+    const allEnabled = {} as Record<TaskId, boolean>;
     TASK_IDS.forEach((id) => {
-      kimQty[id] = enabledMap[id] !== false ? 1 : 0;
+      kimQty[id] = 1;
+      allEnabled[id] = true;
     });
-    // If all switches were turned off, enable all 19 tasks
-    if (Object.values(kimQty).every((v) => v === 0)) {
-      TASK_IDS.forEach((id) => {
-        kimQty[id] = 1;
-      });
-    }
     setState((prev) => ({
       ...prev,
+      enabledTasks: allEnabled,
       quantities: kimQty,
       workoutMode: 'fipi',
     }));
     const queue = buildWorkoutQueue(kimQty, 'fipi', {
       randomize: true,
       shuffleTasks: false,
+      enabledTasks: allEnabled,
     });
     startSessionWithQueue(queue);
   };
@@ -1236,17 +1289,17 @@ export default function App() {
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
-                          id="quick-start-kim-btn"
-                          onClick={handleStartRealKimWorkout}
+                          id="quick-start-30-btn"
+                          onClick={handleApplyBalanced30}
                           className="liquid-pill-btn flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-full text-[11.5px] font-bold cursor-pointer shrink-0"
                           style={{ color: 'var(--ios-blue)', background: 'var(--ios-blue-soft)' }}
-                          title="Реальный экзаменационный КИМ ЕГЭ (задания 4–22 ФИПИ)"
-                          aria-label="Быстрый запуск: КИМ 4–22"
+                          title="Сбалансированный вариант ровно на 30 заданий (задания 4–22 ФИПИ)"
+                          aria-label="30 заданий"
                         >
                           <svg className="w-3.5 h-3.5 shrink-0">
                             <use href="#sf-sparkles" />
                           </svg>
-                          <span>КИМ 4–22</span>
+                          <span>30 заданий</span>
                         </button>
                         <button
                           type="button"
@@ -1263,21 +1316,90 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Mode Segmented Control (Draggable Apple Liquid Glass) */}
+                    {/* Mode Segmented Control: 1. Настраиваемый, 2. 30 заданий */}
                     <div className="mb-3">
-                      <div className="ios-section-header">Формат тренировки</div>
-                      <LiquidGlassSegmented
-                        id="workout-mode-segmented"
-                        ariaLabel="Формат тренировки"
-                        value={state.workoutMode}
-                        onChange={(modeKey) =>
-                          setState((prev) => ({ ...prev, workoutMode: modeKey }))
-                        }
+                      <div className="flex items-center justify-between px-1 mb-1.5">
+                        <div className="ios-section-header !p-0">Режим конструктора</div>
+                        <span
+                          className="text-[11px] font-bold"
+                          style={{ color: 'var(--ios-label-sec)' }}
+                        >
+                          {constructorMode === 'preset30'
+                            ? 'Вариант 30 заданий'
+                            : `Выбрано: ${totalPlanned} заданий`}
+                        </span>
+                      </div>
+                      <LiquidGlassSegmented<'custom' | 'preset30'>
+                        id="workout-constructor-segmented"
+                        ariaLabel="Режим конструктора"
+                        value={constructorMode}
+                        onChange={(modeKey) => handleSelectConstructorMode(modeKey)}
                         options={[
-                          { key: 'fipi', label: 'ФИПИ стандарт (ЕГЭ 4–22)' },
+                          { key: 'custom', label: 'Настраиваемый' },
+                          { key: 'preset30', label: '30 заданий' },
                         ]}
                       />
                     </div>
+
+                    {constructorMode === 'preset30' && (
+                      <div className="ios-inset-group p-3 !mb-3">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="ios-row-icon !w-8 !h-8 !rounded-xl text-[13px] font-black"
+                              style={{ background: 'linear-gradient(135deg, #30D158, #0A84FF)' }}
+                            >
+                              30
+                            </div>
+                            <div>
+                              <div className="text-[13px] font-extrabold leading-tight">
+                                Сбалансированный вариант ЕГЭ
+                              </div>
+                              <div
+                                className="text-[11px]"
+                                style={{ color: 'var(--ios-label-sec)' }}
+                              >
+                                Ровно 30 заданий · Все темы 4–22 включены
+                              </div>
+                            </div>
+                          </div>
+                          <span
+                            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
+                          >
+                            Готово
+                          </span>
+                        </div>
+                        <div
+                          className="text-[11.5px] leading-relaxed pt-0.5 flex flex-wrap gap-x-3 gap-y-0.5"
+                          style={{ color: 'var(--ios-label-sec)' }}
+                        >
+                          <span>Культура речи (4–8): <strong>5</strong></span>
+                          <span>Орфография (9–15): <strong>14</strong></span>
+                          <span>Пунктуация (16–21): <strong>8</strong></span>
+                          <span>Текст (22): <strong>3</strong></span>
+                        </div>
+                      </div>
+                    )}
+
+                    {constructorMode === 'custom' && (
+                      <div
+                        className="px-1 mb-2 text-[11px] flex items-center justify-between"
+                        style={{ color: 'var(--ios-label-sec)' }}
+                      >
+                        <span>Настройте количество заданий каждого типа (4–22):</span>
+                        {totalPlanned > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleApplyPreset(0)}
+                            className="text-[11px] font-semibold underline cursor-pointer"
+                            style={{ color: 'var(--ios-red)' }}
+                          >
+                            Сбросить в 0
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {/* Shuffle Order Switch (Вразброс / По порядку) */}
                     <div className="ios-inset-group !mb-3">
@@ -1511,7 +1633,9 @@ export default function App() {
                       </svg>
                       <span id="start-workout-label">
                         {totalPlanned > 0
-                          ? `Начать занятие (${totalPlanned} заданий)`
+                          ? constructorMode === 'preset30'
+                            ? 'Начать занятие (30 заданий)'
+                            : `Начать занятие (${totalPlanned} заданий)`
                           : 'Выберите хотя бы 1 задание'}
                       </span>
                     </button>
@@ -3489,6 +3613,7 @@ export default function App() {
         state={state}
         onApplyPreset={handleApplyPreset}
         onApplyCustomQuantities={handleApplyCustomQuantities}
+        onApplyBalanced30={handleApplyBalanced30}
         onStartFipiTraps={handleStartFipiTrapsWorkout}
         onStartWeakestTaskWorkout={handleStartWeakestTaskWorkout}
         onStartRealKimWorkout={handleStartRealKimWorkout}

@@ -24,6 +24,7 @@ import {
   TASK_BLOCKS,
   getOfficialTaskInstruction,
   isTheoryOrExplanationText,
+  BALANCED_30_QUANTITIES,
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
@@ -1426,6 +1427,76 @@ test('cleanScraperArtifacts normalizes all nested double parens from user screen
 
   const row5 = 'подмет..вший ((недостатки)), завис..м ((мы)), стро..те ((вы долго))';
   assert.equal(cleanScraperArtifacts(row5), 'подмет..вший (недостатки), завис..м (мы), стро..те (вы долго)');
+});
+
+test('BALANCED_30_QUANTITIES has exactly 30 total tasks and covers all 19 official EGE tasks (4–22)', () => {
+  const total = calculateTotalPlanned(BALANCED_30_QUANTITIES);
+  assert.equal(total, 30, 'Total planned tasks must be exactly 30');
+
+  // Verify all 19 tasks from 4 to 22 have at least 1 question
+  for (const taskId of TASK_IDS) {
+    const qty = BALANCED_30_QUANTITIES[taskId] || 0;
+    assert.ok(qty >= 1, `Task ${taskId} must have at least 1 question in balanced 30 preset`);
+  }
+
+  // Verify specific block breakdown
+  // Culture of speech (4–8): 5
+  const speechSum = (['4', '5', '6', '7', '8'] as const).reduce(
+    (sum, id) => sum + (BALANCED_30_QUANTITIES[id] || 0),
+    0
+  );
+  assert.equal(speechSum, 5, 'Culture of speech must have 5 tasks');
+
+  // Orthography (9–15): 14 (2 each)
+  const orthoSum = (['9', '10', '11', '12', '13', '14', '15'] as const).reduce(
+    (sum, id) => sum + (BALANCED_30_QUANTITIES[id] || 0),
+    0
+  );
+  assert.equal(orthoSum, 14, 'Orthography must have 14 tasks (2 per topic)');
+
+  // Punctuation (16–21): 8
+  const punctSum = (['16', '17', '18', '19', '20', '21'] as const).reduce(
+    (sum, id) => sum + (BALANCED_30_QUANTITIES[id] || 0),
+    0
+  );
+  assert.equal(punctSum, 8, 'Punctuation must have 8 tasks');
+
+  // Text & Speech (22): 3
+  assert.equal(BALANCED_30_QUANTITIES['22'], 3, 'Task 22 must have 3 tasks');
+
+  // Build real queue from balanced 30 preset
+  const queue = buildWorkoutQueue(BALANCED_30_QUANTITIES, 'fipi', {
+    randomize: true,
+    shuffleTasks: false,
+  });
+  assert.equal(queue.length, 30, 'Built queue must contain exactly 30 questions');
+
+  // Every task 4-22 must be represented in queue
+  const tasksInQueue = new Set(queue.map((q) => q.task));
+  for (const taskId of TASK_IDS) {
+    assert.ok(tasksInQueue.has(taskId), `Task ${taskId} must be present in built queue`);
+  }
+});
+
+test('Full KIM variant and preset logic covers all 19 tasks without dropping disabled tasks', () => {
+  const kimQty: Record<string, number> = {};
+  const allEnabled: Record<string, boolean> = {};
+  for (const id of TASK_IDS) {
+    kimQty[id] = 1;
+    allEnabled[id] = true;
+  }
+  const total = calculateTotalPlanned(kimQty as any, allEnabled as any);
+  assert.equal(total, 19, 'Full KIM must have 19 tasks');
+
+  const queue = buildWorkoutQueue(kimQty as any, 'fipi', {
+    randomize: false,
+    shuffleTasks: false,
+    enabledTasks: allEnabled as any,
+  });
+  assert.equal(queue.length, 19, 'KIM queue must have 19 questions');
+  for (let i = 0; i < TASK_IDS.length; i++) {
+    assert.equal(queue[i].task, TASK_IDS[i], `Question ${i + 1} must be task ${TASK_IDS[i]}`);
+  }
 });
 
 
