@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ege-9-13-ios27-v6';
+const CACHE_NAME = 'ege-9-13-ios27-v7';
 const CORE_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (event) => {

@@ -2996,7 +2996,7 @@ export function cleanScraperArtifacts(text: string | undefined): string {
   res = res
     .replace(/&#[хx]2013;\s*\"?>\s*—?/gi, '—')
     .replace(/\s*Изобразительно-выразительные средства языка\s*$/i, '')
-    .replace(/\s*\((?:Взято из|ЕГКР|вар\.|вариант|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили)[^)]*\)?$/i, '')
+    .replace(/\s*\((?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
     .trim();
 
   return res.trim();
@@ -3018,7 +3018,7 @@ export function cleanWord(str: string | undefined): string {
   res = res
     .replace(/[«»]/g, '')
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
-    .replace(/\s*\((?:Взято из|ЕГКР|вар\.|вариант|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили)[^)]*\)?$/i, '')
+    .replace(/\s*\((?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
     .trim();
 
   res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2 $3)');
@@ -3319,10 +3319,15 @@ export function getTrainerBank() {
 
       const rule = cleanQuestionRule(rawFq.rule, rawFq.task, rawFq.instruction);
       const isNumberedGapTask = ['15', '17', '18', '19', '20'].includes(rawFq.task);
+      const rawSent = (rawFq as any).sentence;
       const sentence =
         rawFq.task === '15'
           ? resolveTask15Sentence(rawFq)
-          : (rawFq as any).sentence || (isNumberedGapTask ? rawFq.instruction : undefined);
+          : rawSent
+            ? cleanScraperArtifacts(rawSent)
+            : isNumberedGapTask
+              ? cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction)
+              : undefined;
 
       const rows: FipiRow[] = rawFq.rows.map((r) => ({
         ...r,
@@ -3343,6 +3348,19 @@ export function getTrainerBank() {
 
       const instruction = cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction);
 
+      const matchingLetters = rawFq.matchingLetters?.map((ml) => {
+        if (typeof ml === 'string') {
+          return cleanScraperArtifacts(ml);
+        }
+        return {
+          ...ml,
+          text: cleanScraperArtifacts(ml.text),
+        };
+      });
+
+      const choiceOptions = rawFq.choiceOptions?.map((c) => cleanWord(c));
+      const textAnswers = rawFq.textAnswers?.map((a) => cleanWord(a));
+
       const fq: FipiQuestion = {
         ...rawFq,
         questionKind,
@@ -3350,6 +3368,9 @@ export function getTrainerBank() {
         instruction,
         sentence,
         rows,
+        matchingLetters: matchingLetters as any,
+        choiceOptions,
+        textAnswers,
       };
 
       const sig = `${fq.task}:${(fq.sentence || '').slice(0, 80)}:` + fq.rows.map((r) => r.words.join('|')).join('||');

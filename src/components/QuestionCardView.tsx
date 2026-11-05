@@ -788,10 +788,10 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       {/* MODE 2: Word Input + Hybrid Choice Pills (Tasks 5, 6, 7)           */}
       {/* ================================================================== */}
       {effectiveKind === 'word_input' && (
-        <div className="flex flex-col gap-2.5 my-auto">
+        <div className="flex flex-col gap-2 my-auto flex-1 min-h-0 overflow-y-auto pr-0.5 no-scrollbar">
           {/* Sentence or 5 rows context */}
           {fipiQ.rows.length > 1 ? (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 max-h-[210px] sm:max-h-[240px] overflow-y-auto pr-0.5">
               {fipiQ.rows.map((row, idx) => (
                 <div
                   key={idx}

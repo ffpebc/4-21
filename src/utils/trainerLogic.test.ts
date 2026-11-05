@@ -1317,6 +1317,61 @@ test('All 19 tasks (4–22) in trainer bank have clean official instructions, ze
   }
 });
 
+test('Exhaustive task-by-task verification across all 19 tasks (4–22): grading, inputs, and structure', () => {
+  const bank = getTrainerBank();
+  const tasksFound = new Set<string>();
+
+  for (const q of bank.fipiQuestions) {
+    tasksFound.add(String(q.task));
+    const dump = JSON.stringify(q);
+    assert.equal(dump.includes('\u00ad'), false, `[${q.id}] Task ${q.task} must not have soft hyphens`);
+    assert.equal(dump.includes('\u200b'), false, `[${q.id}] Task ${q.task} must not have zero-width spaces`);
+    assert.equal(dump.includes('(Взято') || dump.includes('(ЕГКР'), false, `[${q.id}] Task ${q.task} must not have scraper annotations`);
+
+    // Verify grading for correct answer
+    if (['5', '6', '7'].includes(q.task)) {
+      const validAns = (q.textAnswers && q.textAnswers[0]) || q.rows.find((r) => r.isCorrectRow)?.letter || '';
+      assert.ok(validAns.length > 0, `[${q.id}] Task ${q.task} must have a valid text answer`);
+      const checkOk = checkFipiQuestionAnswer(q, validAns);
+      assert.equal(checkOk.isCorrect, true, `[${q.id}] Valid answer «${validAns}» must evaluate to true`);
+      assert.equal(checkOk.pointsEarned, checkOk.maxPoints);
+
+      const checkBad = checkFipiQuestionAnswer(q, 'совершенноневерныйответ');
+      assert.equal(checkBad.isCorrect, false);
+      assert.equal(checkBad.pointsEarned, 0);
+    } else if (['8', '22'].includes(q.task)) {
+      assert.ok(q.correctIndices.length >= 4 && q.correctIndices.length <= 5);
+      const correctStr = q.correctIndices.join('');
+      const checkOk = checkFipiQuestionAnswer(q, correctStr);
+      assert.equal(checkOk.isCorrect, true, `[${q.id}] Task ${q.task} matching ${correctStr} must evaluate to true`);
+      assert.equal(checkOk.pointsEarned, 2);
+
+      const checkBad = checkFipiQuestionAnswer(q, '99999');
+      // Unless 99999 happens to have 3 matching (which is impossible as digits are distinct), points <= 1
+      assert.equal(checkBad.isCorrect, false);
+    } else {
+      // Tasks 4, 9-21
+      assert.ok(q.correctIndices.length >= 1, `[${q.id}] Task ${q.task} must have correctIndices`);
+      const correctStr = q.correctIndices.slice().sort((a, b) => a - b).join('');
+      const checkOk = checkFipiQuestionAnswer(q, correctStr);
+      assert.equal(checkOk.isCorrect, true, `[${q.id}] Task ${q.task} answer ${correctStr} must evaluate to true`);
+      assert.equal(checkOk.pointsEarned, 1);
+
+      const checkBad = checkFipiQuestionAnswer(q, '987');
+      if (correctStr !== '789') {
+        assert.equal(checkBad.isCorrect, false);
+        assert.equal(checkBad.pointsEarned, 0);
+      }
+    }
+  }
+
+  // Ensure every single task from 4 to 22 was present and audited
+  for (let t = 4; t <= 22; t++) {
+    assert.ok(tasksFound.has(String(t)), `Task ${t} must be present in FIPI questions bank`);
+  }
+});
+
+
 
 
 
