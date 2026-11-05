@@ -166,13 +166,15 @@ export default function App() {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         if (document.body) document.body.scrollTop = 0;
         if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
       };
       resetScroll();
       syncAppViewport();
       window.setTimeout(resetScroll, 50);
       window.setTimeout(resetScroll, 150);
       window.setTimeout(resetScroll, 300);
-      window.setTimeout(syncAppViewport, 320);
+      window.setTimeout(resetScroll, 500);
+      window.setTimeout(syncAppViewport, 520);
     };
     window.addEventListener('focusout', onFocusOut);
 
@@ -444,6 +446,7 @@ export default function App() {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       if (document.body) document.body.scrollTop = 0;
       if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
       const vp = document.querySelector('meta[name="viewport"]');
       if (vp) {
         vp.setAttribute(
@@ -467,8 +470,8 @@ export default function App() {
   }, [activeTab, workoutView]);
 
   const totalPlanned = useMemo(
-    () => calculateTotalPlanned(state.quantities),
-    [state.quantities]
+    () => calculateTotalPlanned(state.quantities, state.enabledTasks),
+    [state.quantities, state.enabledTasks]
   );
 
   const isScrollLocked = useMemo(() => {
@@ -665,16 +668,11 @@ export default function App() {
   const handleApplyPreset = (qtyEach: number) => {
     const clamped = clampTaskQty(qtyEach);
     setState((prev) => {
-      const currEnabled = { ...createDefaultEnabledTasks(), ...(prev.enabledTasks || {}) };
-      const nextEnabled = { ...currEnabled };
+      const nextEnabled = {} as Record<TaskId, boolean>;
       const nextQuantities = {} as Record<TaskId, number>;
       TASK_IDS.forEach((id) => {
-        if (clamped === 0) {
-          nextQuantities[id] = 0;
-        } else {
-          nextQuantities[id] = clamped;
-          nextEnabled[id] = true;
-        }
+        nextQuantities[id] = clamped;
+        nextEnabled[id] = clamped > 0;
       });
       return {
         ...prev,
@@ -692,9 +690,7 @@ export default function App() {
       TASK_IDS.forEach((id) => {
         const v = clampTaskQty(quantities[id] ?? 0);
         nextQuantities[id] = v;
-        if (v > 0) {
-          nextEnabled[id] = true;
-        }
+        nextEnabled[id] = v > 0;
       });
       return {
         ...prev,
@@ -755,6 +751,20 @@ export default function App() {
     const queue = buildWorkoutQueue(kimQty, 'fipi', {
       randomize: true,
       shuffleTasks: false,
+      enabledTasks: allEnabled,
+    });
+    startSessionWithQueue(queue);
+  };
+
+  const handleStartBalanced30Workout = () => {
+    handleApplyBalanced30();
+    const allEnabled = {} as Record<TaskId, boolean>;
+    TASK_IDS.forEach((id) => {
+      allEnabled[id] = true;
+    });
+    const queue = buildWorkoutQueue(BALANCED_30_QUANTITIES, 'fipi', {
+      randomize: true,
+      shuffleTasks: state.isShuffled,
       enabledTasks: allEnabled,
     });
     startSessionWithQueue(queue);
@@ -958,11 +968,29 @@ export default function App() {
   const handleSelectKimVariant = (newIdx: number) => {
     const wrapped = (newIdx + bank.kimVariants.length) % bank.kimVariants.length;
     setKimVariantIdx(wrapped);
-    const firstActive = TASK_IDS.find((t) => enabledMap[t] !== false) || '4';
-    setKimActiveTask(firstActive);
+    setKimActiveTask('4');
     setKimAnswers(createEmptyKimAnswers());
     setKimChecked(false);
   };
+
+  const kimVariantScore = useMemo(() => {
+    if (!kimChecked || !currentKimVariant) return null;
+    let earned = 0;
+    let maxP = 0;
+    for (const t of TASK_IDS) {
+      const fq = currentKimVariant.tasks?.[t];
+      if (!fq) continue;
+      const ans = (kimAnswers[t] || '').trim();
+      const c = checkFipiQuestionAnswer(fq, ans);
+      earned += c.pointsEarned;
+      maxP += c.maxPoints;
+    }
+    return {
+      earned,
+      maxP,
+      percent: calculateAccuracyPercent(earned, Math.max(1, maxP)),
+    };
+  }, [kimChecked, currentKimVariant, kimAnswers]);
 
   const handleToggleKimRowDigit = (rowNumber1Based: number) => {
     if (kimChecked) return;
@@ -1585,6 +1613,11 @@ export default function App() {
                                         );
                                       }}
                                       onBlur={resetViewportOnBlur}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          (e.target as HTMLInputElement).blur();
+                                        }
+                                      }}
                                       className={`ios-count-badge ${qty > 0 ? 'has-value' : ''}`}
                                       aria-label={`Количество заданий ${taskId}`}
                                     />
@@ -2715,6 +2748,11 @@ export default function App() {
                               value={kimAnswers[kimActiveTask] || ''}
                               onChange={(e) => handleKimInputDirect(e.target.value)}
                               onBlur={resetViewportOnBlur}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
                               placeholder={
                                 ['5', '6', '7'].includes(kimActiveTask)
                                   ? 'СЛОВО'
@@ -2724,7 +2762,9 @@ export default function App() {
                               }
                               aria-label={`Ответ бланка для задания ${kimActiveTask}`}
                               className={`ege-blank-input ${
-                                ['5', '6', '7'].includes(kimActiveTask) ? '!w-[155px] !text-[12.5px]' : ''
+                                ['5', '6', '7'].includes(kimActiveTask)
+                                  ? 'is-word-input !w-[165px] !text-[16px] !tracking-normal'
+                                  : ''
                               }`}
                             />
                           </div>
@@ -2967,28 +3007,51 @@ export default function App() {
                         )}
 
                         {kimChecked && (
-                          <div
-                            className="mt-2.5 p-2.5 rounded-xl text-[12px] font-bold flex items-center justify-between flex-wrap gap-2"
-                            style={{
-                              background: 'var(--ios-bg-secondary)',
-                              color: 'var(--ios-label)',
-                            }}
-                          >
-                            <span>
-                              Ваш ответ:{' '}
-                              <strong>
-                                {kimAnswers[kimActiveTask] || 'пусто'}
-                              </strong>
-                            </span>
-                            <span style={{ color: 'var(--ios-green)' }}>
-                              Эталон ФИПИ:{' '}
-                              {
-                                checkFipiQuestionAnswer(
-                                  currentKimTaskQuestion,
-                                  kimAnswers[kimActiveTask] || ''
-                                ).correctAnswerDisplay
-                              }
-                            </span>
+                          <div className="flex flex-col gap-1.5 mt-2.5">
+                            <div
+                              className="p-2.5 rounded-xl text-[12px] font-bold flex items-center justify-between flex-wrap gap-2"
+                              style={{
+                                background: 'var(--ios-bg-secondary)',
+                                color: 'var(--ios-label)',
+                              }}
+                            >
+                              <span>
+                                Ваш ответ:{' '}
+                                <strong>
+                                  {kimAnswers[kimActiveTask] || 'пусто'}
+                                </strong>
+                              </span>
+                              <span style={{ color: 'var(--ios-green)' }}>
+                                Эталон ФИПИ:{' '}
+                                {
+                                  checkFipiQuestionAnswer(
+                                    currentKimTaskQuestion,
+                                    kimAnswers[kimActiveTask] || ''
+                                  ).correctAnswerDisplay
+                                }
+                              </span>
+                            </div>
+                            {kimVariantScore && (
+                              <div
+                                id="kim-variant-score-banner"
+                                className="px-3 py-2 rounded-xl text-[12px] font-extrabold flex items-center justify-between"
+                                style={{
+                                  background:
+                                    kimVariantScore.percent >= 60
+                                      ? 'var(--ios-green-soft)'
+                                      : 'var(--ios-orange-soft)',
+                                  color:
+                                    kimVariantScore.percent >= 60
+                                      ? 'var(--ios-green)'
+                                      : 'var(--ios-orange)',
+                                }}
+                              >
+                                <span>Итог варианта КИМ (№ 4–22):</span>
+                                <span>
+                                  {kimVariantScore.earned} из {kimVariantScore.maxP} баллов ({kimVariantScore.percent}%)
+                                </span>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -3490,8 +3553,9 @@ export default function App() {
                           rows={3}
                           value={cloudCodeText}
                           onChange={(e) => setCloudCodeText(e.target.value)}
+                          onBlur={resetViewportOnBlur}
                           placeholder="Код прогресса EGE27-..."
-                          className="w-full p-2.5 rounded-2xl text-[13px] font-mono mb-2.5 outline-none"
+                          className="w-full p-2.5 rounded-2xl text-[16px] font-mono mb-2.5 outline-none"
                           style={{
                             background: 'var(--ios-bg-secondary)',
                             border: '0.5px solid var(--ios-separator)',
@@ -3614,6 +3678,7 @@ export default function App() {
         onApplyPreset={handleApplyPreset}
         onApplyCustomQuantities={handleApplyCustomQuantities}
         onApplyBalanced30={handleApplyBalanced30}
+        onStartBalanced30Workout={handleStartBalanced30Workout}
         onStartFipiTraps={handleStartFipiTrapsWorkout}
         onStartWeakestTaskWorkout={handleStartWeakestTaskWorkout}
         onStartRealKimWorkout={handleStartRealKimWorkout}

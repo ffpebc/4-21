@@ -26,6 +26,7 @@ interface PresetsModalProps {
   onApplyPreset: (qtyEach: number) => void;
   onApplyCustomQuantities: (quantities: Partial<Record<TaskId, number>>) => void;
   onApplyBalanced30?: () => void;
+  onStartBalanced30Workout?: () => void;
   onStartFipiTraps: () => void;
   onStartWeakestTaskWorkout: (taskId: TaskId) => void;
   onStartRealKimWorkout?: () => void;
@@ -39,6 +40,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
   onApplyPreset,
   onApplyCustomQuantities,
   onApplyBalanced30,
+  onStartBalanced30Workout,
   onStartFipiTraps,
   onStartWeakestTaskWorkout,
   onStartRealKimWorkout,
@@ -174,7 +176,9 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
           id="smart-30-tasks-btn"
           onClick={() => {
             onClose();
-            if (onApplyBalanced30) {
+            if (onStartBalanced30Workout) {
+              onStartBalanced30Workout();
+            } else if (onApplyBalanced30) {
               onApplyBalanced30();
             } else {
               onApplyCustomQuantities(BALANCED_30_QUANTITIES);
@@ -205,7 +209,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             className="text-[11.5px] font-bold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
             style={{ background: 'var(--ios-blue-soft)', color: 'var(--ios-blue)' }}
           >
-            Выбрать →
+            Старт →
           </span>
         </button>
 

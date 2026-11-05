@@ -25,6 +25,7 @@ import {
   getOfficialTaskInstruction,
   isTheoryOrExplanationText,
   BALANCED_30_QUANTITIES,
+  type TaskId,
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
@@ -1498,6 +1499,83 @@ test('Full KIM variant and preset logic covers all 19 tasks without dropping dis
     assert.equal(queue[i].task, TASK_IDS[i], `Question ${i + 1} must be task ${TASK_IDS[i]}`);
   }
 });
+
+test('calculateTotalPlanned strictly respects enabledTasks toggle filter', () => {
+  const qty: Record<string, number> = {};
+  const enabled: Record<string, boolean> = {};
+  for (const id of TASK_IDS) {
+    qty[id] = 2;
+    enabled[id] = true;
+  }
+
+  // All 19 enabled * 2 = 38
+  assert.equal(calculateTotalPlanned(qty as any, enabled as any), 38);
+
+  // Turn off task 4 and task 9
+  enabled['4'] = false;
+  enabled['9'] = false;
+  // 17 enabled * 2 = 34
+  assert.equal(calculateTotalPlanned(qty as any, enabled as any), 34);
+
+  // Turn off all tasks
+  for (const id of TASK_IDS) {
+    enabled[id] = false;
+  }
+  assert.equal(calculateTotalPlanned(qty as any, enabled as any), 0);
+});
+
+test('Thematic preset quantity application synchronizes enabledTasks flag', () => {
+  // Speech culture preset (4–8)
+  const speechQty: Partial<Record<TaskId, number>> = {};
+  TASK_IDS.forEach((id) => {
+    speechQty[id] = ['4', '5', '6', '7', '8'].includes(id) ? 5 : 0;
+  });
+
+  const nextEnabledSpeech: Record<string, boolean> = {};
+  TASK_IDS.forEach((id) => {
+    nextEnabledSpeech[id] = (speechQty[id] ?? 0) > 0;
+  });
+
+  const speechTotal = calculateTotalPlanned(speechQty, nextEnabledSpeech as any);
+  assert.equal(speechTotal, 25, 'Speech culture preset must total 25');
+
+  // Verify only 4-8 are enabled
+  for (const id of TASK_IDS) {
+    if (['4', '5', '6', '7', '8'].includes(id)) {
+      assert.equal(nextEnabledSpeech[id], true, `Task ${id} must be enabled`);
+    } else {
+      assert.equal(nextEnabledSpeech[id], false, `Task ${id} must be disabled`);
+    }
+  }
+
+  // Orthography preset (9–15)
+  const orthoQty: Partial<Record<TaskId, number>> = {};
+  TASK_IDS.forEach((id) => {
+    orthoQty[id] = ['9', '10', '11', '12', '13', '14', '15'].includes(id) ? 5 : 0;
+  });
+  const nextEnabledOrtho: Record<string, boolean> = {};
+  TASK_IDS.forEach((id) => {
+    nextEnabledOrtho[id] = (orthoQty[id] ?? 0) > 0;
+  });
+  const orthoTotal = calculateTotalPlanned(orthoQty, nextEnabledOrtho as any);
+  assert.equal(orthoTotal, 35, 'Ortho preset must total 35');
+});
+
+test('All 35 authentic KIM variants have complete 19-task structure (4–22)', () => {
+  const bank = getTrainerBank();
+  assert.ok(bank.kimVariants.length >= 35, 'Must have at least 35 KIM variants');
+
+  for (const v of bank.kimVariants) {
+    assert.ok(v.id && v.title, `Variant must have valid ID and title: ${v.id}`);
+    for (const taskId of TASK_IDS) {
+      const taskQ = v.tasks?.[taskId];
+      assert.ok(taskQ, `Variant ${v.id} must contain task ${taskId}`);
+      assert.equal(taskQ.task, taskId, `Question task must match ${taskId}`);
+      assert.ok(taskQ.rows && taskQ.rows.length > 0, `Task ${taskId} in ${v.id} must have rows`);
+    }
+  }
+});
+
 
 
 

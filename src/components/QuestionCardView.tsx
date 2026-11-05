@@ -862,9 +862,18 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               disabled={fipiSubmitted}
               value={fipiWordInput}
               onChange={(e) => setFipiWordInput(e.target.value)}
+              onBlur={() => {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                if (document.body) document.body.scrollTop = 0;
+                if (document.documentElement) document.documentElement.scrollTop = 0;
+                if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+              }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && canSubmitFipi()) {
-                  handleCheckFipi();
+                if (e.key === 'Enter') {
+                  (e.target as HTMLInputElement).blur();
+                  if (canSubmitFipi()) {
+                    handleCheckFipi();
+                  }
                 }
               }}
               placeholder="Введите слово в бланк без пробелов..."

@@ -97,7 +97,7 @@ export function refreshMaps() {
 refreshMaps();
 
 // Очищаем устаревший кэш с урезанной или поврежденной базой
-const CURRENT_BANK_CACHE = 'ege-bank-cache-v29';
+const CURRENT_BANK_CACHE = 'ege-bank-cache-v30';
 if (typeof window !== 'undefined' && 'caches' in window) {
   try {
     window.caches.keys().then((keys) => {
@@ -160,7 +160,7 @@ export async function loadFullDataBank(): Promise<boolean> {
     const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
     const cdnBase = 'https://cdn.jsdelivr.net/gh/ffpebc/9-15@data/public/data';
-    const vParam = '?v=29';
+    const vParam = '?v=30';
     const [allWordsData, fipiData, sprintData] = await Promise.all([
       fetchJsonWithCache(`${localBase}/allWordsBank9_15.json${vParam}`, [
         `${rawGithubBase}/allWordsBank9_15.json${vParam}`,
