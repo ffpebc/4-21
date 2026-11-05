@@ -12,7 +12,10 @@
     <meta name="application-name" content="ЕГЭ 4–22" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="alternate icon" type="image/png" href="/icon-192.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png" />
     <title>ЕГЭ Русский 4–22 — iOS 27 Тренажёр</title>
@@ -94,11 +97,24 @@
         setTimeout(syncAppViewport, 600);
 
         try {
-          var raw = localStorage.getItem('ege_ortho_ios27_v6');
-          if (raw && (raw.indexOf('"darkMode":true') !== -1 || raw.indexOf('"d":1') !== -1)) {
-            document.documentElement.classList.add('dark');
-            var meta = document.getElementById('app-theme-color');
-            if (meta) meta.setAttribute('content', '#000000');
+          var raw = localStorage.getItem('ege_trainer_ios27_v3') || localStorage.getItem('ege_ortho_ios27_v6');
+          if (raw) {
+            var isDark = false;
+            if (raw.indexOf('"darkMode":true') !== -1 || raw.indexOf('"d":1') !== -1) {
+              isDark = true;
+            } else if (raw.indexOf('EGE27-') === 0) {
+              try {
+                var b64 = raw.slice(6).replace(/-/g, '+').replace(/_/g, '/');
+                while (b64.length % 4) b64 += '=';
+                var decoded = decodeURIComponent(escape(atob(b64)));
+                if (decoded.indexOf('"d":1') !== -1) isDark = true;
+              } catch (_) {}
+            }
+            if (isDark) {
+              document.documentElement.classList.add('dark');
+              var meta = document.getElementById('app-theme-color');
+              if (meta) meta.setAttribute('content', '#000000');
+            }
           }
         } catch (e) {}
       })();

@@ -1,14 +1,27 @@
-const CACHE_NAME = 'ege-4-22-ios27-v8';
+const CACHE_NAME = 'ege-4-22-ios27-v9';
 const CORE_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/manifest.json',
+  '/favicon.ico',
   '/icon.svg',
   '/favicon.svg',
   '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/apple-touch-icon-180x180.png',
+  '/apple-touch-icon-180x180-precomposed.png',
   '/icon-192.png',
   '/icon-512.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/apple-touch-icon-precomposed.png',
+  '/icons/apple-touch-icon-180x180.png',
+  '/icons/apple-touch-icon-180x180-precomposed.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon.svg',
+  '/icons/favicon.ico',
+  '/icons/favicon.svg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -93,6 +106,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.svg') ||
     url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.ico') ||
     url.pathname.endsWith('.webmanifest') ||
     url.pathname.endsWith('.json') ||
     url.pathname.endsWith('.woff2')
