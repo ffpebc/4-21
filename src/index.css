@@ -207,6 +207,7 @@ body::before {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
+  background-color: var(--ios-bg-grouped);
 }
 
 .ios-viewport-scroll {
@@ -221,7 +222,7 @@ body::before {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: none;
   padding-top: calc(env(safe-area-inset-top, 0px) + 52px);
-  padding-bottom: calc(64px + max(10px, calc(env(safe-area-inset-bottom, 0px) - 14px)));
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Dedicated Lock for Screens that fit 100% on iPhone 16 */
@@ -325,7 +326,7 @@ body::before {
    ============================================================================ */
 .ios-tabbar {
   position: fixed;
-  bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 18px));
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translate3d(-50%, 0, 0);
   width: calc(100% - 20px);

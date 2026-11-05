@@ -4,12 +4,35 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(<App />);
 
-// Register Service Worker and pre-warm all current bundle assets for 0ms Web App cold start
+// Register Service Worker with auto-update and cache busting for fresh deployments
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register('/sw.js', { updateViaCache: 'none' })
       .then((reg) => {
+        // Auto check for updates on load and on tab focus
+        reg.update().catch(() => {});
+        window.addEventListener('focus', () => reg.update().catch(() => {}));
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          }
+        });
+
         const sendWarmAssets = () => {
           const worker = reg.active || reg.waiting || reg.installing;
           if (!worker) return;

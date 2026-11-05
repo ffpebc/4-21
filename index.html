@@ -32,7 +32,8 @@
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
         -webkit-font-smoothing: antialiased;
         -webkit-text-size-adjust: 100%;
-        overflow-x: hidden;
+        overflow: hidden;
+        overscroll-behavior: none;
       }
       body {
         margin: 0;
@@ -59,8 +60,9 @@
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
+        background-color: #E6ECF8;
       }
-      html.dark, html.dark body {
+      html.dark, html.dark body, html.dark #root {
         background-color: #000000;
         color: #FFFFFF;
       }

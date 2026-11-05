@@ -707,6 +707,22 @@ export default function App() {
     startSessionWithQueue(queue);
   };
 
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('autostart') === 'kim') {
+          handleStartRealKimWorkout();
+        } else if (params.get('task')) {
+          const t = params.get('task') as TaskId;
+          if (TASK_IDS.includes(t)) {
+            handleStartWeakestTaskWorkout(t);
+          }
+        }
+      }
+    } catch {}
+  }, []);
+
   const handleStartFipiTrapsWorkout = () => {
     const freshTraps = balanceSprintQuestionsList(shuffleArray(bank.trapQuestions)).slice(0, 15);
     startSessionWithQueue(freshTraps);

@@ -2992,10 +2992,11 @@ export function cleanScraperArtifacts(text: string | undefined): string {
     return opens > closes ? `${word}).` : `${word}.`;
   });
 
-  // Strip broken XML/HTML entity artifacts and section headers
+  // Strip broken XML/HTML entity artifacts, trailing source annotations, and section headers
   res = res
     .replace(/&#[хx]2013;\s*\"?>\s*—?/gi, '—')
     .replace(/\s*Изобразительно-выразительные средства языка\s*$/i, '')
+    .replace(/\s*\((?:Взято из|ЕГКР|вар\.|вариант|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили)[^)]*\)?$/i, '')
     .trim();
 
   return res.trim();
@@ -3017,6 +3018,7 @@ export function cleanWord(str: string | undefined): string {
   res = res
     .replace(/[«»]/g, '')
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
+    .replace(/\s*\((?:Взято из|ЕГКР|вар\.|вариант|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили)[^)]*\)?$/i, '')
     .trim();
 
   res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2 $3)');
@@ -3339,13 +3341,13 @@ export function getTrainerBank() {
           ? 'numbered_gaps'
           : 'rows');
 
-      const instruction = rawFq.instruction || (rawFq.task === '15' ? rule : undefined);
+      const instruction = cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction);
 
       const fq: FipiQuestion = {
         ...rawFq,
         questionKind,
-        rule,
-        instruction: instruction || rule,
+        rule: instruction,
+        instruction,
         sentence,
         rows,
       };

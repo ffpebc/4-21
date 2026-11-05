@@ -1272,10 +1272,49 @@ test('Authentic prototype coverage and punctuation sentence integrity across tas
     assert.ok(errorRow?.explanation?.includes('Нетерпимый') || errorRow?.explanation?.includes('нетерпимо'), 'Task 5 nf-5-82033 must have paronym explanation');
   }
 
-  // 7. cleanScraperArtifacts cleans broken XML entity and section header
+  // 7. cleanScraperArtifacts cleans broken XML entity, trailing source annotations, and section headers
   assert.equal(cleanScraperArtifacts('мир (ТАК ЖЕ) &#х2013;">— видеть его').includes('&#х2013;'), false);
   assert.equal(cleanScraperArtifacts('мир (ТАК ЖЕ) &#х2013;">— видеть его'), 'мир (ТАК ЖЕ) — видеть его');
   assert.equal(cleanScraperArtifacts('Пушкин Изобразительно-выразительные средства языка'), 'Пушкин');
+  assert.equal(cleanScraperArtifacts('Шоссе. (Взято из сборника Дощинского-2026, 50 вар. (вар. 22)'), 'Шоссе.');
+  assert.equal(cleanScraperArtifacts('Текст (ЕГКР 18.03.2025, вариант 959)'), 'Текст');
+  assert.equal(cleanScraperArtifacts('ле\u00adсочке зе\u00adлени'), 'лесочке зелени');
+  assert.equal(cleanWord('ле\u00adсочке зе\u00adлени'), 'лесочке зелени');
+});
+
+test('All 19 tasks (4–22) in trainer bank have clean official instructions, zero trailing scraper annotations, and zero leaked rules', () => {
+  const bank = getTrainerBank();
+
+  for (const q of bank.fipiQuestions) {
+    const dump = JSON.stringify(q);
+    assert.equal(dump.includes('\u00ad'), false, `Question ${q.id} must not contain soft hyphen \\u00ad`);
+    assert.equal(dump.includes('\u200b'), false, `Question ${q.id} must not contain zero-width space \\u200b`);
+    assert.equal(dump.includes('((') || dump.includes('))'), false, `Question ${q.id} must not contain double parens`);
+
+    const instr = q.instruction || q.rule || '';
+    assert.equal(
+      instr.includes('От глаголов I спряжения') || instr.includes('союзы тоже') || instr.includes('в -чив-'),
+      false,
+      `Question ${q.id} must not have leaked theory rule in instruction: ${instr}`
+    );
+
+    const sent = q.sentence || '';
+    assert.equal(
+      /\((?:Взято из|ЕГКР|вар\.|вариант|Сборник|Дощинск|Цыбулько|Сенина)[^)]*\)?$/i.test(sent),
+      false,
+      `Sentence in ${q.id} must not have trailing scraper annotations: ${sent}`
+    );
+
+    for (const r of q.rows) {
+      for (const w of r.words) {
+        assert.equal(
+          /\((?:Взято из|ЕГКР|вар\.|вариант|Сборник|Дощинск|Цыбулько|Сенина)[^)]*\)?$/i.test(w),
+          false,
+          `Word in ${q.id} must not have trailing scraper annotations: ${w}`
+        );
+      }
+    }
+  }
 });
 
 

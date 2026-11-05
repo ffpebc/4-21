@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ege-9-13-ios27-v3';
+const CACHE_NAME = 'ege-9-13-ios27-v6';
 const CORE_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,9 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
   if (event.data && event.data.type === 'WARM_ASSETS' && Array.isArray(event.data.urls)) {
     const urls = event.data.urls;
     event.waitUntil(
@@ -44,7 +47,33 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
 
-  // 1. Immutable Vite hashed assets (/assets/*) and static icons: Cache-First (0ms cold start)
+  // 1. App Shell navigation (/ or /index.html): Network-First for instant fresh deployments, Cache fallback when offline
+  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put('/index.html', copy.clone());
+              cache.put('/', copy);
+            });
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cache = await caches.open(CACHE_NAME);
+          const cachedShell =
+            (await cache.match(request)) ||
+            (await cache.match('/index.html')) ||
+            (await cache.match('/'));
+          return cachedShell;
+        })
+    );
+    return;
+  }
+
+  // 2. Immutable Vite hashed assets (/assets/*) and static icons: Cache-First
   if (
     url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.svg') ||
@@ -64,29 +93,5 @@ self.addEventListener('fetch', (event) => {
       })
     );
     return;
-  }
-
-  // 2. App Shell navigation (/ or /index.html): Instant Stale-While-Revalidate for 0ms Web App cold start
-  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
-    event.respondWith(
-      caches.open(CACHE_NAME).then(async (cache) => {
-        const cachedShell =
-          (await cache.match(request)) ||
-          (await cache.match('/index.html')) ||
-          (await cache.match('/'));
-
-        const networkFetch = fetch(request)
-          .then((response) => {
-            if (response && response.status === 200) {
-              cache.put('/index.html', response.clone());
-              cache.put('/', response.clone());
-            }
-            return response;
-          })
-          .catch(() => cachedShell);
-
-        return cachedShell || networkFetch;
-      })
-    );
   }
 });
