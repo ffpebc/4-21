@@ -162,6 +162,18 @@ async function audit() {
     fs.writeFileSync('.cache/cdp_task12_verified.png', Buffer.from(shot1.data, 'base64'));
     console.log('[AUDIT] Saved .cache/cdp_task12_verified.png');
 
+    // Test 1b: Dark Mode on iPhone 16
+    await client.send('Runtime.evaluate', {
+      expression: 'document.documentElement.classList.add("dark")',
+    });
+    await wait(300);
+    const shotDark = await client.send('Page.captureScreenshot', { format: 'png' });
+    fs.writeFileSync('.cache/cdp_task12_dark_verified.png', Buffer.from(shotDark.data, 'base64'));
+    console.log('[AUDIT] Saved .cache/cdp_task12_dark_verified.png');
+    await client.send('Runtime.evaluate', {
+      expression: 'document.documentElement.classList.remove("dark")',
+    });
+
     // Test 2: UxPlay window dimensions (479 x 1024)
     console.log('[AUDIT] Testing UxPlay aspect ratio (479 x 1024)...');
     await client.send('Emulation.setDeviceMetricsOverride', {
