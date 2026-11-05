@@ -59,3 +59,36 @@ export async function fetchNeoFamilyTasksForLine(
   }
   return results;
 }
+
+export async function fetchAllNeoFamilyTasks(
+  tasks: TaskId[] = Object.keys(NEOFAMILY_LINE_IDS) as TaskId[],
+  maxPagesPerTask = 5
+): Promise<Record<TaskId, NeoFamilyRawTask[]>> {
+  const result: Partial<Record<TaskId, NeoFamilyRawTask[]>> = {};
+  for (const t of tasks) {
+    result[t] = await fetchNeoFamilyTasksForLine(t, maxPagesPerTask);
+  }
+  return result as Record<TaskId, NeoFamilyRawTask[]>;
+}
+
+// CLI runner
+if (process.argv[1]?.endsWith('parser-neofamily.ts')) {
+  const argTask = process.argv.find((a) => a.startsWith('--task='))?.split('=')[1] as TaskId | undefined;
+  const argPages = parseInt(process.argv.find((a) => a.startsWith('--pages='))?.split('=')[1] || '5', 10);
+  const tasksToFetch: TaskId[] = argTask ? [argTask] : (Object.keys(NEOFAMILY_LINE_IDS) as TaskId[]);
+
+  console.log(`[NeoFamily Parser] Fetching tasks: ${tasksToFetch.join(', ')} (max ${argPages} pages)...`);
+  fetchAllNeoFamilyTasks(tasksToFetch, argPages)
+    .then((res) => {
+      let total = 0;
+      for (const [t, items] of Object.entries(res)) {
+        console.log(`  Task ${t}: ${items.length} tasks`);
+        total += items.length;
+      }
+      console.log(`[NeoFamily Parser] Total tasks fetched: ${total}`);
+    })
+    .catch((err) => {
+      console.error('[NeoFamily Parser] Error:', err);
+      process.exit(1);
+    });
+}

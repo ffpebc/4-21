@@ -3347,12 +3347,35 @@ export function getTrainerBank() {
               ? cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction)
               : undefined;
 
-      const rows: FipiRow[] = rawFq.rows.map((r) => ({
-        ...r,
-        words: r.words.map((w) => (rawFq.task === '15' ? cleanWord(w) : cleanScraperArtifacts(w))),
-        solvedWords: r.solvedWords.map((w) => (rawFq.task === '15' ? cleanWord(w) : cleanScraperArtifacts(w))),
-        explanation: cleanExplanation(r.explanation),
-      }));
+      const rows: FipiRow[] = rawFq.rows.map((r) => {
+        let solvedWords = r.solvedWords.map((w) => (rawFq.task === '15' ? cleanWord(w) : cleanScraperArtifacts(w)));
+        let letter = r.letter;
+
+        if (rawFq.task === '4' && !r.isCorrectRow) {
+          const expl = r.explanation || '';
+          const m =
+            expl.match(/\(([^()]*[А-ЯЁ][^()]*)\)/) ||
+            expl.match(/правильный вариант\s*[-–—:]*\s*«?([а-яёА-ЯЁ]*[А-ЯЁ][а-яёА-ЯЁ]*)»?/i) ||
+            expl.match(/правильно\s*[-–—:]*\s*«?([а-яёА-ЯЁ]*[А-ЯЁ][а-яёА-ЯЁ]*)»?/i) ||
+            expl.match(/вариант\s*[-–—:]*\s*«?([а-яёА-ЯЁ]*[А-ЯЁ][а-яёА-ЯЁ]*)»?/i);
+          if (m && m[1]) {
+            const candidate = m[1].replace(/[«»]/g, '').trim();
+            const stressedLetter = candidate.match(/[А-ЯЁ]/)?.[0];
+            if (stressedLetter) {
+              solvedWords = [candidate];
+              letter = stressedLetter;
+            }
+          }
+        }
+
+        return {
+          ...r,
+          words: r.words.map((w) => (rawFq.task === '15' ? cleanWord(w) : cleanScraperArtifacts(w))),
+          solvedWords,
+          letter,
+          explanation: cleanExplanation(r.explanation),
+        };
+      });
 
       const questionKind =
         rawFq.questionKind ||
@@ -3422,6 +3445,8 @@ export function getTrainerBank() {
       const cleanedContext = cleanScraperArtifacts(rawSq.context);
       const cleanedRule = cleanScraperArtifacts(rawSq.rule);
       const cleanedExplanation = cleanExplanation(rawSq.explanation);
+      const cleanedPrefix = cleanScraperArtifacts(rawSq.prefix);
+      const cleanedSuffix = cleanScraperArtifacts(rawSq.suffix);
 
       const classified = classifyWordSubtopicAndException(
         rawSq.task,
@@ -3446,6 +3471,8 @@ export function getTrainerBank() {
       const isTrap = Boolean(rawSq.isTrap || classified.isTrap);
       const sq: SprintQuestion = {
         ...rawSq,
+        prefix: cleanedPrefix,
+        suffix: cleanedSuffix,
         context: cleanedContext,
         explanation: cleanedExplanation,
         topic: rawSq.topic && !isOrthoTask ? rawSq.topic : classified.topic,

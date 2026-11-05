@@ -23,11 +23,64 @@ const ALL_TASK_IDS_LIST: TaskId[] = [
   '16', '17', '18', '19', '20', '21', '22',
 ];
 
-let initialWords: WordEntry[] = (starterBank.words || []) as WordEntry[];
+export function sprintToWordEntry(sq: SprintQuestion, index: number): WordEntry {
+  const task = String(sq.task);
+  const pref = sq.prefix || '';
+  const suff = sq.suffix || '';
+  const ans = sq.answer || '';
+  let word = '';
+
+  if (['9', '10', '11', '12', '15'].includes(task)) {
+    word = pref + ans + suff;
+  } else if (['13', '14'].includes(task)) {
+    const pClean = pref.replace(/[()]/g, '').trim();
+    const sClean = suff.replace(/[()]/g, '').trim();
+    if (ans === 'РАЗДЕЛЬНО' || ans === 'РАЗД.') {
+      word = `${pClean} ${sClean}`.trim();
+    } else if (ans === 'ДЕФИС' || ans === 'ДЕФИСНО') {
+      word = `${pClean}-${sClean}`.trim();
+    } else if (ans === 'СЛИТНО') {
+      word = `${pClean}${sClean}`.trim();
+    } else {
+      word = (sq as any).word || ans;
+    }
+  } else if (task === '7') {
+    const m = pref.match(/«([^»]+)»/);
+    if (m && ans === 'ВЕРНО') {
+      word = m[1].trim();
+    } else {
+      word = (sq as any).word || (pref ? `${pref} ${ans}`.trim() : ans);
+    }
+  } else {
+    word = (sq as any).word || ans;
+  }
+
+  const wordGap = (sq as any).wordGap || (pref && suff ? `${pref}..${suff}` : word);
+
+  return {
+    id: sq.id ? sq.id.replace(/^sp-/, 'w-') : `w-${task}-${index + 1}`,
+    word: word || '—',
+    wordGap,
+    prefix: pref,
+    missingLetter: ans,
+    suffix: suff,
+    task: sq.task,
+    topic: sq.topic || '',
+    category: sq.topic || '',
+    rule: sq.rule || '',
+    context: sq.context || '',
+    source: sq.source || '',
+    isTrap: sq.isTrap,
+  };
+}
+
 let initialFipi: FipiQuestion[] = (starterBank.fipi || []) as FipiQuestion[];
 let initialSprint: SprintQuestion[] = (starterBank.sprint || []) as SprintQuestion[];
+let initialWords: WordEntry[] = ((starterBank as any).words && (starterBank as any).words.length > 0)
+  ? ((starterBank as any).words as WordEntry[])
+  : initialSprint.map(sprintToWordEntry);
 
-// В среде Node.js (при прогоне тестов) считываем полную базу из локальных файлов
+// В среде Node.js (при прогоне тестов) считываем полную базу заданий из локальных файлов
 if (typeof window === 'undefined' && typeof process !== 'undefined') {
   try {
     const getModule = (name: string): any => {
@@ -44,21 +97,21 @@ if (typeof window === 'undefined' && typeof process !== 'undefined') {
     const path = getModule('node:path');
     if (fs && path) {
       let dataDir = path.resolve(process.cwd(), 'src/data');
-      if (!fs.existsSync(path.join(dataDir, 'allWordsBank9_15.json'))) {
+      if (!fs.existsSync(path.join(dataDir, 'fipiTasksBank9_15.json')) && !fs.existsSync(path.join(dataDir, 'fipiTasksBank.json'))) {
         dataDir = path.resolve(process.cwd(), 'public/data');
       }
-      const allWordsPath = path.join(dataDir, 'allWordsBank9_15.json');
-      if (fs.existsSync(allWordsPath)) {
-        const parsed = JSON.parse(fs.readFileSync(allWordsPath, 'utf8'));
-        initialWords = Array.isArray(parsed) ? parsed : parsed.words || [];
-      }
-      const fipiPath = path.join(dataDir, 'fipiTasksBank9_15.json');
+      const fipiPath = fs.existsSync(path.join(dataDir, 'fipiTasksBank9_15.json'))
+        ? path.join(dataDir, 'fipiTasksBank9_15.json')
+        : path.join(dataDir, 'fipiTasksBank.json');
       if (fs.existsSync(fipiPath)) {
         initialFipi = JSON.parse(fs.readFileSync(fipiPath, 'utf8'));
       }
-      const sprintPath = path.join(dataDir, 'sprintBank9_15.json');
+      const sprintPath = fs.existsSync(path.join(dataDir, 'sprintBank9_15.json'))
+        ? path.join(dataDir, 'sprintBank9_15.json')
+        : path.join(dataDir, 'sprintBank.json');
       if (fs.existsSync(sprintPath)) {
         initialSprint = JSON.parse(fs.readFileSync(sprintPath, 'utf8'));
+        initialWords = initialSprint.map(sprintToWordEntry);
       }
     }
   } catch (err) {
@@ -97,7 +150,7 @@ export function refreshMaps() {
 refreshMaps();
 
 // Очищаем устаревший кэш с урезанной или поврежденной базой
-const CURRENT_BANK_CACHE = 'ege-bank-cache-v30';
+const CURRENT_BANK_CACHE = 'ege-bank-cache-v31';
 if (typeof window !== 'undefined' && 'caches' in window) {
   try {
     window.caches.keys().then((keys) => {
@@ -160,14 +213,8 @@ export async function loadFullDataBank(): Promise<boolean> {
     const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
     const cdnBase = 'https://cdn.jsdelivr.net/gh/ffpebc/9-15@data/public/data';
-    const vParam = '?v=30';
-    const [allWordsData, fipiData, sprintData] = await Promise.all([
-      fetchJsonWithCache(`${localBase}/allWordsBank9_15.json${vParam}`, [
-        `${rawGithubBase}/allWordsBank9_15.json${vParam}`,
-        `${cdnBase}/allWordsBank9_15.json${vParam}`,
-        `${rawGithubBase}/allWordsBank.json${vParam}`,
-        `${cdnBase}/allWordsBank.json${vParam}`,
-      ]),
+    const vParam = '?v=31';
+    const [fipiData, sprintData] = await Promise.all([
       fetchJsonWithCache(`${localBase}/fipiTasksBank9_15.json${vParam}`, [
         `${rawGithubBase}/fipiTasksBank9_15.json${vParam}`,
         `${cdnBase}/fipiTasksBank9_15.json${vParam}`,
@@ -184,15 +231,6 @@ export async function loadFullDataBank(): Promise<boolean> {
 
     let updated = false;
 
-    if (allWordsData) {
-      const wordsArr = Array.isArray(allWordsData) ? allWordsData : allWordsData.words || [];
-      if (wordsArr.length > 0) {
-        PARSED_WORDS.length = 0;
-        PARSED_WORDS.push(...wordsArr);
-        updated = true;
-      }
-    }
-
     if (Array.isArray(fipiData) && fipiData.length > 0) {
       PARSED_FIPI_QUESTIONS.length = 0;
       PARSED_FIPI_QUESTIONS.push(...fipiData);
@@ -202,6 +240,8 @@ export async function loadFullDataBank(): Promise<boolean> {
     if (Array.isArray(sprintData) && sprintData.length > 0) {
       PARSED_SPRINT_QUESTIONS.length = 0;
       PARSED_SPRINT_QUESTIONS.push(...sprintData);
+      PARSED_WORDS.length = 0;
+      PARSED_WORDS.push(...sprintData.map(sprintToWordEntry));
       updated = true;
     }
 

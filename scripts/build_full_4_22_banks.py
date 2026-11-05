@@ -1024,16 +1024,14 @@ def parse_task_21(qid: str, raw_q: str, raw_sol: str, raw_ans: list[str], source
 def build_all():
     # 1. Load existing 100% verified 9-15 banks (idempotent filter for tasks 9..15)
     t9_15 = {"9", "10", "11", "12", "13", "14", "15"}
-    with open(PUBLIC_DATA / "allWordsBank9_15.json", encoding="utf-8") as f:
-        words_raw = json.load(f)
-        raw_list = words_raw if isinstance(words_raw, list) else words_raw.get("words", [])
-        existing_words_9_15 = [w for w in raw_list if str(w.get("task")) in t9_15]
-    with open(PUBLIC_DATA / "fipiTasksBank9_15.json", encoding="utf-8") as f:
+    fipi_file = PUBLIC_DATA / "fipiTasksBank9_15.json" if (PUBLIC_DATA / "fipiTasksBank9_15.json").exists() else PUBLIC_DATA / "fipiTasksBank.json"
+    sprint_file = PUBLIC_DATA / "sprintBank9_15.json" if (PUBLIC_DATA / "sprintBank9_15.json").exists() else PUBLIC_DATA / "sprintBank.json"
+    with open(fipi_file, encoding="utf-8") as f:
         existing_fipi_9_15 = [q for q in json.load(f) if str(q.get("task")) in t9_15]
-    with open(PUBLIC_DATA / "sprintBank9_15.json", encoding="utf-8") as f:
+    with open(sprint_file, encoding="utf-8") as f:
         existing_sprint_9_15 = [q for q in json.load(f) if str(q.get("task")) in t9_15]
 
-    print(f"Loaded verified 9-15 banks: words={len(existing_words_9_15)}, fipi={len(existing_fipi_9_15)}, sprint={len(existing_sprint_9_15)}")
+    print(f"Loaded verified 9-15 banks: fipi={len(existing_fipi_9_15)}, sprint={len(existing_sprint_9_15)}")
 
     # Ensure questionKind and clean pedagogical rules on 9-15 FIPI tasks
     for fq in existing_fipi_9_15:
@@ -1094,8 +1092,10 @@ def build_all():
                     "source": sp["source"],
                 })
 
-    # 2. Parse NeoFamily tasks (/tmp/neofamily_4_22.json)
-    nf_path = Path("/tmp/neofamily_4_22.json")
+    # 2. Parse NeoFamily tasks (.cache/neofamily_4_22.json or /tmp/neofamily_4_22.json)
+    nf_path = ROOT / ".cache" / "neofamily_4_22.json"
+    if not nf_path.exists():
+        nf_path = Path("/tmp/neofamily_4_22.json")
     if nf_path.exists():
         with open(nf_path, encoding="utf-8") as f:
             nf_data = json.load(f)
@@ -1164,47 +1164,39 @@ def build_all():
         conn.close()
 
     # Combine 9-15 and 4-8, 16-22
-    all_words = existing_words_9_15 + new_words
     all_fipi = existing_fipi_9_15 + new_fipi
     all_sprint = existing_sprint_9_15 + new_sprint
 
     # Print statistics per task 4..22
     print("\n=== ИТОГОВАЯ СТАТИСТИКА БАНКОВ 4–22 ===")
     for t in [str(x) for x in range(4, 23)]:
-        c_w = sum(1 for w in all_words if str(w.get("task")) == t)
         c_f = sum(1 for fq in all_fipi if str(fq.get("task")) == t)
         c_s = sum(1 for sq in all_sprint if str(sq.get("task")) == t)
-        print(f"  Задание №{t:>2} ({TASK_TITLES[t][:35]:<35}): ФИПИ={c_f:>4} | Спринт/Слова={c_s:>5}")
+        print(f"  Задание №{t:>2} ({TASK_TITLES[t][:35]:<35}): ФИПИ={c_f:>4} | Спринт={c_s:>5}")
 
-    print(f"ВСЕГО: Слов/Микро-карточек = {len(all_words)} | Заданий ФИПИ = {len(all_fipi)} | Спринт = {len(all_sprint)}")
+    print(f"ВСЕГО: Заданий ФИПИ = {len(all_fipi)} | Спринт = {len(all_sprint)}")
 
-    # Save full banks to public/data/ (both new names and backwards-compatible 9_15 names!)
+    # Save full task banks to public/data/ (purely authentic tasks, NO words database!)
     for fname, payload in [
-        ("allWordsBank9_15.json", all_words),
         ("fipiTasksBank9_15.json", all_fipi),
         ("sprintBank9_15.json", all_sprint),
-        ("allWordsBank.json", all_words),
         ("fipiTasksBank.json", all_fipi),
         ("sprintBank.json", all_sprint),
     ]:
         with open(PUBLIC_DATA / fname, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False)
 
-    # Build lightweight starterBank.json (< 450 KB) covering all 19 tasks (4..22) for instant AI Studio load
-    starter_words = []
+    # Build lightweight starterBank.json (< 450 KB) covering all 19 tasks (4..22) for instant load
     starter_fipi = []
     starter_sprint = []
     for t in [str(x) for x in range(4, 23)]:
         k = 4 if t in ("5", "8", "21") else (6 if t in ("4", "6", "7", "15") else 5)
         t_fipi = [fq for fq in all_fipi if str(fq.get("task")) == t][:k]
-        t_words = [w for w in all_words if str(w.get("task")) == t][:1]
         t_sprint = [sq for sq in all_sprint if str(sq.get("task")) == t][:1]
         starter_fipi.extend(t_fipi)
-        starter_words.extend(t_words)
         starter_sprint.extend(t_sprint)
 
     starter_obj = {
-        "words": starter_words,
         "fipi": starter_fipi,
         "sprint": starter_sprint,
     }
@@ -1213,7 +1205,7 @@ def build_all():
         json.dump(starter_obj, f, ensure_ascii=False, separators=(",", ":"))
 
     size_kb = starter_path.stat().st_size / 1024
-    print(f"Saved lightweight src/data/starterBank.json: {size_kb:.1f} KB (words={len(starter_words)}, fipi={len(starter_fipi)}, sprint={len(starter_sprint)})")
+    print(f"Saved lightweight src/data/starterBank.json: {size_kb:.1f} KB (fipi={len(starter_fipi)}, sprint={len(starter_sprint)})")
 
 
 if __name__ == "__main__":

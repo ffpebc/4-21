@@ -18,40 +18,104 @@ export interface ShkolkovoCategoryConfig {
 }
 
 export const SHKOLKOVO_CATEGORIES: ShkolkovoCategoryConfig[] = [
+  // Task 4: Ударения
+  { task: '4', name: '4. Дощинский-2026 (36 вар.)', id: 10598, priority: 1 },
+  { task: '4', name: '4. Авторские задания', id: 3746, priority: 2 },
+  { task: '4', name: '4. Банк ФИПИ', id: 2309, priority: 3 },
+
+  // Task 5: Паронимы
+  { task: '5', name: '5. Дощинский-2026 (36 вар.)', id: 10454, priority: 1 },
+  { task: '5', name: '5. Банк ФИПИ', id: 2376, priority: 2 },
+  { task: '5', name: '5. Авторские задания', id: 248, priority: 3 },
+
+  // Task 6: Лексические нормы
+  { task: '6', name: '6. Дощинский-2026 (36 вар.)', id: 10474, priority: 1 },
+  { task: '6', name: '6. Банк ФИПИ', id: 2403, priority: 2 },
+  { task: '6', name: '6. Авторские задания', id: 215, priority: 3 },
+
+  // Task 7: Морфологические нормы
+  { task: '7', name: '7. Дощинский-2026 (36 вар.)', id: 10673, priority: 1 },
+  { task: '7', name: '7. Банк ФИПИ', id: 2377, priority: 2 },
+  { task: '7', name: '7. Авторские задания', id: 216, priority: 3 },
+
+  // Task 8: Синтаксические нормы
+  { task: '8', name: '8. Дощинский-2026 (36 вар.)', id: 11947, priority: 1 },
+  { task: '8', name: '8. Банк ФИПИ', id: 2402, priority: 2 },
+  { task: '8', name: '8. Авторские задания', id: 217, priority: 3 },
+
   // Task 9: Правописание корней
-  { task: '9', name: 'Дощинский-2026 (36 вар.)', id: 11550, priority: 1 },
-  { task: '9', name: 'Демоверсии', id: 2342, priority: 2 },
-  { task: '9', name: 'Банк ФИПИ', id: 2378, priority: 3 },
-  { task: '9', name: 'Реальный ЕГЭ', id: 9089, priority: 4 },
-  { task: '9', name: 'Авторские задания', id: 3747, priority: 5 },
+  { task: '9', name: '9. Дощинский-2026 (36 вар.)', id: 11550, priority: 1 },
+  { task: '9', name: '9. Демоверсии', id: 2342, priority: 2 },
+  { task: '9', name: '9. Банк ФИПИ', id: 2378, priority: 3 },
+  { task: '9', name: '9. Реальный ЕГЭ', id: 9089, priority: 4 },
+  { task: '9', name: '9. Авторские задания', id: 3747, priority: 5 },
 
   // Task 10: Правописание приставок
-  { task: '10', name: 'Дощинский-2026 (36 вар.)', id: 11551, priority: 1 },
-  { task: '10', name: 'Демоверсии', id: 2343, priority: 2 },
-  { task: '10', name: 'Банк ФИПИ', id: 2312, priority: 3 },
-  { task: '10', name: 'Реальный ЕГЭ', id: 9090, priority: 4 },
-  { task: '10', name: 'Авторские задания', id: 3766, priority: 5 },
+  { task: '10', name: '10. Дощинский-2026 (36 вар.)', id: 11551, priority: 1 },
+  { task: '10', name: '10. Демоверсии', id: 2343, priority: 2 },
+  { task: '10', name: '10. Банк ФИПИ', id: 2312, priority: 3 },
+  { task: '10', name: '10. Реальный ЕГЭ', id: 9090, priority: 4 },
+  { task: '10', name: '10. Авторские задания', id: 3766, priority: 5 },
 
   // Task 11: Правописание суффиксов
-  { task: '11', name: 'Дощинский-2026 (36 вар.)', id: 11552, priority: 1 },
-  { task: '11', name: 'Демоверсии', id: 2344, priority: 2 },
-  { task: '11', name: 'Банк ФИПИ', id: 2313, priority: 3 },
-  { task: '11', name: 'Реальный ЕГЭ', id: 9091, priority: 4 },
-  { task: '11', name: 'Авторские задания', id: 3767, priority: 5 },
+  { task: '11', name: '11. Дощинский-2026 (36 вар.)', id: 11552, priority: 1 },
+  { task: '11', name: '11. Демоверсии', id: 2344, priority: 2 },
+  { task: '11', name: '11. Банк ФИПИ', id: 2313, priority: 3 },
+  { task: '11', name: '11. Реальный ЕГЭ', id: 9091, priority: 4 },
+  { task: '11', name: '11. Авторские задания', id: 3767, priority: 5 },
 
   // Task 12: Спряжения и личные окончания
-  { task: '12', name: 'Дощинский-2026 (36 вар.)', id: 10979, priority: 1 },
-  { task: '12', name: 'Демоверсии', id: 2345, priority: 2 },
-  { task: '12', name: 'Банк ФИПИ', id: 2379, priority: 3 },
-  { task: '12', name: 'Реальный ЕГЭ', id: 9092, priority: 4 },
-  { task: '12', name: 'Авторские задания', id: 3768, priority: 5 },
+  { task: '12', name: '12. Дощинский-2026 (36 вар.)', id: 10979, priority: 1 },
+  { task: '12', name: '12. Демоверсии', id: 2345, priority: 2 },
+  { task: '12', name: '12. Банк ФИПИ', id: 2379, priority: 3 },
+  { task: '12', name: '12. Реальный ЕГЭ', id: 9092, priority: 4 },
+  { task: '12', name: '12. Авторские задания', id: 3768, priority: 5 },
 
   // Task 13: Правописание НЕ и НИ
-  { task: '13', name: 'Дощинский-2026 (36 вар.)', id: 11553, priority: 1 },
-  { task: '13', name: 'Демоверсии', id: 2346, priority: 2 },
-  { task: '13', name: 'Банк ФИПИ', id: 2315, priority: 3 },
-  { task: '13', name: 'Реальный ЕГЭ', id: 9093, priority: 4 },
-  { task: '13', name: 'Авторские задания', id: 6456, priority: 5 },
+  { task: '13', name: '13. Дощинский-2026 (36 вар.)', id: 11553, priority: 1 },
+  { task: '13', name: '13. Демоверсии', id: 2346, priority: 2 },
+  { task: '13', name: '13. Банк ФИПИ', id: 2315, priority: 3 },
+  { task: '13', name: '13. Реальный ЕГЭ', id: 9093, priority: 4 },
+  { task: '13', name: '13. Авторские задания', id: 6456, priority: 5 },
+
+  // Task 14: Слитное, дефисное, раздельное написание
+  { task: '14', name: '14. Дощинский-2026 (36 вар.)', id: 11554, priority: 1 },
+  { task: '14', name: '14. Банк ФИПИ', id: 2316, priority: 2 },
+  { task: '14', name: '14. Авторские задания', id: 218, priority: 3 },
+
+  // Task 15: Правописание Н и НН
+  { task: '15', name: '15. Дощинский-2026 (36 вар.)', id: 12549, priority: 1 },
+  { task: '15', name: '15. Банк ФИПИ', id: 2397, priority: 2 },
+  { task: '15', name: '15. Авторские задания', id: 219, priority: 3 },
+
+  // Task 16: Пунктуация в ССП и с однородными
+  { task: '16', name: '16. Дощинский-2026 (36 вар.)', id: 12623, priority: 1 },
+  { task: '16', name: '16. Банк ФИПИ', id: 2398, priority: 2 },
+  { task: '16', name: '16. Авторские задания', id: 1656, priority: 3 },
+
+  // Task 17: Обособленные члены
+  { task: '17', name: '17. Дощинский-2026 (36 вар.)', id: 13432, priority: 1 },
+  { task: '17', name: '17. Банк ФИПИ', id: 2399, priority: 2 },
+
+  // Task 18: Вводные слова и обращения
+  { task: '18', name: '18. Дощинский-2026 (36 вар.)', id: 13480, priority: 1 },
+  { task: '18', name: '18. Банк ФИПИ', id: 2400, priority: 2 },
+
+  // Task 19: Знаки в СПП
+  { task: '19', name: '19. Дощинский-2026 (36 вар.)', id: 13637, priority: 1 },
+  { task: '19', name: '19. Банк ФИПИ', id: 2401, priority: 2 },
+
+  // Task 20: Знаки с разными видами связи
+  { task: '20', name: '20. Дощинский-2026 (36 вар.)', id: 13638, priority: 1 },
+  { task: '20', name: '20. Демоверсии', id: 2348, priority: 2 },
+
+  // Task 21: Пунктуационный анализ
+  { task: '21', name: '21. Дощинский-2026 (36 вар.)', id: 13727, priority: 1 },
+  { task: '21', name: '21. Демоверсии', id: 2347, priority: 2 },
+
+  // Task 22: Языковые средства выразительности
+  { task: '22', name: '22. Дощинский-2026 (36 вар.)', id: 14369, priority: 1 },
+  { task: '22', name: '22. Демоверсии', id: 2346, priority: 2 },
 ];
 
 export interface ShkolkovoParseOptions {
