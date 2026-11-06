@@ -571,6 +571,9 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
         ? 'Верное ударение'
         : `Неверно (норма: ${row.solvedWords[0] || row.letter})`;
     }
+    if (fipiQ.task === '15') {
+      return `Пишется ${row.letter || '—'}`;
+    }
     if (fipiQ.task === '16') {
       return row.isCorrectRow ? 'Подходит: одна запятая' : `Не подходит (${row.letter})`;
     }

@@ -1863,6 +1863,76 @@ test('inferQuestionTarget and cleanQuestionRule handle edge cases without topic 
   mockQ13.correctIndices = [1, 3, 4];
   assert.equal(inferQuestionTarget(mockQ13), 'РАЗДЕЛЬНО');
   assert.equal(cleanQuestionRule(undefined, '13', undefined, mockQ13).includes('РАЗДЕЛЬНО'), true);
+
+  // Deep Bug Regression Tests:
+  // 1. Plural verbs ("пишутся раздельно", "пишутся через дефис", "пишутся слитно")
+  assert.equal(
+    inferQuestionTarget({ task: '13', rule: 'Правописание НЕ и НИ. Укажите варианты, где слова пишутся РАЗДЕЛЬНО.' }),
+    'РАЗДЕЛЬНО'
+  );
+  assert.equal(
+    inferQuestionTarget({ task: '14', rule: 'Слитное, дефисное и раздельное написание слов. Укажите варианты, где все слова пишутся РАЗДЕЛЬНО.' }),
+    'РАЗДЕЛЬНО'
+  );
+  assert.equal(
+    inferQuestionTarget({ task: '14', rule: 'Слитное, дефисное и раздельное написание слов. Укажите варианты, где слова пишутся ЧЕРЕЗ ДЕФИС.' }),
+    'ЧЕРЕЗ ДЕФИС'
+  );
+  assert.equal(
+    inferQuestionTarget({ task: '14', rule: 'Слитное, дефисное и раздельное написание слов. Укажите варианты, где слова пишутся СЛИТНО.' }),
+    'СЛИТНО'
+  );
+
+  // 2. Rule only (instruction undefined) must infer target correctly, not default unconditionally
+  assert.equal(
+    inferQuestionTarget({ task: '13', rule: 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО.' }),
+    'РАЗДЕЛЬНО'
+  );
+  assert.equal(
+    cleanQuestionRule({ task: '13', rule: 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО.' }, '13').includes('РАЗДЕЛЬНО'),
+    true
+  );
+
+  // 3. Row answers ground truth overrides contradictory target
+  const contradictoryQ13 = {
+    task: '13',
+    target: 'СЛИТНО', // Erroneous target
+    rows: [
+      { letter: 'РАЗДЕЛЬНО', isCorrectRow: true },
+      { letter: 'СЛИТНО', isCorrectRow: false },
+      { letter: 'РАЗДЕЛЬНО', isCorrectRow: true },
+      { letter: 'СЛИТНО', isCorrectRow: false },
+      { letter: 'РАЗДЕЛЬНО', isCorrectRow: true },
+    ],
+    correctIndices: [1, 3, 5],
+  };
+  assert.equal(inferQuestionTarget(contradictoryQ13), 'РАЗДЕЛЬНО');
+  assert.equal(getOfficialTaskInstruction('13', { question: contradictoryQ13 }).includes('РАЗДЕЛЬНО'), true);
+
+  // 4. Task 4 does not false-positive to НЕВЕРНО on explanation words
+  assert.equal(
+    inferQuestionTarget({ task: '4', rule: 'Орфоэпические нормы (Ударения). Проверьте постановку ударения в соответствии со словником.' }),
+    'ВЕРНО'
+  );
+  assert.equal(
+    inferQuestionTarget({ task: '4', instruction: 'Укажите варианты ответов, в которых НЕВЕРНО выделена буква, обозначающая ударный гласный звук.' }),
+    'НЕВЕРНО'
+  );
+
+  // 5. Cyrillic lookaround boundaries for Task 15
+  assert.equal(inferQuestionTarget({ task: '15', instruction: 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.' }), 'Н');
+  assert.equal(inferQuestionTarget({ task: '15', instruction: 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.' }), 'НН');
+
+  // 6. resolveTask15Sentence fallback respects target 'Н'
+  const fallbackQ15 = {
+    task: '15',
+    target: 'Н',
+    rows: [{ words: ['жаре(1)ый'] }, { words: ['тушё(2)ый'] }],
+    correctIndices: [1, 2],
+  };
+  const resolvedSent = resolveTask15Sentence(fallbackQ15);
+  assert.equal(resolvedSent.includes('пишется Н:'), true);
+  assert.equal(resolvedSent.includes('пишется НН:'), false);
 });
 
 

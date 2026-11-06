@@ -33,14 +33,32 @@ export const FormattedInstruction: React.FC<FormattedInstructionProps> = React.m
     instruction || question?.instruction,
     question || (target ? { target } : undefined)
   );
-  const match = cleanedRule.match(TARGET_REGEX);
 
-  if (!match || match.index === undefined) {
+  const effectiveTarget = target || question?.target;
+  let matchIndex: number | undefined;
+  let targetText: string | undefined;
+
+  if (effectiveTarget) {
+    const escaped = String(effectiveTarget).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const targetMatch = cleanedRule.match(new RegExp(`(?<![а-яёА-ЯЁ])${escaped}(?![а-яёА-ЯЁ])`, 'i'));
+    if (targetMatch && targetMatch.index !== undefined) {
+      matchIndex = targetMatch.index;
+      targetText = targetMatch[0];
+    }
+  }
+
+  if (matchIndex === undefined || targetText === undefined) {
+    const match = cleanedRule.match(TARGET_REGEX);
+    if (match && match.index !== undefined) {
+      matchIndex = match.index;
+      targetText = match[0];
+    }
+  }
+
+  if (matchIndex === undefined || targetText === undefined) {
     return <span className={className}>{cleanedRule}</span>;
   }
 
-  const matchIndex = match.index;
-  const targetText = match[0];
   const beforeText = cleanedRule.slice(0, matchIndex);
   const afterText = cleanedRule.slice(matchIndex + targetText.length);
 

@@ -3175,7 +3175,31 @@ export function inferQuestionTarget(q: any, task?: TaskId | string): string | un
   if (!q) return undefined;
   const t = String(task || q.task || '');
 
-  // 1. Direct explicit target
+  // 1. Direct row letters ground truth (unambiguous pedagogical answer key)
+  if (Array.isArray(q.rows) && Array.isArray(q.correctIndices) && q.correctIndices.length > 0) {
+    const correctRows = q.correctIndices
+      .map((idx: number) => q.rows[idx - 1])
+      .filter(Boolean);
+    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase().trim());
+
+    if (t === '13') {
+      if (letters.every((l: string) => l.includes('РАЗД')) && letters.length > 0) return 'РАЗДЕЛЬНО';
+      if (letters.every((l: string) => l === 'СЛИТНО') && letters.length > 0) return 'СЛИТНО';
+    }
+
+    if (t === '14') {
+      if (letters.every((l: string) => l.includes('ДЕФИС')) && letters.length > 0) return 'ЧЕРЕЗ ДЕФИС';
+      if (letters.every((l: string) => l.includes('РАЗД')) && letters.length > 0) return 'РАЗДЕЛЬНО';
+      if (letters.every((l: string) => l.includes('СЛИТ')) && letters.length > 0) return 'СЛИТНО';
+    }
+
+    if (t === '15') {
+      if (letters.every((l: string) => l === 'Н') && letters.length > 0) return 'Н';
+      if (letters.every((l: string) => l === 'НН') && letters.length > 0) return 'НН';
+    }
+  }
+
+  // 2. Direct explicit target
   if (typeof q.target === 'string' && q.target.trim().length > 0) {
     const direct = q.target.trim().toUpperCase();
     if (t === '13' && (direct === 'СЛИТНО' || direct.includes('РАЗД'))) {
@@ -3203,87 +3227,82 @@ export function inferQuestionTarget(q: any, task?: TaskId | string): string | un
     return direct;
   }
 
-  // 2. Infer from correct rows and indices
-  if (Array.isArray(q.rows) && Array.isArray(q.correctIndices) && q.correctIndices.length > 0) {
-    const correctRows = q.correctIndices
-      .map((idx: number) => q.rows[idx - 1])
-      .filter(Boolean);
-    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase().trim());
+  // 3. Infer from explicit instruction, rule, or sentence text
+  const text = String(q.instruction || q.rule || q.sentence || '').trim();
+  const lower = text.toLowerCase();
 
-    if (t === '13') {
-      if (letters.every((l: string) => l === 'СЛИТНО') && letters.length > 0) return 'СЛИТНО';
-      if (letters.every((l: string) => l.includes('РАЗД')) && letters.length > 0) return 'РАЗДЕЛЬНО';
-    }
+  if (t === '13') {
+    const hasOpRazd =
+      /(?:пиш[уе]тся|написан[ыоа])(?:\s+[^.!?]+)?\s+раздельно/i.test(text) ||
+      /(?:пиш[уе]тся|написан[ыоа])\s+с\s+не\s+раздельно/i.test(text) ||
+      /(?<![а-яёА-ЯЁ])РАЗДЕЛЬНО(?![а-яёА-ЯЁ])/.test(text) ||
+      (lower.includes('раздельно') && !lower.includes('слитно'));
+    const hasOpSlit =
+      /(?:пиш[уе]тся|написан[ыоа])(?:\s+[^.!?]+)?\s+слитно/i.test(text) ||
+      /(?<![а-яёА-ЯЁ])СЛИТНО(?![а-яёА-ЯЁ])/.test(text) ||
+      (lower.includes('слитно') && !lower.includes('раздельно'));
 
-    if (t === '14') {
-      if (letters.every((l: string) => l.includes('ДЕФИС')) && letters.length > 0) return 'ЧЕРЕЗ ДЕФИС';
-      if (letters.every((l: string) => l.includes('РАЗД')) && letters.length > 0) return 'РАЗДЕЛЬНО';
-      if (letters.every((l: string) => l.includes('СЛИТ')) && letters.length > 0) return 'СЛИТНО';
-    }
-
-    if (t === '15') {
-      if (letters.every((l: string) => l === 'Н') && letters.length > 0) return 'Н';
-      if (letters.every((l: string) => l === 'НН') && letters.length > 0) return 'НН';
-    }
+    if (hasOpRazd && !hasOpSlit) return 'РАЗДЕЛЬНО';
+    if (hasOpSlit && !hasOpRazd) return 'СЛИТНО';
+    if (lower.includes('раздельно') && !lower.includes('слитно')) return 'РАЗДЕЛЬНО';
+    return 'СЛИТНО';
   }
 
-  // 3. Infer from explicit instruction text
-  const instr = String(q.instruction || '').toLowerCase();
-  if (instr.length > 0) {
-    if (t === '13') {
-      if (instr.includes('пишется слитно') || (instr.includes('слитно') && !instr.includes('раздельно'))) return 'СЛИТНО';
-      if (instr.includes('пишется раздельно') || (instr.includes('раздельно') && !instr.includes('слитно'))) return 'РАЗДЕЛЬНО';
-    }
-    if (t === '14') {
-      if (instr.includes('через дефис')) return 'ЧЕРЕЗ ДЕФИС';
-      if ((instr.includes('дефис') || instr.includes('дефисно')) && !instr.includes('слитн') && !instr.includes('раздельн')) return 'ЧЕРЕЗ ДЕФИС';
-      if (instr.includes('раздельно') && !instr.includes('слитн') && !instr.includes('дефис')) return 'РАЗДЕЛЬНО';
-      if (instr.includes('слитно') && !instr.includes('раздельн') && !instr.includes('дефис')) return 'СЛИТНО';
-    }
-    if (t === '15') {
-      if (/пишется\s+(?:одна\s+буква\s+)?н(?!н)/i.test(instr) || instr.includes('одна буква н')) return 'Н';
-      if (instr.includes('нн')) return 'НН';
-    }
-    if (t === '4') {
-      if (instr.includes('неверно')) return 'НЕВЕРНО';
-      if (instr.includes('верно')) return 'ВЕРНО';
-    }
-    if (t === '6') {
-      if (instr.includes('замен')) return 'ЗАМЕНИВ';
-      if (instr.includes('исключ') || instr.includes('лишн')) return 'ИСКЛЮЧИВ';
-    }
-    if (t === '21') {
-      if (instr.includes('двоеточи')) return 'ДВОЕТОЧИЕ';
-      if (instr.includes('запят')) return 'ЗАПЯТАЯ';
-      if (instr.includes('тире')) return 'ТИРЕ';
-    }
+  if (t === '14') {
+    const hasOpDefis =
+      /(?:пиш[уе]тся|написан[ыоа])(?:\s+[^.!?]+)?\s+(?:через\s+дефис|дефисно)/i.test(text) ||
+      /(?<![а-яёА-ЯЁ])ЧЕРЕЗ\s+ДЕФИС(?![а-яёА-ЯЁ])/.test(text) ||
+      /(?<![а-яёА-ЯЁ])ДЕФИСНО(?![а-яёА-ЯЁ])/.test(text) ||
+      /через\s+дефис/i.test(text) ||
+      (lower.includes('дефис') && !lower.includes('слитн') && !lower.includes('раздельн'));
+    const hasOpRazd =
+      /(?:пиш[уе]тся|написан[ыоа])(?:\s+[^.!?]+)?\s+раздельно/i.test(text) ||
+      /(?<![а-яёА-ЯЁ])РАЗДЕЛЬНО(?![а-яёА-ЯЁ])/.test(text) ||
+      (lower.includes('раздельно') && !lower.includes('слитн') && !lower.includes('дефис'));
+    const hasOpSlit =
+      /(?:пиш[уе]тся|написан[ыоа])(?:\s+[^.!?]+)?\s+слитно/i.test(text) ||
+      /(?<![а-яёА-ЯЁ])СЛИТНО(?![а-яёА-ЯЁ])/.test(text) ||
+      (lower.includes('слитно') && !lower.includes('раздельн') && !lower.includes('дефис'));
+
+    if (hasOpDefis) return 'ЧЕРЕЗ ДЕФИС';
+    if (hasOpRazd && !hasOpSlit) return 'РАЗДЕЛЬНО';
+    if (hasOpSlit && !hasOpRazd) return 'СЛИТНО';
+    return 'СЛИТНО';
   }
 
-  // 4. Infer from sentence / topic / rule (avoiding generic topic collisions)
-  const topicAndRule = `${q.topic || ''} ${q.rule || ''} ${q.sentence || ''}`.toLowerCase();
-  if (t === '6') {
-    if (topicAndRule.includes('замен')) return 'ЗАМЕНИВ';
-    return 'ИСКЛЮЧИВ';
-  }
   if (t === '15') {
-    if (/пишется\s+(?:одна\s+буква\s+)?н(?!н)/i.test(topicAndRule) || topicAndRule.includes('одна буква н')) return 'Н';
+    if (
+      /(?:пишется|месте\s+которых)\s+(?:одна\s+буква\s+)?н(?![а-яёА-ЯЁ])/i.test(text) ||
+      /(?<![а-яёА-ЯЁ])одна\s+буква\s+н(?![а-яёА-ЯЁ])/i.test(text)
+    ) {
+      return 'Н';
+    }
+    if (
+      /(?:пишется|месте\s+которых)\s+(?:две\s+буквы\s+)?нн(?![а-яёА-ЯЁ])/i.test(text) ||
+      /(?<![а-яёА-ЯЁ])две\s+буквы\s+нн(?![а-яёА-ЯЁ])/i.test(text) ||
+      /(?<![а-яёА-ЯЁ])НН(?![а-яёА-ЯЁ])/.test(text)
+    ) {
+      return 'НН';
+    }
     return 'НН';
   }
-  if (t === '21') {
-    if (topicAndRule.includes('двоеточи')) return 'ДВОЕТОЧИЕ';
-    if (topicAndRule.includes('запят')) return 'ЗАПЯТАЯ';
-    return 'ТИРЕ';
-  }
+
   if (t === '4') {
-    if (topicAndRule.includes('неверно')) return 'НЕВЕРНО';
+    if (/неверно/i.test(text)) {
+      return 'НЕВЕРНО';
+    }
     return 'ВЕРНО';
   }
-  if (t === '13') {
-    // If topic contains both, default is СЛИТНО
-    return 'СЛИТНО';
+
+  if (t === '6') {
+    if (lower.includes('замен')) return 'ЗАМЕНИВ';
+    return 'ИСКЛЮЧИВ';
   }
-  if (t === '14') {
-    return 'СЛИТНО';
+
+  if (t === '21') {
+    if (lower.includes('двоеточи')) return 'ДВОЕТОЧИЕ';
+    if (lower.includes('запят')) return 'ЗАПЯТАЯ';
+    return 'ТИРЕ';
   }
 
   return undefined;
@@ -3296,8 +3315,8 @@ export function getOfficialTaskInstruction(
   const t = String(task);
   const q = variant?.question;
   const target = (
-    variant?.target ||
     (q ? inferQuestionTarget(q, t) : undefined) ||
+    variant?.target ||
     inferQuestionTarget({ instruction: variant?.ruleOrInstruction }, t) ||
     ''
   ).toUpperCase();
@@ -3365,7 +3384,7 @@ export function getOfficialTaskInstruction(
 }
 
 export function cleanQuestionRule(
-  rule: string | undefined,
+  rule: string | any,
   task: string,
   instruction?: string,
   rawQuestion?: any
@@ -3435,7 +3454,8 @@ export function resolveTask15Sentence(question: any): string {
           }
           return `${clean}(${i + 1})`;
         });
-        sent = `Укажите все цифры, на месте которых пишется НН: ${parts.join(', ')}.`;
+        const t15Target = question?.target || inferQuestionTarget(question, '15') || 'НН';
+        sent = `Укажите все цифры, на месте которых пишется ${t15Target}: ${parts.join(', ')}.`;
       }
     } else {
       sent = 'Укажите цифры на месте пропусков в словах предложения.';
@@ -3541,7 +3561,7 @@ export function getTrainerBank() {
           ? 'numbered_gaps'
           : 'rows');
 
-      const target = rawFq.target || inferQuestionTarget(rawFq, rawFq.task);
+      const target = inferQuestionTarget(rawFq, rawFq.task) || rawFq.target;
       const instruction = cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction, { ...rawFq, target });
 
       const matchingLetters = rawFq.matchingLetters?.map((ml) => {
@@ -3890,16 +3910,13 @@ export function getTrainerBank() {
   for (let v = 1; v <= 35; v++) {
     const tasksMap = {} as Record<TaskId, FipiQuestion>;
     for (const t of TASK_IDS) {
-      const authenticList = PARSED_TASKS_MAP?.[t] || [];
-      if (authenticList.length >= v) {
-        tasksMap[t] = authenticList[v - 1];
-      } else {
-        const fipiForTask = fipiQuestions.filter((fq) => fq.task === t);
-        if (fipiForTask.length > 0) {
-          tasksMap[t] = fipiForTask[(v - 1) % fipiForTask.length];
-        } else if (fipiQuestions.length > 0) {
-          tasksMap[t] = { ...fipiQuestions[0], task: t, topic: TASK_META[t].title };
-        }
+      const fipiForTask = fipiQuestions.filter((fq) => fq.task === t);
+      if (fipiForTask.length >= v) {
+        tasksMap[t] = fipiForTask[v - 1];
+      } else if (fipiForTask.length > 0) {
+        tasksMap[t] = fipiForTask[(v - 1) % fipiForTask.length];
+      } else if (fipiQuestions.length > 0) {
+        tasksMap[t] = { ...fipiQuestions[0], task: t, topic: TASK_META[t].title };
       }
     }
     const variantTitle =
