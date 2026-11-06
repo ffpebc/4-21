@@ -204,6 +204,20 @@ body::before {
     radial-gradient(circle at 50% 84%, var(--ios-bg-aura-3), transparent 50%);
 }
 
+/* PWA Safe-area bottom fill: заливает зону Home Indicator тем же фоном,
+   чтобы не было пустой полосы под плавающим таб-баром в standalone-режиме */
+body::after {
+  content: "";
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background-color: var(--ios-bg-grouped);
+  pointer-events: none;
+  z-index: 49;
+}
+
 #root {
   position: relative;
   z-index: 1;
