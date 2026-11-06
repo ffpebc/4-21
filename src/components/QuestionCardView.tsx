@@ -639,6 +639,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               selectedDigits={fipiSelectedRows}
               isSubmitted={fipiSubmitted}
               onToggleDigit={toggleRow}
+              task={fipiQ.task}
             />
           </div>
 

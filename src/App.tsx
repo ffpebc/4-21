@@ -2715,6 +2715,7 @@ export default function App() {
                                   .filter(Boolean)}
                                 isSubmitted={kimChecked}
                                 onToggleDigit={handleToggleKimRowDigit}
+                                task={currentKimTaskQuestion.task}
                               />
                             </div>
 

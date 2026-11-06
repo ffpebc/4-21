@@ -226,18 +226,18 @@ async function fetchJsonWithCache(url: string, fallbackUrls: string[] = []): Pro
     } catch {}
   }
 
-  // 1. Попытка загрузки из локальной или fallback CDN баз (ветка data в GitHub)
+  // 1. Попытка загрузки из локальной или fallback баз (ветка data в GitHub)
   const allUrls = [url, ...fallbackUrls];
   for (const targetUrl of allUrls) {
     try {
       const res = await fetch(targetUrl);
       if (res.ok) {
-        const data = await res.json();
         if (cache) {
           try {
-            await cache.put(url, new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } }));
+            await cache.put(url, res.clone());
           } catch {}
         }
+        const data = await res.json();
         return data;
       }
     } catch (err) {
@@ -258,20 +258,15 @@ export async function loadFullDataBank(): Promise<boolean> {
   try {
     const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
-    const cdnBase = 'https://cdn.jsdelivr.net/gh/ffpebc/9-15@data/public/data';
     const vParam = '?v=33';
     const [fipiData, sprintData] = await Promise.all([
       fetchJsonWithCache(`${localBase}/fipiTasksBank9_15.json${vParam}`, [
         `${rawGithubBase}/fipiTasksBank9_15.json${vParam}`,
-        `${cdnBase}/fipiTasksBank9_15.json${vParam}`,
         `${rawGithubBase}/fipiTasksBank.json${vParam}`,
-        `${cdnBase}/fipiTasksBank.json${vParam}`,
       ]),
       fetchJsonWithCache(`${localBase}/sprintBank9_15.json${vParam}`, [
         `${rawGithubBase}/sprintBank9_15.json${vParam}`,
-        `${cdnBase}/sprintBank9_15.json${vParam}`,
         `${rawGithubBase}/sprintBank.json${vParam}`,
-        `${cdnBase}/sprintBank.json${vParam}`,
       ]),
     ]);
 

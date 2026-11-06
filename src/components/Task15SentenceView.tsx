@@ -8,6 +8,7 @@ export interface Task15SentenceViewProps {
   isSubmitted: boolean;
   onToggleDigit?: (digit: number) => void;
   className?: string;
+  task?: string;
 }
 
 export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(({
@@ -17,10 +18,11 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
   isSubmitted,
   onToggleDigit,
   className = '',
+  task,
 }) => {
   const effectiveSentence = React.useMemo(() => {
-    return resolveTask15Sentence({ sentence, rows });
-  }, [sentence, rows]);
+    return resolveTask15Sentence({ sentence, rows, task });
+  }, [sentence, rows, task]);
 
   // Pattern matches either:
   // 1) Words with internal gaps like деревя(1)ая, письме(2)ый (Task 15) -> groups 1, 2, 3
