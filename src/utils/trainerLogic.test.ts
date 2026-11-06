@@ -1708,9 +1708,12 @@ test('iOS PWA fullscreen layout and single-line quantity selector constraints', 
   assert.ok(indexCss.includes('min-height: 100dvh'), 'index.css must specify min-height: 100dvh');
   assert.ok(indexCss.includes('bottom: 0'), 'ios-tabbar must be docked at bottom: 0');
   assert.ok(indexCss.includes('env(safe-area-inset-bottom'), 'ios-tabbar must account for safe-area-inset-bottom');
+  assert.ok(indexCss.includes('env(safe-area-inset-left'), 'ios-tabbar must account for safe-area-inset-left');
+  assert.ok(indexCss.includes('env(safe-area-inset-right'), 'ios-tabbar must account for safe-area-inset-right');
 
   const appTsx = fs.readFileSync('src/App.tsx', 'utf-8');
   assert.ok(appTsx.includes('Настройте количество заданий:'), 'App.tsx must have concise single-line label without (4–22)');
+  assert.ok(appTsx.includes('truncate'), 'App.tsx label must have truncate class to prevent wrapping on compact viewports');
   assert.ok(appTsx.includes('whitespace-nowrap shrink-0 ml-2'), 'App.tsx badge must never wrap to multiple lines');
 });
 

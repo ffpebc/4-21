@@ -1318,10 +1318,10 @@ export default function App() {
                     </div>
 
                     <div
-                      className="px-1 mb-2 text-[11px] flex items-center justify-between"
+                      className="px-1 mb-2 text-[11px] flex items-center justify-between gap-1 min-w-0"
                       style={{ color: 'var(--ios-label-sec)' }}
                     >
-                      <span>Настройте количество заданий:</span>
+                      <span className="truncate">Настройте количество заданий:</span>
                       <span
                         className="font-semibold whitespace-nowrap shrink-0 ml-2"
                         style={{ color: 'var(--ios-blue)' }}

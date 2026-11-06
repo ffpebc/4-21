@@ -360,8 +360,8 @@ body.keyboard-open .ios-tabbar {
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04), var(--ios-glass-inner-glow);
   padding-top: 4px;
   padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
   overflow: hidden;
 }
 
