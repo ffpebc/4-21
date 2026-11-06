@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ege-4-22-ios27-v12';
+const CACHE_NAME = 'ege-4-22-ios27-v13';
 const CORE_SHELL = [
   '/',
   '/index.html',
@@ -38,7 +38,7 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys.map((key) => {
-            if (key !== CACHE_NAME && !key.startsWith('ege-bank-cache-v28')) {
+            if (key !== CACHE_NAME && !key.startsWith('ege-bank-cache-')) {
               return caches.delete(key);
             }
             return Promise.resolve();

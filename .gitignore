@@ -15,6 +15,7 @@ dist
 push.sh
 __pycache__/
 *.pyc
+bun.lock*
 *allWordsBank*.json
 src/data/allWordsBank9_15.json
 src/data/fipiTasksBank9_15.json

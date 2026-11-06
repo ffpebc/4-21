@@ -47,11 +47,11 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
   onToggleShuffle,
 }) => {
   const [customCountInput, setCustomCountInput] = useState('5');
-  const customCount = Math.min(100, Math.max(1, parseInt(customCountInput, 10) || 1));
+  const customCount = Math.min(1000, Math.max(1, parseInt(customCountInput, 10) || 1));
 
   const handleStepCustomCount = (delta: number) => {
     const cur = parseInt(customCountInput, 10) || 1;
-    const next = Math.min(100, Math.max(1, cur + delta));
+    const next = Math.min(1000, Math.max(1, cur + delta));
     setCustomCountInput(String(next));
   };
 
@@ -168,7 +168,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
                 className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
                 style={{ color: 'var(--ios-label-sec)' }}
               >
-                Главные слова-исключения заданий 9–15
+                Главные слова-исключения и ловушки заданий 4–22
               </div>
             </div>
           </div>
@@ -372,6 +372,30 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
           </div>
         </div>
         <div className="flex items-center gap-2.5">
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={4}
+            value={customCountInput}
+            onChange={(e) => {
+              const cleaned = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+              setCustomCountInput(cleaned);
+            }}
+            onBlur={() => {
+              const n = parseInt(customCountInput, 10);
+              if (!n || n < 1) setCustomCountInput('1');
+              else if (n > 1000) setCustomCountInput('1000');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onApplyPreset(customCount);
+                onClose();
+              }
+            }}
+            className="ios-count-badge has-value !w-14 text-center font-bold shrink-0"
+            aria-label="Количество заданий на тему"
+          />
           <div className="ios-stepper shrink-0">
             <button
               type="button"
@@ -386,37 +410,13 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             <button
               type="button"
               className="ios-stepper-btn"
-              disabled={customCount >= 100}
+              disabled={customCount >= 1000}
               onClick={() => handleStepCustomCount(1)}
               aria-label="Увеличить количество"
             >
               +
             </button>
           </div>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={3}
-            value={customCountInput}
-            onChange={(e) => {
-              const cleaned = e.target.value.replace(/[^0-9]/g, '').slice(0, 3);
-              setCustomCountInput(cleaned);
-            }}
-            onBlur={() => {
-              const n = parseInt(customCountInput, 10);
-              if (!n || n < 1) setCustomCountInput('1');
-              else if (n > 100) setCustomCountInput('100');
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                onApplyPreset(customCount);
-                onClose();
-              }
-            }}
-            className="ios-count-badge has-value !w-14 text-center font-bold"
-            aria-label="Количество заданий на тему"
-          />
           <span className="text-[11.5px] flex-1 min-w-0 font-medium" style={{ color: 'var(--ios-label-sec)' }}>
             по {customCount} на тему (= {customCount * 19} зад.)
           </span>

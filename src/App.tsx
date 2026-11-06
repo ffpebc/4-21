@@ -663,6 +663,7 @@ export default function App() {
       });
       return {
         ...prev,
+        workoutMode: 'fipi',
         enabledTasks: nextEnabled,
         quantities: nextQuantities,
       };
@@ -1367,7 +1368,7 @@ export default function App() {
                           >
                             {state.isShuffled
                               ? 'Случайный порядок (разные задания чередуются)'
-                              : 'По порядку (сначала 9, затем 10, 11...)'}
+                              : 'По порядку (сначала № 4, затем 5, 6...)'}
                           </div>
                         </div>
                         <div
