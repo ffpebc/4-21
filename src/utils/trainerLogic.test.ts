@@ -1637,6 +1637,34 @@ test('All-by-30 preset, Custom-N preset, and Reset-to-0 cover all 19 official EG
   }
 
   // 2. Custom-N preset (e.g. N = 7)
+  // 1b. All-by-1 preset
+  const qty1: Record<TaskId, number> = {} as any;
+  const enabled1: Record<TaskId, boolean> = {} as any;
+  TASK_IDS.forEach((id) => {
+    qty1[id] = 1;
+    enabled1[id] = true;
+  });
+  assert.equal(calculateTotalPlanned(qty1, enabled1), 19 * 1, 'All-by-1 must total 19');
+
+  // 1c. All-by-5 preset
+  const qty5: Record<TaskId, number> = {} as any;
+  const enabled5: Record<TaskId, boolean> = {} as any;
+  TASK_IDS.forEach((id) => {
+    qty5[id] = 5;
+    enabled5[id] = true;
+  });
+  assert.equal(calculateTotalPlanned(qty5, enabled5), 19 * 5, 'All-by-5 must total 95');
+
+  // 1d. All-by-50 preset
+  const qty50: Record<TaskId, number> = {} as any;
+  const enabled50: Record<TaskId, boolean> = {} as any;
+  TASK_IDS.forEach((id) => {
+    qty50[id] = 50;
+    enabled50[id] = true;
+  });
+  assert.equal(calculateTotalPlanned(qty50, enabled50), 19 * 50, 'All-by-50 must total 950');
+
+  // 2. Custom-N preset (e.g. N = 7)
   const customN = 7;
   const qtyN: Record<TaskId, number> = {} as any;
   const enabledN: Record<TaskId, boolean> = {} as any;

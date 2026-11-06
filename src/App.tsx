@@ -476,37 +476,25 @@ export default function App() {
 
   const isScrollLocked = useMemo(() => {
     if (activeTab === 'workout') {
-      if (workoutView === 'builder') return false;
-      if (workoutView === 'active') return true;
-      if (workoutView === 'summary') return true;
+      return false;
     }
     if (activeTab === 'sprint') {
-      return true;
+      return false;
     }
     if (activeTab === 'lab') {
       if (labSubMode === 'flashcards' || labSubMode === 'pairs') return true;
       return false;
     }
     if (activeTab === 'errors') {
-      return state.errorBank.length <= 3;
+      return false;
     }
     if (activeTab === 'stats') {
-      if (statSubMode === 'cloud') return true;
-      if (statSubMode === 'overview') return false;
-      if (statSubMode === 'journal') {
-        return !state.sessionJournal || state.sessionJournal.length <= 2;
-      }
+      return false;
     }
     return false;
   }, [
     activeTab,
-    workoutView,
-    showSessionErrorsDrawer,
-    sessionMistakes.length,
     labSubMode,
-    statSubMode,
-    state.errorBank.length,
-    state.sessionJournal,
   ]);
 
   const enabledMap = useMemo(
@@ -1263,7 +1251,7 @@ export default function App() {
 
       {/* Main Viewport Scroll Container */}
       <div id="app-scroll-container" className={`ios-viewport-scroll ${isScrollLocked ? 'ios-scroll-locked' : ''}`}>
-        <main className={`max-w-[600px] mx-auto px-3.5 pt-0.5 relative overflow-x-hidden ${isScrollLocked ? 'h-full min-h-0' : 'min-h-full'} flex flex-col w-full flex-grow flex-shrink-0`}>
+        <main className="max-w-[600px] mx-auto px-3.5 pt-0.5 relative overflow-x-hidden min-h-full flex flex-col w-full flex-grow flex-shrink-0">
           <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
             {/* ======================================================================
                 TAB 1: WORKOUT BUILDER, ACTIVE WORKOUT & POST-SESSION SUMMARY

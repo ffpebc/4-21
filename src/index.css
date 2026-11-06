@@ -237,14 +237,16 @@ body::before {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: none;
   padding-top: calc(env(safe-area-inset-top, 0px) + 52px);
-  padding-bottom: calc(64px + max(10px, calc(env(safe-area-inset-bottom, 0px) - 14px)));
+  padding-bottom: calc(56px + max(12px, env(safe-area-inset-bottom, 0px)) + 28px);
 }
 
 /* Dedicated Lock for Screens that fit 100% on iPhone 16 */
 .ios-viewport-scroll.ios-scroll-locked {
-  overflow-y: hidden !important;
+  overflow-y: auto !important;
   overflow-x: hidden !important;
-  overscroll-behavior: none !important;
+  overscroll-behavior-y: none !important;
+  overscroll-behavior-x: none !important;
+  touch-action: pan-y !important;
 }
 
 .ios-touch-scroll {
@@ -261,8 +263,8 @@ body::before {
 /* Dedicated Physical Bottom Clearance Spacer for Truly Scrollable Long Views */
 .ios-bottom-clearance {
   width: 100%;
-  height: 80px;
-  min-height: 80px;
+  height: 24px;
+  min-height: 24px;
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -270,7 +272,7 @@ body::before {
 /* Screen Stack tuned for iPhone 16 (393 x 852 pt) — Controlled by Framer Motion Spring Slide */
 .ios-screen-stack {
   min-height: 100%;
-  height: 100%;
+  height: auto;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -337,58 +339,61 @@ body::before {
 }
 
 /* ============================================================================
-   APPLE LIQUID GLASS FLOATING TAB BAR (5 TABS + DRAGGABLE DROPLET LENS)
+   APPLE LIQUID GLASS DOCKED TAB BAR (5 TABS + DRAGGABLE DROPLET LENS)
    ============================================================================ */
 .ios-tabbar {
   position: fixed;
-  bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 18px));
-  left: 50%;
-  transform: translate3d(-50%, 0, 0);
-  width: calc(100% - 20px);
-  max-width: 576px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 100%;
   z-index: 50;
-  height: 58px;
-  border-radius: 999px;
   background: var(--ios-glass-chrome);
   backdrop-filter: blur(28px) saturate(200%);
   -webkit-backdrop-filter: blur(28px) saturate(200%);
-  border: 0.5px solid var(--ios-glass-border);
-  box-shadow: var(--ios-glass-shadow), var(--ios-glass-inner-glow);
-  padding: 4px;
-  overflow: hidden;
+  border-top: 0.5px solid var(--ios-glass-border);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05), var(--ios-glass-inner-glow);
+  padding-top: 6px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .ios-tabbar.is-scrubbing {
-  box-shadow: 0 16px 36px -8px rgba(0, 122, 255, 0.24), var(--ios-glass-inner-glow);
+  box-shadow: 0 -8px 28px -4px rgba(0, 122, 255, 0.22), var(--ios-glass-inner-glow);
 }
 
 .ios-tabbar::after {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
   background: linear-gradient(
-    var(--spec-angle),
-    var(--ios-glass-rim) 0%,
-    transparent 40%,
-    transparent 65%,
-    var(--ios-glass-border) 100%
+    90deg,
+    transparent 0%,
+    var(--ios-glass-rim) 25%,
+    var(--ios-glass-rim) 75%,
+    transparent 100%
   );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
   pointer-events: none;
 }
 
 .ios-tabbar-inner {
   position: relative;
   width: 100%;
-  height: 100%;
+  max-width: 576px;
+  height: 48px;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: center;
   z-index: 2;
+  padding: 0 4px;
 }
 
 .ios-tab-indicator-track {

@@ -357,7 +357,11 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
           {renderWordWithSlot()}
 
-          {question.context && (
+          {question.context &&
+            (!['4', '5', '6', '7', '8', '16', '17', '18', '19', '20', '21', '22'].includes(question.task) ||
+              (!question.suffix.trim() && !question.prefix.trim()) ||
+              (!question.context.trim().includes(question.suffix.trim()) &&
+                !question.suffix.trim().includes(question.context.trim()))) && (
             <div
               className="text-[13.5px] font-medium mt-1 leading-snug px-1 text-center"
               style={{ color: 'var(--ios-label-sec)' }}

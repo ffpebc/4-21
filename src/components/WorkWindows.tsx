@@ -105,9 +105,9 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
         </button>
       </div>
 
-      {/* Smart Focus Cards */}
-      <div className="ios-section-header !px-1">Умные тренировки в 1 касание</div>
-      <div className="grid grid-cols-1 gap-2 mb-2.5">
+      {/* 9 Uniform Template Tiles (Photo 5 design) */}
+      <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar space-y-2 pr-0.5 pb-2">
+        {/* 1. Слабая тема */}
         <button
           type="button"
           id="smart-weakest-btn"
@@ -115,11 +115,11 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             onClose();
             onStartWeakestTaskWorkout(weakestTask);
           }}
-          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer"
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer w-full rounded-2xl"
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div
-              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[14px] !m-0"
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0 shrink-0"
               style={{ background: TASK_META[weakestTask].gradient }}
             >
               {weakestTask}
@@ -137,13 +137,14 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             </div>
           </div>
           <span
-            className="text-[11.5px] font-bold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
+            className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap"
             style={{ background: 'var(--ios-blue-soft)', color: 'var(--ios-blue)' }}
           >
             Старт →
           </span>
         </button>
 
+        {/* 2. Ловушки ФИПИ */}
         <button
           type="button"
           id="smart-traps-btn"
@@ -151,12 +152,12 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             onClose();
             onStartFipiTraps();
           }}
-          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer"
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer w-full rounded-2xl"
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div
-              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[14px] !m-0"
-              style={{ background: 'linear-gradient(135deg, #FF9500, #FF3B30)' }}
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[14px] !m-0 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #FF9500, #FF3B30)', color: '#FFFFFF' }}
             >
               !
             </div>
@@ -173,55 +174,14 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             </div>
           </div>
           <span
-            className="text-[11.5px] font-bold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
+            className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap"
             style={{ background: 'var(--ios-orange-soft)', color: 'var(--ios-orange)' }}
           >
             Старт →
           </span>
         </button>
 
-        <button
-          type="button"
-          id="smart-30-tasks-btn"
-          onClick={() => {
-            onClose();
-            if (onStartBalanced30Workout) {
-              onStartBalanced30Workout();
-            } else if (onApplyBalanced30) {
-              onApplyBalanced30();
-            } else {
-              onApplyCustomQuantities(BALANCED_30_QUANTITIES);
-            }
-          }}
-          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer"
-        >
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div
-              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0"
-              style={{ background: 'linear-gradient(135deg, #30D158, #0A84FF)' }}
-            >
-              30
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[13.5px] font-extrabold leading-tight whitespace-nowrap truncate">
-                30 заданий (сбалансированный вариант)
-              </div>
-              <div
-                className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
-                style={{ color: 'var(--ios-label-sec)' }}
-              >
-                Оптимальный баланс всех 4 блоков ЕГЭ (№ 4–22)
-              </div>
-            </div>
-          </div>
-          <span
-            className="text-[11.5px] font-bold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
-            style={{ background: 'var(--ios-blue-soft)', color: 'var(--ios-blue)' }}
-          >
-            Старт →
-          </span>
-        </button>
-
+        {/* 3. Полный КИМ */}
         <button
           type="button"
           id="smart-real-kim-btn"
@@ -237,12 +197,12 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
               onApplyCustomQuantities(allActive);
             }
           }}
-          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer"
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer w-full rounded-2xl"
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div
-              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[12px] font-black !m-0"
-              style={{ background: 'linear-gradient(135deg, #007AFF, #5856D6)' }}
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[12px] font-black !m-0 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #007AFF, #5856D6)', color: '#FFFFFF' }}
             >
               КИМ
             </div>
@@ -254,297 +214,252 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
                 className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
                 style={{ color: 'var(--ios-label-sec)' }}
               >
-                По 1 заданию каждого типа экзамена (№ 4–22)
+                По 1 заданию на каждое из 19 заданий (№ 4–22)
               </div>
             </div>
           </div>
           <span
-            className="text-[11.5px] font-bold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
+            className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap"
             style={{ background: 'var(--ios-blue-soft)', color: 'var(--ios-blue)' }}
           >
             Старт →
           </span>
         </button>
-      </div>
 
-      {/* Shuffle Mode Toggle */}
-      <div className="ios-section-header !px-1">Порядок заданий</div>
-      <div className="ios-inset-group !mb-2.5">
-        <div
-          id="preset-shuffle-toggle"
-          className="ios-cell cursor-pointer select-none"
-          onClick={onToggleShuffle}
-          role="switch"
-          aria-checked={state.isShuffled}
-          aria-label="Вразброс: перемешать задания"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onToggleShuffle?.();
-            }
-          }}
-        >
-          <div
-            className="ios-row-icon shrink-0 transition-colors duration-200"
-            style={{
-              background: state.isShuffled
-                ? 'linear-gradient(135deg, #0A84FF, #007AFF)'
-                : 'var(--ios-fill-tertiary)',
-              color: state.isShuffled ? '#FFFFFF' : 'var(--ios-label-sec)',
-            }}
-          >
-            <svg className="w-4 h-4 shrink-0">
-              <use href="#sf-shuffle" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0 pr-2">
-            <div className="text-[13.5px] font-bold tracking-[-0.2px] leading-tight text-[var(--ios-label)]">
-              Вразброс
-            </div>
-            <div
-              className="text-[11px] leading-tight truncate mt-0.5"
-              style={{ color: 'var(--ios-label-sec)' }}
-            >
-              {state.isShuffled
-                ? 'Случайный порядок (разные темы чередуются)'
-                : 'По порядку (сначала № 4, затем 5, 6...)'}
-            </div>
-          </div>
-          <div
-            className={`ios-switch shrink-0 ${state.isShuffled ? 'is-active' : ''}`}
-            aria-hidden="true"
-          >
-            <div className="ios-switch-knob" />
-          </div>
-        </div>
-      </div>
-
-      {/* Preset Quantities */}
-      <div className="ios-section-header !px-1">Шаблоны для конструктора</div>
-
-      {/* Всё по 30 */}
-      <button
-        type="button"
-        id="preset-modal-30"
-        onClick={() => {
-          onApplyPreset(30);
-          onClose();
-        }}
-        className="ios-inset-group !mb-2.5 p-3 text-left cursor-pointer w-full flex items-center justify-between gap-2"
-      >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div
-            className="ios-row-icon !w-9 !h-9 !rounded-xl text-[13px] font-black !m-0"
-            style={{ background: 'linear-gradient(135deg, #30D158, #0A84FF)' }}
-          >
-            30
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[13.5px] font-extrabold leading-tight">Всё по 30</div>
-            <div className="text-[11px] mt-0.5" style={{ color: 'var(--ios-label-sec)' }}>
-              Ровно по 30 заданий на каждый тип (№ 4–22)
-            </div>
-          </div>
-        </div>
-        <span
-          className="text-[11.5px] font-bold px-2.5 py-1 rounded-full shrink-0"
-          style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
-        >
-          Применить →
-        </span>
-      </button>
-
-      {/* Настраиваемый шаблон */}
-      <div className="ios-inset-group !mb-2.5 p-3">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div
-            className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0"
-            style={{ background: 'linear-gradient(135deg, #FF9500, #FF6B00)' }}
-          >
-            N
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[13.5px] font-extrabold leading-tight">Настраиваемый шаблон</div>
-            <div className="text-[11px] mt-0.5" style={{ color: 'var(--ios-label-sec)' }}>
-              Введите число или листайте: столько заданий будет на каждую тему (4–22)
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={4}
-            value={customCountInput}
-            onChange={(e) => {
-              const cleaned = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-              setCustomCountInput(cleaned);
-            }}
-            onBlur={() => {
-              const n = parseInt(customCountInput, 10);
-              if (!n || n < 1) setCustomCountInput('1');
-              else if (n > 1000) setCustomCountInput('1000');
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                onApplyPreset(customCount);
-                onClose();
-              }
-            }}
-            className="ios-count-badge has-value !w-14 text-center font-bold shrink-0"
-            aria-label="Количество заданий на тему"
-          />
-          <div className="ios-stepper shrink-0">
-            <button
-              type="button"
-              className="ios-stepper-btn"
-              disabled={customCount <= 1}
-              onClick={() => handleStepCustomCount(-1)}
-              aria-label="Уменьшить количество"
-            >
-              −
-            </button>
-            <div className="ios-stepper-divider" />
-            <button
-              type="button"
-              className="ios-stepper-btn"
-              disabled={customCount >= 1000}
-              onClick={() => handleStepCustomCount(1)}
-              aria-label="Увеличить количество"
-            >
-              +
-            </button>
-          </div>
-          <span className="text-[11.5px] flex-1 min-w-0 font-medium" style={{ color: 'var(--ios-label-sec)' }}>
-            по {customCount} на тему (= {customCount * 19} зад.)
-          </span>
-          <button
-            type="button"
-            id="apply-custom-count-btn"
-            onClick={() => {
-              onApplyPreset(customCount);
-              onClose();
-            }}
-            className="ios-btn-tinted !min-h-[36px] !px-3.5 !py-1.5 !text-[12.5px] font-bold shrink-0 !rounded-xl cursor-pointer"
-          >
-            Применить
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 mb-2.5">
+        {/* 4. По 1 заданию */}
         <button
           type="button"
-          id="preset-modal-kim"
+          id="preset-modal-1"
           onClick={() => {
             onApplyPreset(1);
             onClose();
           }}
-          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer w-full rounded-2xl"
         >
-          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-blue)' }}>
-            По 1 заданию (КИМ)
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #007AFF, #5AC8FA)', color: '#FFFFFF' }}
+            >
+              1
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-extrabold leading-tight whitespace-nowrap truncate">
+                По 1 заданию (19 заданий)
+              </div>
+              <div
+                className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
+                style={{ color: 'var(--ios-label-sec)' }}
+              >
+                Ровно по 1 заданию на все 19 заданий (№ 4–22)
+              </div>
+            </div>
           </div>
-          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            19 заданий (по 1 на тему)
-          </div>
+          <span
+            className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap"
+            style={{ background: 'var(--ios-blue-soft)', color: 'var(--ios-blue)' }}
+          >
+            Применить →
+          </span>
         </button>
 
+        {/* 5. По 5 заданий */}
         <button
           type="button"
-          id="preset-modal-3"
+          id="preset-modal-5"
           onClick={() => {
-            onApplyPreset(3);
+            onApplyPreset(5);
             onClose();
           }}
-          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer w-full rounded-2xl"
         >
-          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-indigo)' }}>
-            По 3 задания
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #5856D6, #AF52DE)', color: '#FFFFFF' }}
+            >
+              5
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-extrabold leading-tight whitespace-nowrap truncate">
+                По 5 заданий (95 заданий)
+              </div>
+              <div
+                className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
+                style={{ color: 'var(--ios-label-sec)' }}
+              >
+                Ровно по 5 заданий на все 19 заданий (№ 4–22)
+              </div>
+            </div>
           </div>
-          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Углублённый вариант (57 зад.)
-          </div>
+          <span
+            className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap"
+            style={{ background: 'var(--ios-indigo-soft)', color: 'var(--ios-indigo)' }}
+          >
+            Применить →
+          </span>
         </button>
 
+        {/* 6. По 30 заданий */}
         <button
           type="button"
-          id="preset-modal-10"
+          id="preset-modal-30"
           onClick={() => {
-            onApplyPreset(10);
+            onApplyPreset(30);
             onClose();
           }}
-          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer w-full rounded-2xl"
         >
-          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-purple)' }}>
-            По 10 заданий
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #30D158, #0A84FF)', color: '#FFFFFF' }}
+            >
+              30
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-extrabold leading-tight whitespace-nowrap truncate">
+                По 30 заданий (570 заданий)
+              </div>
+              <div
+                className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
+                style={{ color: 'var(--ios-label-sec)' }}
+              >
+                Ровно по 30 заданий на все 19 заданий (№ 4–22)
+              </div>
+            </div>
           </div>
-          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Марафон по всем темам
-          </div>
+          <span
+            className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap"
+            style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
+          >
+            Применить →
+          </span>
         </button>
 
+        {/* 7. По 50 заданий */}
         <button
           type="button"
-          id="preset-modal-speech"
+          id="preset-modal-50"
           onClick={() => {
-            const q: Record<TaskId, number> = {} as Record<TaskId, number>;
-            TASK_IDS.forEach((id) => {
-              q[id] = ['4', '5', '6', '7', '8'].includes(id) ? 5 : 0;
-            });
-            onApplyCustomQuantities(q);
+            onApplyPreset(50);
             onClose();
           }}
-          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer w-full rounded-2xl"
         >
-          <div className="text-[14px] font-extrabold" style={{ color: 'var(--ios-orange)' }}>
-            Культура речи (4–8)
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #FF9500, #FF2D55)', color: '#FFFFFF' }}
+            >
+              50
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-extrabold leading-tight whitespace-nowrap truncate">
+                По 50 заданий (950 заданий)
+              </div>
+              <div
+                className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
+                style={{ color: 'var(--ios-label-sec)' }}
+              >
+                Ровно по 50 заданий на все 19 заданий (№ 4–22)
+              </div>
+            </div>
           </div>
-          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Ударения, паронимы, нормы
-          </div>
+          <span
+            className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap"
+            style={{ background: 'var(--ios-orange-soft)', color: 'var(--ios-orange)' }}
+          >
+            Применить →
+          </span>
         </button>
 
-        <button
-          type="button"
-          id="preset-modal-ortho"
-          onClick={() => {
-            const q: Record<TaskId, number> = {} as Record<TaskId, number>;
-            TASK_IDS.forEach((id) => {
-              q[id] = ['9', '10', '11', '12', '13', '14', '15'].includes(id) ? 5 : 0;
-            });
-            onApplyCustomQuantities(q);
-            onClose();
-          }}
-          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+        {/* 8. Настраиваемый шаблон */}
+        <div
+          id="preset-modal-custom"
+          className="ios-inset-group !mb-0 p-3 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-2xl"
         >
-          <div className="text-[14px] font-extrabold" style={{ color: 'var(--ios-blue)' }}>
-            Орфография (9–15)
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #FF9500, #FF6B00)', color: '#FFFFFF' }}
+            >
+              N
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-extrabold leading-tight whitespace-nowrap truncate">
+                Настраиваемый шаблон
+              </div>
+              <div
+                className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
+                style={{ color: 'var(--ios-label-sec)' }}
+              >
+                по {customCount} на тему (= {customCount * 19} зад.)
+              </div>
+            </div>
           </div>
-          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Корни, приставки, суффиксы, Н/НН
+          <div className="flex items-center justify-end gap-1.5 shrink-0 pt-0.5 sm:pt-0">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={customCountInput}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                setCustomCountInput(cleaned);
+              }}
+              onBlur={() => {
+                const n = parseInt(customCountInput, 10);
+                if (!n || n < 1) setCustomCountInput('1');
+                else if (n > 1000) setCustomCountInput('1000');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onApplyPreset(customCount);
+                  onClose();
+                }
+              }}
+              className="ios-count-badge has-value !w-11 text-center font-bold shrink-0"
+              aria-label="Количество заданий на тему"
+            />
+            <div className="ios-stepper shrink-0">
+              <button
+                type="button"
+                className="ios-stepper-btn"
+                disabled={customCount <= 1}
+                onClick={() => handleStepCustomCount(-1)}
+                aria-label="Уменьшить количество"
+              >
+                −
+              </button>
+              <div className="ios-stepper-divider" />
+              <button
+                type="button"
+                className="ios-stepper-btn"
+                disabled={customCount >= 1000}
+                onClick={() => handleStepCustomCount(1)}
+                aria-label="Увеличить количество"
+              >
+                +
+              </button>
+            </div>
+            <button
+              type="button"
+              id="apply-custom-count-btn"
+              onClick={() => {
+                onApplyPreset(customCount);
+                onClose();
+              }}
+              className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-transform"
+              style={{ background: 'var(--ios-orange-soft)', color: 'var(--ios-orange)' }}
+            >
+              Применить →
+            </button>
           </div>
-        </button>
-      </div>
+        </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          id="preset-modal-punct"
-          onClick={() => {
-            const q: Record<TaskId, number> = {} as Record<TaskId, number>;
-            TASK_IDS.forEach((id) => {
-              q[id] = ['16', '17', '18', '19', '20', '21', '22'].includes(id) ? 5 : 0;
-            });
-            onApplyCustomQuantities(q);
-            onClose();
-          }}
-          className="ios-btn-tinted !min-h-[38px] !text-[12px] w-full"
-        >
-          Пунктуация и речь (16–22)
-        </button>
+        {/* 9. Сбросить всё в 0 */}
         <button
           type="button"
           id="preset-modal-clear"
@@ -552,10 +467,34 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             onApplyPreset(0);
             onClose();
           }}
-          className="ios-btn-tinted !min-h-[38px] !text-[12px] w-full"
-          style={{ background: 'var(--ios-red-soft)', color: 'var(--ios-red)' }}
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2.5 cursor-pointer w-full rounded-2xl"
+          style={{ background: 'var(--ios-red-soft)', borderColor: 'rgba(255, 59, 48, 0.2)' }}
         >
-          Сбросить все в 0
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #FF3B30, #FF453A)', color: '#FFFFFF' }}
+            >
+              0
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-extrabold leading-tight text-[var(--ios-red)] whitespace-nowrap truncate">
+                Сбросить всё в 0
+              </div>
+              <div
+                className="text-[11.5px] leading-tight mt-0.5 truncate whitespace-nowrap"
+                style={{ color: 'var(--ios-label-sec)' }}
+              >
+                Установить 0 заданий на все темы (№ 4–22)
+              </div>
+            </div>
+          </div>
+          <span
+            className="text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0 whitespace-nowrap"
+            style={{ background: 'var(--ios-red)', color: '#FFFFFF' }}
+          >
+            Сбросить
+          </span>
         </button>
       </div>
     </SwipeableSheet>
