@@ -46,7 +46,14 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
   onStartRealKimWorkout,
   onToggleShuffle,
 }) => {
-  const [customCount, setCustomCount] = useState(5);
+  const [customCountInput, setCustomCountInput] = useState('5');
+  const customCount = Math.min(100, Math.max(1, parseInt(customCountInput, 10) || 1));
+
+  const handleStepCustomCount = (delta: number) => {
+    const cur = parseInt(customCountInput, 10) || 1;
+    const next = Math.min(100, Math.max(1, cur + delta));
+    setCustomCountInput(String(next));
+  };
 
   const weakestTask = useMemo<TaskId>(() => {
     let worstId: TaskId = '12';
@@ -370,7 +377,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
               type="button"
               className="ios-stepper-btn"
               disabled={customCount <= 1}
-              onClick={() => setCustomCount((v) => Math.max(1, v - 1))}
+              onClick={() => handleStepCustomCount(-1)}
               aria-label="Уменьшить количество"
             >
               −
@@ -380,7 +387,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
               type="button"
               className="ios-stepper-btn"
               disabled={customCount >= 100}
-              onClick={() => setCustomCount((v) => Math.min(100, v + 1))}
+              onClick={() => handleStepCustomCount(1)}
               aria-label="Увеличить количество"
             >
               +
@@ -391,12 +398,21 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={3}
-            value={customCount}
+            value={customCountInput}
             onChange={(e) => {
-              const cleaned = e.target.value.replace(/[^0-9]/g, '');
-              const n = parseInt(cleaned, 10);
-              if (!isNaN(n)) setCustomCount(Math.min(100, Math.max(1, n)));
-              else if (cleaned === '') setCustomCount(1);
+              const cleaned = e.target.value.replace(/[^0-9]/g, '').slice(0, 3);
+              setCustomCountInput(cleaned);
+            }}
+            onBlur={() => {
+              const n = parseInt(customCountInput, 10);
+              if (!n || n < 1) setCustomCountInput('1');
+              else if (n > 100) setCustomCountInput('100');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onApplyPreset(customCount);
+                onClose();
+              }
             }}
             className="ios-count-badge has-value !w-14 text-center font-bold"
             aria-label="Количество заданий на тему"
@@ -406,11 +422,12 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
           </span>
           <button
             type="button"
+            id="apply-custom-count-btn"
             onClick={() => {
               onApplyPreset(customCount);
               onClose();
             }}
-            className="ios-btn-tinted !min-h-[36px] !px-3.5 !py-1.5 !text-[12.5px] font-bold shrink-0 !rounded-xl"
+            className="ios-btn-tinted !min-h-[36px] !px-3.5 !py-1.5 !text-[12.5px] font-bold shrink-0 !rounded-xl cursor-pointer"
           >
             Применить
           </button>

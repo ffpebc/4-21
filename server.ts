@@ -90,23 +90,29 @@ async function startServer() {
     res.json({ ok: true, pin, updatedAt: record.updatedAt });
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  const distPath = path.join(process.cwd(), 'dist');
+  const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
+
+  if (process.env.NODE_ENV === 'production' && hasDist) {
+    app.use(express.static(distPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  } else {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Server running on http://0.0.0.0:${PORT} [mode: ${process.env.NODE_ENV || 'development'}, dist: ${hasDist}]`);
   });
 }
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] Unhandled Rejection:', reason);
+});
 
 startServer();

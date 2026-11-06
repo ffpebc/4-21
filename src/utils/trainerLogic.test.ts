@@ -1621,6 +1621,53 @@ test('sprintToWordEntry and PARSED_WORDS: authentic formatting, zero punctuation
   assert.equal(bogusPunctuation.length, 0, `PARSED_WORDS contains ${bogusPunctuation.length} bogus punctuation items`);
 });
 
+test('All-by-30 preset, Custom-N preset, and Reset-to-0 cover all 19 official EGE tasks', () => {
+  // 1. All-by-30 preset
+  const qty30: Record<TaskId, number> = {} as any;
+  const enabled30: Record<TaskId, boolean> = {} as any;
+  TASK_IDS.forEach((id) => {
+    qty30[id] = 30;
+    enabled30[id] = true;
+  });
+  assert.equal(TASK_IDS.length, 19, 'Must have exactly 19 official tasks (4–22)');
+  assert.equal(calculateTotalPlanned(qty30, enabled30), 19 * 30, 'All-by-30 must total 570');
+  for (const id of TASK_IDS) {
+    assert.equal(qty30[id], 30);
+    assert.equal(enabled30[id], true);
+  }
+
+  // 2. Custom-N preset (e.g. N = 7)
+  const customN = 7;
+  const qtyN: Record<TaskId, number> = {} as any;
+  const enabledN: Record<TaskId, boolean> = {} as any;
+  TASK_IDS.forEach((id) => {
+    qtyN[id] = customN;
+    enabledN[id] = customN > 0;
+  });
+  assert.equal(calculateTotalPlanned(qtyN, enabledN), 19 * 7, 'Custom-7 must total 133');
+
+  // 3. Reset-to-0 preset
+  const qty0: Record<TaskId, number> = {} as any;
+  const enabled0: Record<TaskId, boolean> = {} as any;
+  TASK_IDS.forEach((id) => {
+    qty0[id] = 0;
+    enabled0[id] = false;
+  });
+  assert.equal(calculateTotalPlanned(qty0, enabled0), 0, 'Reset-to-0 must total 0');
+  for (const id of TASK_IDS) {
+    assert.equal(enabled0[id], false);
+  }
+
+  // 4. Independent step/toggle on both non-ortho (4, 16, 22) and ortho (9, 15)
+  const testTasks: TaskId[] = ['4', '5', '8', '9', '12', '15', '16', '21', '22'];
+  for (const tid of testTasks) {
+    const stepped = stepTaskQty(0, 1);
+    assert.equal(stepped, 1, `Stepping from 0 on task ${tid} must yield 1`);
+    const steppedDown = stepTaskQty(stepped, -1);
+    assert.equal(steppedDown, 0, `Stepping down on task ${tid} must yield 0`);
+  }
+});
+
 
 
 

@@ -199,7 +199,6 @@ export default function App() {
   const [state, setState] = useState<TrainerState>(() => loadInitialStateSync());
   const [activeTab, setActiveTab] = useState<ActiveTab>('workout');
   const [workoutView, setWorkoutView] = useState<WorkoutSubView>('builder');
-  const [constructorMode, setConstructorMode] = useState<'custom' | 'preset30'>('custom');
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<TaskBlockId, boolean>>({
     speech: false,
     ortho: false,
@@ -574,19 +573,9 @@ export default function App() {
       quantities: { ...BALANCED_30_QUANTITIES },
       workoutMode: 'fipi',
     }));
-    setConstructorMode('preset30');
   }, []);
 
-  const handleSelectConstructorMode = (mode: 'custom' | 'preset30') => {
-    if (mode === 'preset30') {
-      handleApplyBalanced30();
-    } else {
-      setConstructorMode('custom');
-    }
-  };
-
   const handleToggleTaskEnabled = (task: TaskId) => {
-    setConstructorMode('custom');
     setState((prev) => {
       const currEnabled = prev.enabledTasks?.[task] !== false;
       const nextEnabled = !currEnabled;
@@ -611,7 +600,6 @@ export default function App() {
   const handleToggleBlockEnabled = (blockId: TaskBlockId) => {
     const block = TASK_BLOCKS.find((b) => b.id === blockId);
     if (!block) return;
-    setConstructorMode('custom');
     setState((prev) => {
       const currMap = { ...createDefaultEnabledTasks(), ...(prev.enabledTasks || {}) };
       const allActive = block.tasks.every((t) => currMap[t] !== false);
@@ -632,7 +620,6 @@ export default function App() {
 
   const handleSetTaskQty = (task: TaskId, newQty: number) => {
     const clamped = clampTaskQty(newQty);
-    setConstructorMode('custom');
     setState((prev) => ({
       ...prev,
       enabledTasks: {
@@ -648,7 +635,6 @@ export default function App() {
   };
 
   const handleStepTask = (task: TaskId, delta: number) => {
-    setConstructorMode('custom');
     setState((prev) => {
       const nextQty = stepTaskQty(prev.quantities[task] || 0, delta);
       return {
@@ -681,7 +667,6 @@ export default function App() {
         quantities: nextQuantities,
       };
     });
-    setConstructorMode('custom');
   };
 
   const handleApplyCustomQuantities = (quantities: Partial<Record<TaskId, number>>) => {
@@ -699,7 +684,6 @@ export default function App() {
         quantities: nextQuantities,
       };
     });
-    setConstructorMode('custom');
   };
 
   const startSessionWithQueue = (queue: TrainerQuestion[]) => {
