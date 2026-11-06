@@ -1701,20 +1701,22 @@ test('iOS PWA fullscreen layout and single-line quantity selector constraints', 
   const indexHtml = fs.readFileSync('index.html', 'utf-8');
   assert.ok(indexHtml.includes('viewport-fit=cover'), 'index.html must have viewport-fit=cover');
   assert.ok(indexHtml.includes('apple-mobile-web-app-capable'), 'index.html must enable apple-mobile-web-app-capable');
-  assert.ok(indexHtml.includes('100dvh'), 'index.html must specify 100dvh');
+  assert.ok(indexHtml.includes('inset: 0'), 'index.html must pin fullscreen layout via inset: 0');
 
   const indexCss = fs.readFileSync('src/index.css', 'utf-8');
   assert.ok(!indexCss.includes('-webkit-fill-available'), 'index.css must avoid -webkit-fill-available to prevent iOS standalone clipping');
-  assert.ok(indexCss.includes('min-height: 100dvh'), 'index.css must specify min-height: 100dvh');
-  assert.ok(indexCss.includes('bottom: 0'), 'ios-tabbar must be docked at bottom: 0');
+  assert.ok(indexCss.includes('border-radius: 999px'), 'ios-tabbar must have authentic rounded capsule border-radius: 999px without flat straight cut');
   assert.ok(indexCss.includes('env(safe-area-inset-bottom'), 'ios-tabbar must account for safe-area-inset-bottom');
-  assert.ok(indexCss.includes('env(safe-area-inset-left'), 'ios-tabbar must account for safe-area-inset-left');
-  assert.ok(indexCss.includes('env(safe-area-inset-right'), 'ios-tabbar must account for safe-area-inset-right');
 
   const appTsx = fs.readFileSync('src/App.tsx', 'utf-8');
   assert.ok(appTsx.includes('Настройте количество заданий:'), 'App.tsx must have concise single-line label without (4–22)');
   assert.ok(appTsx.includes('truncate'), 'App.tsx label must have truncate class to prevent wrapping on compact viewports');
   assert.ok(appTsx.includes('whitespace-nowrap shrink-0 ml-2'), 'App.tsx badge must never wrap to multiple lines');
+
+  const workWindowsTsx = fs.readFileSync('src/components/WorkWindows.tsx', 'utf-8');
+  assert.ok(workWindowsTsx.includes('id="dictionary-search-input"'), 'WorkWindows.tsx must contain dictionary search input');
+  assert.ok(workWindowsTsx.includes('min-h-[44px]'), 'dictionary search input must have min-h-[44px] to prevent flex collapse');
+  assert.ok(workWindowsTsx.includes('shrink-0 mb-2 w-full'), 'dictionary search wrapper must be shrink-0 to prevent overlap with chips');
 });
 
 

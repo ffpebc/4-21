@@ -83,7 +83,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       ariaLabel="Шаблоны и умный подбор занятия"
       handleAriaLabel="Потяните вниз, чтобы закрыть шаблоны занятия"
     >
-      <div className="flex items-center justify-between gap-2 mb-2.5">
+      <div className="flex items-center justify-between gap-2 mb-2.5 shrink-0">
         <div className="min-w-0 flex-1 pr-2">
           <h3 className="text-[18px] font-extrabold tracking-tight leading-tight whitespace-nowrap truncate">
             Шаблоны занятия
@@ -106,7 +106,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       </div>
 
       {/* 9 Uniform Template Tiles (Photo 5 design) */}
-      <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar space-y-2 pr-0.5 pb-6">
+      <div className="flex-1 min-h-0 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar space-y-2 pr-0.5 pb-6">
         {/* 1. Слабая тема */}
         <button
           type="button"
@@ -2372,7 +2372,7 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
       handleAriaLabel="Потяните вниз, чтобы закрыть разбор правила"
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-2.5">
+      <div className="flex items-start justify-between gap-2 mb-2.5 shrink-0">
         <div className="flex items-start gap-2.5 min-w-0 flex-1 pr-1">
           <div
             className="ios-row-icon !w-9 !h-9 !rounded-xl !m-0 shrink-0 mt-0.5"
@@ -3082,7 +3082,7 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
       ariaLabel="Словарь исключений и база слов ФИПИ"
       handleAriaLabel="Потяните вниз, чтобы закрыть словарь"
     >
-      <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex items-center justify-between gap-2 mb-2 shrink-0">
         <div className="min-w-0 flex-1 pr-2">
           <h3 className="text-[18px] font-extrabold tracking-tight leading-tight whitespace-nowrap truncate">
             Словарь и база ЕГЭ 4–22
@@ -3104,7 +3104,7 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
         </button>
       </div>
 
-      <div className="mb-2">
+      <div className="mb-2 shrink-0">
         <LiquidGlassSegmented
           id="dict-source-glass-mode"
           ariaLabel="Выбор режима базы слов"
@@ -3118,22 +3118,24 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
         />
       </div>
 
-      <input
-        id="dictionary-search-input"
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Поиск слова, правила или источника (полог, стелить, звонит)..."
-        aria-label="Поиск по словарю"
-        className="w-full px-3.5 py-2 rounded-2xl text-[16px] outline-none mb-2"
-        style={{
-          background: 'var(--ios-bg-secondary)',
-          border: '0.5px solid var(--ios-separator)',
-          color: 'var(--ios-label)',
-        }}
-      />
+      <div className="shrink-0 mb-2 w-full">
+        <input
+          id="dictionary-search-input"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Поиск слова, правила или источника (полог, стелить, звонит)..."
+          aria-label="Поиск по словарю"
+          className="w-full h-11 min-h-[44px] px-3.5 py-2 rounded-2xl text-[16px] outline-none block appearance-none"
+          style={{
+            background: 'var(--ios-bg-secondary)',
+            border: '0.5px solid var(--ios-separator)',
+            color: 'var(--ios-label)',
+          }}
+        />
+      </div>
 
-      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      <div className="shrink-0 mb-2 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar w-full">
         <button
           type="button"
           onClick={() => setFilterTask('all')}
@@ -3161,7 +3163,7 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
         ))}
       </div>
 
-      <div className="flex items-center justify-between text-[11.5px] px-1 mb-1.5" style={{ color: 'var(--ios-label-sec)' }}>
+      <div className="shrink-0 flex items-center justify-between text-[11.5px] px-1 mb-1.5" style={{ color: 'var(--ios-label-sec)' }}>
         <span>
           Найдено: <b>{filtered.length}</b> {sourceMode === 'traps' ? 'ловушек' : 'слов'}
         </span>
@@ -3170,7 +3172,7 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
         )}
       </div>
 
-      <div className="cheat-reader flex-1 mb-2.5">
+      <div className="cheat-reader flex-1 min-h-0 mb-2.5">
         <div className="flex flex-col gap-2 pb-1">
           {visibleItems.map((item, idx) => (
             <div key={idx} className="ios-inset-group ios-scroll-item p-3.5 !mb-0 shrink-0">
@@ -3219,7 +3221,7 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
           onClose();
           onStartTrapsWorkout();
         }}
-        className="ios-btn-primary !text-[15px]"
+        className="ios-btn-primary !text-[15px] shrink-0"
       >
         <span>Тренировать ловушки ФИПИ (15 слов)</span>
       </button>

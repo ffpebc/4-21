@@ -167,9 +167,7 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  height: 100dvh;
   min-height: 100%;
-  min-height: 100dvh;
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -212,7 +210,6 @@ body::before {
   width: 100%;
   height: 100%;
   min-height: 100%;
-  min-height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -342,56 +339,54 @@ body.keyboard-open .ios-tabbar {
 }
 
 /* ============================================================================
-   APPLE LIQUID GLASS DOCKED TAB BAR (5 TABS + DRAGGABLE DROPLET LENS)
+   APPLE LIQUID GLASS FLOATING TAB BAR (5 TABS + DRAGGABLE DROPLET LENS)
    ============================================================================ */
 .ios-tabbar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
+  bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 22px));
+  left: 50%;
+  transform: translate3d(-50%, 0, 0);
+  width: calc(100% - 20px);
+  max-width: 576px;
   z-index: 50;
-  border-radius: 0;
+  height: 58px;
+  border-radius: 999px;
   background: var(--ios-glass-chrome);
   backdrop-filter: blur(28px) saturate(200%);
   -webkit-backdrop-filter: blur(28px) saturate(200%);
-  border: none;
-  border-top: 0.5px solid var(--ios-glass-border);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04), var(--ios-glass-inner-glow);
-  padding-top: 4px;
-  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
-  padding-left: max(8px, env(safe-area-inset-left, 0px));
-  padding-right: max(8px, env(safe-area-inset-right, 0px));
+  border: 0.5px solid var(--ios-glass-border);
+  box-shadow: var(--ios-glass-shadow), var(--ios-glass-inner-glow);
+  padding: 4px;
   overflow: hidden;
 }
 
 .ios-tabbar.is-scrubbing {
-  box-shadow: 0 -8px 28px -4px rgba(0, 122, 255, 0.2), var(--ios-glass-inner-glow);
+  box-shadow: 0 16px 36px -8px rgba(0, 122, 255, 0.24), var(--ios-glass-inner-glow);
 }
 
 .ios-tabbar::after {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
   background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--ios-glass-rim) 20%,
-    var(--ios-glass-border) 80%,
-    transparent 100%
+    var(--spec-angle),
+    var(--ios-glass-rim) 0%,
+    transparent 40%,
+    transparent 65%,
+    var(--ios-glass-border) 100%
   );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
   pointer-events: none;
 }
 
 .ios-tabbar-inner {
   position: relative;
   width: 100%;
-  max-width: 576px;
-  margin: 0 auto;
-  height: 50px;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: center;
