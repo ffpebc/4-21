@@ -10,11 +10,13 @@ const ALL_TASKS = [
 const publicData = path.resolve(process.cwd(), 'public/data');
 const srcData = path.resolve(process.cwd(), 'src/data');
 
-const wordsRaw = JSON.parse(fs.readFileSync(path.join(publicData, 'allWordsBank9_15.json'), 'utf8'));
-const words = Array.isArray(wordsRaw) ? wordsRaw : wordsRaw.words;
+const wordsPath = path.join(publicData, 'allWordsBank9_15.json');
+const wordsRaw = fs.existsSync(wordsPath) ? JSON.parse(fs.readFileSync(wordsPath, 'utf8')) : [];
+const words = (Array.isArray(wordsRaw) ? wordsRaw : wordsRaw.words) || [];
 const fipi = JSON.parse(fs.readFileSync(path.join(publicData, 'fipiTasksBank9_15.json'), 'utf8'));
 const sprint = JSON.parse(fs.readFileSync(path.join(publicData, 'sprintBank9_15.json'), 'utf8'));
 const starter = JSON.parse(fs.readFileSync(path.join(srcData, 'starterBank.json'), 'utf8'));
+const starterWords = (starter.words || starter.sprint || []);
 
 let errors = 0;
 let contradictions = 0;
@@ -90,11 +92,11 @@ for (const t of ALL_TASKS) {
   const tw = words.filter((w) => String(w.task) === t);
   const tf = fipi.filter((q) => String(q.task) === t);
   const ts = sprint.filter((q) => String(q.task) === t);
-  const sw = starter.words.filter((w) => String(w.task) === t);
+  const sw = starterWords.filter((w) => String(w.task) === t);
   const sf = starter.fipi.filter((q) => String(q.task) === t);
   const ss = starter.sprint.filter((q) => String(q.task) === t);
 
-  if (tw.length === 0 || tf.length === 0 || ts.length === 0) {
+  if ((words.length > 0 && tw.length === 0) || tf.length === 0 || ts.length === 0) {
     console.error(`[FAIL] Task ${t} is empty in full bank!`);
     errors++;
   }

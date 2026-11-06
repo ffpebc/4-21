@@ -46,6 +46,8 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
   onStartRealKimWorkout,
   onToggleShuffle,
 }) => {
+  const [customCount, setCustomCount] = useState(5);
+
   const weakestTask = useMemo<TaskId>(() => {
     let worstId: TaskId = '12';
     let worstAcc = 101;
@@ -312,29 +314,110 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       </div>
 
       {/* Preset Quantities */}
-      <div className="ios-section-header !px-1">Готовые наборы для конструктора</div>
-      <div className="grid grid-cols-2 gap-2 mb-2.5">
-        <button
-          type="button"
-          id="preset-modal-30"
-          onClick={() => {
-            if (onApplyBalanced30) {
-              onApplyBalanced30();
-            } else {
-              onApplyCustomQuantities(BALANCED_30_QUANTITIES);
-            }
-            onClose();
-          }}
-          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
-        >
-          <div className="text-[15px] font-extrabold" style={{ color: 'var(--ios-green)' }}>
-            30 заданий
-          </div>
-          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Готовый вариант ЕГЭ (4–22)
-          </div>
-        </button>
+      <div className="ios-section-header !px-1">Шаблоны для конструктора</div>
 
+      {/* Всё по 30 */}
+      <button
+        type="button"
+        id="preset-modal-30"
+        onClick={() => {
+          onApplyPreset(30);
+          onClose();
+        }}
+        className="ios-inset-group !mb-2.5 p-3 text-left cursor-pointer w-full flex items-center justify-between gap-2"
+      >
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div
+            className="ios-row-icon !w-9 !h-9 !rounded-xl text-[13px] font-black !m-0"
+            style={{ background: 'linear-gradient(135deg, #30D158, #0A84FF)' }}
+          >
+            30
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13.5px] font-extrabold leading-tight">Всё по 30</div>
+            <div className="text-[11px] mt-0.5" style={{ color: 'var(--ios-label-sec)' }}>
+              Ровно по 30 заданий на каждый тип (№ 4–22)
+            </div>
+          </div>
+        </div>
+        <span
+          className="text-[11.5px] font-bold px-2.5 py-1 rounded-full shrink-0"
+          style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
+        >
+          Применить →
+        </span>
+      </button>
+
+      {/* Настраиваемый шаблон */}
+      <div className="ios-inset-group !mb-2.5 p-3">
+        <div className="flex items-center gap-2.5 mb-2">
+          <div
+            className="ios-row-icon !w-9 !h-9 !rounded-xl !text-[13px] font-black !m-0"
+            style={{ background: 'linear-gradient(135deg, #FF9500, #FF6B00)' }}
+          >
+            N
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13.5px] font-extrabold leading-tight">Настраиваемый шаблон</div>
+            <div className="text-[11px] mt-0.5" style={{ color: 'var(--ios-label-sec)' }}>
+              Введите число или листайте: столько заданий будет на каждую тему (4–22)
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <div className="ios-stepper shrink-0">
+            <button
+              type="button"
+              className="ios-stepper-btn"
+              disabled={customCount <= 1}
+              onClick={() => setCustomCount((v) => Math.max(1, v - 1))}
+              aria-label="Уменьшить количество"
+            >
+              −
+            </button>
+            <div className="ios-stepper-divider" />
+            <button
+              type="button"
+              className="ios-stepper-btn"
+              disabled={customCount >= 100}
+              onClick={() => setCustomCount((v) => Math.min(100, v + 1))}
+              aria-label="Увеличить количество"
+            >
+              +
+            </button>
+          </div>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={3}
+            value={customCount}
+            onChange={(e) => {
+              const cleaned = e.target.value.replace(/[^0-9]/g, '');
+              const n = parseInt(cleaned, 10);
+              if (!isNaN(n)) setCustomCount(Math.min(100, Math.max(1, n)));
+              else if (cleaned === '') setCustomCount(1);
+            }}
+            className="ios-count-badge has-value !w-14 text-center font-bold"
+            aria-label="Количество заданий на тему"
+          />
+          <span className="text-[11.5px] flex-1 min-w-0 font-medium" style={{ color: 'var(--ios-label-sec)' }}>
+            по {customCount} на тему (= {customCount * 19} зад.)
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              onApplyPreset(customCount);
+              onClose();
+            }}
+            className="ios-btn-tinted !min-h-[36px] !px-3.5 !py-1.5 !text-[12.5px] font-bold shrink-0 !rounded-xl"
+          >
+            Применить
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mb-2.5">
         <button
           type="button"
           id="preset-modal-kim"

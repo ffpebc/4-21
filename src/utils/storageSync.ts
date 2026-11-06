@@ -1,9 +1,11 @@
 import {
+  TaskId,
   TrainerState,
   createInitialState,
   createDefaultEnabledTasks,
   encodeBackupCode,
   decodeBackupCode,
+  TASK_IDS,
 } from './trainerLogic';
 import {
   cleanDisplayText,
@@ -17,14 +19,49 @@ const DEFAULT_HOSTED_PIN = 'HOSTED_DEFAULT';
 
 export function sanitizeLoadedState(state: TrainerState): TrainerState {
   if (!state || !Array.isArray(state.errorBank)) return state;
+
+  const defaultQty = {} as Record<TaskId, number>;
+  for (const id of TASK_IDS) {
+    defaultQty[id] = ['9', '10', '11', '12', '13', '14', '15'].includes(id) ? 5 : 3;
+  }
+
+  const mergedEnabled = createDefaultEnabledTasks();
+  if (state.enabledTasks && typeof state.enabledTasks === 'object') {
+    for (const id of TASK_IDS) {
+      if (typeof state.enabledTasks[id] === 'boolean') {
+        mergedEnabled[id] = state.enabledTasks[id];
+      }
+    }
+  }
+
+  // If ALL non-ortho tasks are disabled or 0 (which happens with old saves from 9-15 version),
+  // re-enable all tasks 4-22 with default quantities so user is not stuck with only 9-15!
+  const nonOrtho = ['4', '5', '6', '7', '8', '16', '17', '18', '19', '20', '21', '22'] as TaskId[];
+  const allNonOrthoDisabled = nonOrtho.every(
+    (id) => mergedEnabled[id] === false || !state.quantities?.[id]
+  );
+  if (allNonOrthoDisabled) {
+    for (const id of TASK_IDS) {
+      mergedEnabled[id] = true;
+      if (!state.quantities?.[id]) {
+        defaultQty[id] = ['9', '10', '11', '12', '13', '14', '15'].includes(id) ? 5 : 3;
+      }
+    }
+  }
+
+  const mergedQuantities: Record<TaskId, number> = { ...defaultQty, ...(state.quantities || {}) };
+  for (const id of TASK_IDS) {
+    if (mergedEnabled[id] && (!mergedQuantities[id] || mergedQuantities[id] <= 0)) {
+      mergedQuantities[id] = ['9', '10', '11', '12', '13', '14', '15'].includes(id) ? 5 : 3;
+    }
+  }
+
   return {
     ...state,
     workoutMode: 'fipi',
     isShuffled: typeof state.isShuffled === 'boolean' ? state.isShuffled : true,
-    enabledTasks: {
-      ...createDefaultEnabledTasks(),
-      ...(state.enabledTasks || {}),
-    },
+    quantities: mergedQuantities,
+    enabledTasks: mergedEnabled,
     errorBank: state.errorBank.map((entry) => ({
       ...entry,
       explanation: cleanDisplayText(

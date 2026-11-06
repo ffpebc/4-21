@@ -1312,24 +1312,10 @@ export default function App() {
                       exit="exit"
                     >
                   <div>
-                    {/* Clean Header with 1-tap Presets/Smart Focus Window Trigger */}
+                    {/* Clean Header with 1-tap Presets Trigger */}
                     <div className="flex items-center justify-between gap-1.5 mt-0.5 mb-2.5 min-w-0">
                       <h1 className="ios-large-title !m-0">Новое занятие</h1>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          id="quick-start-30-btn"
-                          onClick={handleApplyBalanced30}
-                          className="liquid-pill-btn flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-full text-[11.5px] font-bold cursor-pointer shrink-0"
-                          style={{ color: 'var(--ios-blue)', background: 'var(--ios-blue-soft)' }}
-                          title="Сбалансированный вариант ровно на 30 заданий (задания 4–22 ФИПИ)"
-                          aria-label="30 заданий"
-                        >
-                          <svg className="w-3.5 h-3.5 shrink-0">
-                            <use href="#sf-sparkles" />
-                          </svg>
-                          <span>30 заданий</span>
-                        </button>
                         <button
                           type="button"
                           id="open-presets-modal-btn"
@@ -1345,90 +1331,15 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Mode Segmented Control: 1. Настраиваемый, 2. 30 заданий */}
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between px-1 mb-1.5">
-                        <div className="ios-section-header !p-0">Режим конструктора</div>
-                        <span
-                          className="text-[11px] font-bold"
-                          style={{ color: 'var(--ios-label-sec)' }}
-                        >
-                          {constructorMode === 'preset30'
-                            ? 'Вариант 30 заданий'
-                            : `Выбрано: ${totalPlanned} заданий`}
-                        </span>
-                      </div>
-                      <LiquidGlassSegmented<'custom' | 'preset30'>
-                        id="workout-constructor-segmented"
-                        ariaLabel="Режим конструктора"
-                        value={constructorMode}
-                        onChange={(modeKey) => handleSelectConstructorMode(modeKey)}
-                        options={[
-                          { key: 'custom', label: 'Настраиваемый' },
-                          { key: 'preset30', label: '30 заданий' },
-                        ]}
-                      />
+                    <div
+                      className="px-1 mb-2 text-[11px] flex items-center justify-between"
+                      style={{ color: 'var(--ios-label-sec)' }}
+                    >
+                      <span>Настройте количество заданий каждого типа (4–22):</span>
+                      <span className="font-semibold" style={{ color: 'var(--ios-blue)' }}>
+                        {totalPlanned > 0 ? `Выбрано: ${totalPlanned}` : 'Не выбрано'}
+                      </span>
                     </div>
-
-                    {constructorMode === 'preset30' && (
-                      <div className="ios-inset-group p-3 !mb-3">
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="ios-row-icon !w-8 !h-8 !rounded-xl text-[13px] font-black"
-                              style={{ background: 'linear-gradient(135deg, #30D158, #0A84FF)' }}
-                            >
-                              30
-                            </div>
-                            <div>
-                              <div className="text-[13px] font-extrabold leading-tight">
-                                Сбалансированный вариант ЕГЭ
-                              </div>
-                              <div
-                                className="text-[11px]"
-                                style={{ color: 'var(--ios-label-sec)' }}
-                              >
-                                Ровно 30 заданий · Все темы 4–22 включены
-                              </div>
-                            </div>
-                          </div>
-                          <span
-                            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-                            style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
-                          >
-                            Готово
-                          </span>
-                        </div>
-                        <div
-                          className="text-[11.5px] leading-relaxed pt-0.5 flex flex-wrap gap-x-3 gap-y-0.5"
-                          style={{ color: 'var(--ios-label-sec)' }}
-                        >
-                          <span>Культура речи (4–8): <strong>5</strong></span>
-                          <span>Орфография (9–15): <strong>14</strong></span>
-                          <span>Пунктуация (16–21): <strong>8</strong></span>
-                          <span>Текст (22): <strong>3</strong></span>
-                        </div>
-                      </div>
-                    )}
-
-                    {constructorMode === 'custom' && (
-                      <div
-                        className="px-1 mb-2 text-[11px] flex items-center justify-between"
-                        style={{ color: 'var(--ios-label-sec)' }}
-                      >
-                        <span>Настройте количество заданий каждого типа (4–22):</span>
-                        {totalPlanned > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleApplyPreset(0)}
-                            className="text-[11px] font-semibold underline cursor-pointer"
-                            style={{ color: 'var(--ios-red)' }}
-                          >
-                            Сбросить в 0
-                          </button>
-                        )}
-                      </div>
-                    )}
 
                     {/* Shuffle Order Switch (Вразброс / По порядку) */}
                     <div className="ios-inset-group !mb-3">
@@ -1562,12 +1473,13 @@ export default function App() {
                                 return (
                                   <div
                                     key={taskId}
-                                    className={`ios-cell transition-opacity ${
+                                    onClick={() => handleToggleTaskEnabled(taskId)}
+                                    className={`ios-cell cursor-pointer select-none transition-opacity ${
                                       !isTaskEnabled ? 'opacity-55' : ''
                                     }`}
                                   >
                                     <div
-                                      className="ios-row-icon"
+                                      className="ios-row-icon shrink-0"
                                       style={{ background: meta.gradient }}
                                     >
                                       {taskId}
@@ -1591,7 +1503,10 @@ export default function App() {
                                       role="switch"
                                       aria-checked={isTaskEnabled}
                                       aria-label={`Переключатель задания ${taskId}`}
-                                      onClick={() => handleToggleTaskEnabled(taskId)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleTaskEnabled(taskId);
+                                      }}
                                       className={`ios-switch shrink-0 ${
                                         isTaskEnabled ? 'is-active' : ''
                                       }`}
@@ -1599,49 +1514,54 @@ export default function App() {
                                       <div className="ios-switch-knob" />
                                     </button>
 
-                                    <input
-                                      id={`qty-badge-${taskId}`}
-                                      type="text"
-                                      inputMode="numeric"
-                                      pattern="[0-9]*"
-                                      maxLength={4}
-                                      value={qty}
-                                      onChange={(e) => {
-                                        const cleaned = e.target.value.replace(/[^0-9]/g, '');
-                                        handleSetTaskQty(
-                                          taskId,
-                                          cleaned === '' ? 0 : Number(cleaned)
-                                        );
-                                      }}
-                                      onBlur={resetViewportOnBlur}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          (e.target as HTMLInputElement).blur();
-                                        }
-                                      }}
-                                      className={`ios-count-badge ${qty > 0 ? 'has-value' : ''}`}
-                                      aria-label={`Количество заданий ${taskId}`}
-                                    />
-                                    <div className="ios-stepper">
-                                      <button
-                                        type="button"
-                                        className="ios-stepper-btn"
-                                        disabled={qty <= 0}
-                                        onClick={() => handleStepTask(taskId, -1)}
-                                        aria-label={`Уменьшить задание ${taskId}`}
-                                      >
-                                        −
-                                      </button>
-                                      <div className="ios-stepper-divider" />
-                                      <button
-                                        type="button"
-                                        className="ios-stepper-btn"
-                                        disabled={qty >= 1000}
-                                        onClick={() => handleStepTask(taskId, 1)}
-                                        aria-label={`Увеличить задание ${taskId}`}
-                                      >
-                                        +
-                                      </button>
+                                    <div
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="flex items-center gap-1.5 shrink-0"
+                                    >
+                                      <input
+                                        id={`qty-badge-${taskId}`}
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength={4}
+                                        value={qty}
+                                        onChange={(e) => {
+                                          const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                                          handleSetTaskQty(
+                                            taskId,
+                                            cleaned === '' ? 0 : Number(cleaned)
+                                          );
+                                        }}
+                                        onBlur={resetViewportOnBlur}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            (e.target as HTMLInputElement).blur();
+                                          }
+                                        }}
+                                        className={`ios-count-badge ${qty > 0 ? 'has-value' : ''}`}
+                                        aria-label={`Количество заданий ${taskId}`}
+                                      />
+                                      <div className="ios-stepper">
+                                        <button
+                                          type="button"
+                                          className="ios-stepper-btn"
+                                          disabled={qty <= 0}
+                                          onClick={() => handleStepTask(taskId, -1)}
+                                          aria-label={`Уменьшить задание ${taskId}`}
+                                        >
+                                          −
+                                        </button>
+                                        <div className="ios-stepper-divider" />
+                                        <button
+                                          type="button"
+                                          className="ios-stepper-btn"
+                                          disabled={qty >= 1000}
+                                          onClick={() => handleStepTask(taskId, 1)}
+                                          aria-label={`Увеличить задание ${taskId}`}
+                                        >
+                                          +
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -1667,9 +1587,7 @@ export default function App() {
                       </svg>
                       <span id="start-workout-label">
                         {totalPlanned > 0
-                          ? constructorMode === 'preset30'
-                            ? 'Начать занятие (30 заданий)'
-                            : `Начать занятие (${totalPlanned} заданий)`
+                          ? `Начать занятие (${totalPlanned} заданий)`
                           : 'Выберите хотя бы 1 задание'}
                       </span>
                     </button>

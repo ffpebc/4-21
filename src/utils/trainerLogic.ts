@@ -3331,7 +3331,7 @@ export function resolveTask15Sentence(question: any): string {
     rows.length === 0 ||
     Array.from({ length: rows.length }, (_, i) => i + 1).every((d) => gapDigits.has(d));
 
-  // If missing, corrupted, or missing any of the row gap numbers, reconstruct cleanly from question.rows
+  // If missing, corrupted, or missing any of the row gap numbers, reconstruct cleanly
   if (!sent || !hasAllRowGaps || sent.length < 15) {
     if (rows.length > 0) {
       const isPunctTask = ['17', '18', '19', '20'].includes(String(question.task));
@@ -3351,7 +3351,7 @@ export function resolveTask15Sentence(question: any): string {
           }
           return `${clean}(${i + 1})`;
         });
-        sent = `В данном предложении пропущены буквы: ${parts.join(', ')}.`;
+        sent = `Укажите все цифры, на месте которых пишется НН: ${parts.join(', ')}.`;
       }
     } else {
       sent = 'Укажите цифры на месте пропусков в словах предложения.';
@@ -3378,7 +3378,10 @@ export function getTrainerBank() {
       const isFiveRowTask = ['4', '9', '10', '11', '12', '13', '14', '16'].includes(rawFq.task);
       if (isFiveRowTask && rawFq.rows.length !== 5) continue;
       if (['8', '21', '22'].includes(rawFq.task) && (rawFq.rows.length < 4 || rawFq.rows.length > 9)) continue;
-      if (['15', '17', '18', '19', '20'].includes(rawFq.task) && rawFq.rows.length < 2) continue;
+      if (rawFq.task === '15') {
+        if (!rawFq.sentence || rawFq.sentence.length < 20 || rawFq.rows.length < 3) continue;
+      }
+      if (['17', '18', '19', '20'].includes(rawFq.task) && rawFq.rows.length < 2) continue;
       if (!Array.isArray(rawFq.rows) || rawFq.rows.length === 0) continue;
       if (!Array.isArray(rawFq.correctIndices) || rawFq.correctIndices.length === 0) continue;
       const isMatchingGrid =

@@ -196,7 +196,7 @@ export function refreshMaps() {
 refreshMaps();
 
 // Очищаем устаревший кэш с урезанной или поврежденной базой
-const CURRENT_BANK_CACHE = 'ege-bank-cache-v32';
+const CURRENT_BANK_CACHE = 'ege-bank-cache-v33';
 if (typeof window !== 'undefined' && 'caches' in window) {
   try {
     window.caches.keys().then((keys) => {
@@ -259,7 +259,7 @@ export async function loadFullDataBank(): Promise<boolean> {
     const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
     const cdnBase = 'https://cdn.jsdelivr.net/gh/ffpebc/9-15@data/public/data';
-    const vParam = '?v=32';
+    const vParam = '?v=33';
     const [fipiData, sprintData] = await Promise.all([
       fetchJsonWithCache(`${localBase}/fipiTasksBank9_15.json${vParam}`, [
         `${rawGithubBase}/fipiTasksBank9_15.json${vParam}`,

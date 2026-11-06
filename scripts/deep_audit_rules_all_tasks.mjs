@@ -5,7 +5,8 @@ import { classifyWordSubtopicAndException } from '../src/utils/wordClassifier.ts
 const publicData = path.resolve(process.cwd(), 'public/data');
 const srcData = path.resolve(process.cwd(), 'src/data');
 
-const wordsRaw = JSON.parse(fs.readFileSync(path.join(publicData, 'allWordsBank9_15.json'), 'utf8'));
+const wordsPath = path.join(publicData, 'allWordsBank9_15.json');
+const wordsRaw = fs.existsSync(wordsPath) ? JSON.parse(fs.readFileSync(wordsPath, 'utf8')) : [];
 const words = Array.isArray(wordsRaw) ? wordsRaw : wordsRaw.words;
 const sprint = JSON.parse(fs.readFileSync(path.join(publicData, 'sprintBank9_15.json'), 'utf8'));
 const fipi = JSON.parse(fs.readFileSync(path.join(publicData, 'fipiTasksBank9_15.json'), 'utf8'));
@@ -197,7 +198,7 @@ for (const s of sprint) checkSprintWord(s, 'sprint');
 for (const w of words) checkSprintWord(w, 'words');
 // Audit Starter
 for (const s of starter.sprint) checkSprintWord(s, 'starter-sprint');
-for (const w of starter.words) checkSprintWord(w, 'starter-words');
+if (starter.words) for (const w of starter.words) checkSprintWord(w, 'starter-words');
 
 // Audit FIPI rows & structure
 for (const f of fipi) {
