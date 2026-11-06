@@ -106,7 +106,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       </div>
 
       {/* 9 Uniform Template Tiles (Photo 5 design) */}
-      <div className="flex-1 min-h-0 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar flex flex-col gap-3 pr-0.5 pb-6">
+      <div className="flex-1 min-h-0 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar flex flex-col gap-3 pr-0.5 pb-2">
         {/* 1. Слабая тема */}
         <button
           type="button"

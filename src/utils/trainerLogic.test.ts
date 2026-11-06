@@ -24,6 +24,7 @@ import {
   TASK_IDS,
   TASK_BLOCKS,
   getOfficialTaskInstruction,
+  inferQuestionTarget,
   isTheoryOrExplanationText,
   BALANCED_30_QUANTITIES,
   type TaskId,
@@ -1717,6 +1718,151 @@ test('iOS PWA fullscreen layout and single-line quantity selector constraints', 
   assert.ok(workWindowsTsx.includes('id="dictionary-search-input"'), 'WorkWindows.tsx must contain dictionary search input');
   assert.ok(workWindowsTsx.includes('min-h-[44px]'), 'dictionary search input must have min-h-[44px] to prevent flex collapse');
   assert.ok(workWindowsTsx.includes('shrink-0 mb-2 w-full'), 'dictionary search wrapper must be shrink-0 to prevent overlap with chips');
+});
+
+test('Exhaustive canonical instruction, target, and answer-key consistency across all 19 tasks (4–22)', () => {
+  const bank = getTrainerBank();
+
+  for (const q of bank.fipiQuestions) {
+    const t = q.task;
+    const target = q.target || inferQuestionTarget(q, t);
+    const instruction = q.instruction || q.rule || '';
+
+    // Verify task instruction matches official canonical pattern
+    assert.ok(instruction.length > 20, `Task ${t} question ${q.id} must have non-empty instruction`);
+
+    if (t === '4') {
+      if (target === 'НЕВЕРНО') {
+        assert.ok(instruction.includes('НЕВЕРНО'), `Task 4 ${q.id} must prompt for НЕВЕРНО`);
+      } else {
+        assert.ok(instruction.includes('верно'), `Task 4 ${q.id} must prompt for верно`);
+      }
+    }
+
+    if (t === '6') {
+      if (target === 'ЗАМЕНИВ') {
+        assert.ok(instruction.includes('заменив неверно употреблённое слово'), `Task 6 ${q.id} must prompt for заменив`);
+      } else {
+        assert.ok(instruction.includes('исключив лишнее слово'), `Task 6 ${q.id} must prompt for исключив`);
+      }
+    }
+
+    if (['9', '10', '11', '12'].includes(t)) {
+      assert.equal(
+        instruction,
+        'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.',
+        `Task ${t} ${q.id} must have exact official prompt`
+      );
+    }
+
+    if (t === '13') {
+      const correctRows = q.correctIndices.map((idx) => q.rows[idx - 1]).filter(Boolean);
+      const letters = correctRows.map((r) => (r.letter || '').toUpperCase().trim());
+      assert.ok(letters.length > 0, `Task 13 ${q.id} must have correct rows`);
+
+      if (target === 'СЛИТНО') {
+        assert.ok(instruction.includes('СЛИТНО'), `Task 13 ${q.id} instruction must ask for СЛИТНО`);
+        assert.ok(!instruction.includes('РАЗДЕЛЬНО'), `Task 13 ${q.id} instruction must not ask for РАЗДЕЛЬНО`);
+        assert.ok(letters.every((l) => l === 'СЛИТНО'), `Task 13 ${q.id} correct rows must all be СЛИТНО, got ${letters}`);
+      } else if (target === 'РАЗДЕЛЬНО') {
+        assert.ok(instruction.includes('РАЗДЕЛЬНО'), `Task 13 ${q.id} instruction must ask for РАЗДЕЛЬНО`);
+        assert.ok(letters.every((l) => l.includes('РАЗД')), `Task 13 ${q.id} correct rows must all be РАЗДЕЛЬНО, got ${letters}`);
+      }
+    }
+
+    if (t === '14') {
+      const correctRows = q.correctIndices.map((idx) => q.rows[idx - 1]).filter(Boolean);
+      const letters = correctRows.map((r) => (r.letter || '').toUpperCase().trim());
+      assert.ok(letters.length > 0, `Task 14 ${q.id} must have correct rows`);
+
+      if (target === 'СЛИТНО') {
+        assert.ok(instruction.includes('СЛИТНО'), `Task 14 ${q.id} instruction must ask for СЛИТНО`);
+        assert.ok(letters.every((l) => l.includes('СЛИТ')), `Task 14 ${q.id} correct rows must all be СЛИТНО, got ${letters}`);
+      } else if (target === 'РАЗДЕЛЬНО') {
+        assert.ok(instruction.includes('РАЗДЕЛЬНО'), `Task 14 ${q.id} instruction must ask for РАЗДЕЛЬНО`);
+        assert.ok(letters.every((l) => l.includes('РАЗД')), `Task 14 ${q.id} correct rows must all be РАЗДЕЛЬНО, got ${letters}`);
+      } else if (target === 'ЧЕРЕЗ ДЕФИС') {
+        assert.ok(instruction.includes('ЧЕРЕЗ ДЕФИС'), `Task 14 ${q.id} instruction must ask for ЧЕРЕЗ ДЕФИС`);
+        assert.ok(letters.every((l) => l.includes('ДЕФИС')), `Task 14 ${q.id} correct rows must all be ДЕФИС, got ${letters}`);
+      }
+    }
+
+    if (t === '15') {
+      const correctRows = q.correctIndices.map((idx) => q.rows[idx - 1]).filter(Boolean);
+      const letters = correctRows.map((r) => (r.letter || '').toUpperCase().trim());
+      assert.ok(letters.length > 0, `Task 15 ${q.id} must have correct rows`);
+
+      if (target === 'Н') {
+        assert.ok(instruction.includes('пишется Н.') || instruction.includes('пишется Н '), `Task 15 ${q.id} instruction must ask for Н: ${instruction}`);
+        assert.ok(letters.every((l) => l === 'Н'), `Task 15 ${q.id} correct rows must all be Н, got ${letters}`);
+      } else if (target === 'НН') {
+        assert.ok(instruction.includes('пишется НН'), `Task 15 ${q.id} instruction must ask for НН: ${instruction}`);
+        assert.ok(letters.every((l) => l === 'НН'), `Task 15 ${q.id} correct rows must all be НН, got ${letters}`);
+      }
+    }
+
+    if (t === '21') {
+      if (target === 'ТИРЕ') {
+        assert.ok(instruction.includes('тире'), `Task 21 ${q.id} instruction must ask for тире`);
+      } else if (target === 'ДВОЕТОЧИЕ') {
+        assert.ok(instruction.includes('двоеточие'), `Task 21 ${q.id} instruction must ask for двоеточие`);
+      } else if (target === 'ЗАПЯТАЯ') {
+        assert.ok(instruction.includes('запятая'), `Task 21 ${q.id} instruction must ask for запятая`);
+      }
+    }
+  }
+
+  // Verify all 35 KIM variants have consistent task instructions
+  for (const variant of bank.kimVariants) {
+    for (const tid of TASK_IDS) {
+      const q = variant.tasks[tid];
+      assert.ok(q, `KIM variant ${variant.id} must contain task ${tid}`);
+      const expectedInstruction = cleanQuestionRule(q.instruction || q.rule, tid, q.instruction, q);
+      assert.equal(q.instruction, expectedInstruction, `KIM variant ${variant.id} task ${tid} instruction mismatch`);
+    }
+  }
+});
+
+test('inferQuestionTarget and cleanQuestionRule handle edge cases without topic false positives', () => {
+  // Generic topic collisions must never override actual task requirement
+  const generic13Topic = 'Правописание НЕ и НИ с различными частями речи (слитное и раздельное написание).';
+  const generic14Topic = 'Слитное, дефисное и раздельное написание слов (предлоги, союзы, частицы, наречия, сложные слова).';
+
+  // Task 13 default with ambiguous topic is СЛИТНО
+  assert.equal(getOfficialTaskInstruction('13', { ruleOrInstruction: generic13Topic }).includes('СЛИТНО'), true);
+
+  // Task 14 default with ambiguous topic is СЛИТНО (not false-positive ЧЕРЕЗ ДЕФИС)
+  assert.equal(getOfficialTaskInstruction('14', { ruleOrInstruction: generic14Topic }).includes('СЛИТНО'), true);
+
+  // Explicit target overrides everything
+  assert.equal(inferQuestionTarget({ target: 'РАЗДЕЛЬНО' }, '13'), 'РАЗДЕЛЬНО');
+  assert.equal(inferQuestionTarget({ target: 'СЛИТНО' }, '13'), 'СЛИТНО');
+  assert.equal(inferQuestionTarget({ target: 'ЧЕРЕЗ ДЕФИС' }, '14'), 'ЧЕРЕЗ ДЕФИС');
+  assert.equal(inferQuestionTarget({ target: 'Н' }, '15'), 'Н');
+  assert.equal(inferQuestionTarget({ target: 'НН' }, '15'), 'НН');
+  assert.equal(inferQuestionTarget({ target: 'ЗАМЕНИВ' }, '6'), 'ЗАМЕНИВ');
+  assert.equal(inferQuestionTarget({ target: 'ИСКЛЮЧИВ' }, '6'), 'ИСКЛЮЧИВ');
+  assert.equal(inferQuestionTarget({ target: 'ДВОЕТОЧИЕ' }, '21'), 'ДВОЕТОЧИЕ');
+  assert.equal(inferQuestionTarget({ target: 'ЗАПЯТАЯ' }, '21'), 'ЗАПЯТАЯ');
+
+  // Infer target from rows when target is missing
+  const mockQ13 = {
+    task: '13',
+    rows: [
+      { letter: 'РАЗДЕЛЬНО' },
+      { letter: 'СЛИТНО' },
+      { letter: 'РАЗДЕЛЬНО' },
+      { letter: 'РАЗДЕЛЬНО' },
+      { letter: 'СЛИТНО' },
+    ],
+    correctIndices: [2, 5],
+  };
+  assert.equal(inferQuestionTarget(mockQ13), 'СЛИТНО');
+  assert.equal(cleanQuestionRule(undefined, '13', undefined, mockQ13).includes('СЛИТНО'), true);
+
+  mockQ13.correctIndices = [1, 3, 4];
+  assert.equal(inferQuestionTarget(mockQ13), 'РАЗДЕЛЬНО');
+  assert.equal(cleanQuestionRule(undefined, '13', undefined, mockQ13).includes('РАЗДЕЛЬНО'), true);
 });
 
 

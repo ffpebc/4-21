@@ -1563,7 +1563,7 @@ export default function App() {
                   </div>
 
                   {/* Ergonomic Action Bar: Primary Start CTA Positioned Comfortably Above TabBar */}
-                  <div className="mt-auto pt-2 pb-1">
+                  <div className="mt-auto pt-2 pb-0">
                     <button
                       type="button"
                       id="start-workout-btn"
@@ -1927,7 +1927,7 @@ export default function App() {
                   </div>
 
                   {/* Pinned Bottom Deck: Always sitting right above the bottom menu, no scrolling past it */}
-                  <div className="shrink-0 flex flex-col gap-1.5 pt-2 pb-1">
+                  <div className="shrink-0 flex flex-col gap-1.5 pt-2 pb-0">
                     {sessionMistakes.length > 0 && (
                       <button
                         type="button"
@@ -2688,8 +2688,11 @@ export default function App() {
                         >
                           <div className="text-[14px] sm:text-[15.5px] font-semibold leading-relaxed">
                             <FormattedInstruction
-                              rule={currentKimTaskQuestion.instruction || currentKimTaskQuestion.rule}
+                              rule={currentKimTaskQuestion.rule}
+                              instruction={currentKimTaskQuestion.instruction}
                               task={kimActiveTask}
+                              question={currentKimTaskQuestion}
+                              target={(currentKimTaskQuestion as any).target}
                             />
                           </div>
                         </div>
@@ -2969,7 +2972,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="mt-auto pt-1">
+                    <div className="mt-auto pt-1 pb-0">
                       <button
                         type="button"
                         id="kim-check-all-btn"
@@ -3134,7 +3137,7 @@ export default function App() {
                 </div>
 
                 {/* Clean Single-Line Bottom Button */}
-                <div id="errors-bottom-deck" className="mt-auto pt-2 pb-1">
+                <div id="errors-bottom-deck" className="mt-auto pt-2 pb-0">
                   <button
                     type="button"
                     id="train-fipi-traps-btn"

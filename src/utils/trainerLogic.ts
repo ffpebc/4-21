@@ -68,6 +68,7 @@ export interface FipiQuestion {
   kind: 'fipi';
   questionKind?: 'rows' | 'word_input' | 'matching_grid' | 'numbered_gaps';
   task: TaskId;
+  target?: string;
   topic: string;
   rule: string;
   instruction?: string;
@@ -3170,23 +3171,147 @@ export function isTheoryOrExplanationText(text: string | undefined): boolean {
   );
 }
 
+export function inferQuestionTarget(q: any, task?: TaskId | string): string | undefined {
+  if (!q) return undefined;
+  const t = String(task || q.task || '');
+
+  // 1. Direct explicit target
+  if (typeof q.target === 'string' && q.target.trim().length > 0) {
+    const direct = q.target.trim().toUpperCase();
+    if (t === '13' && (direct === 'СЛИТНО' || direct.includes('РАЗД'))) {
+      return direct.includes('РАЗД') ? 'РАЗДЕЛЬНО' : 'СЛИТНО';
+    }
+    if (t === '14' && (direct.includes('ДЕФИС') || direct.includes('РАЗД') || direct.includes('СЛИТ'))) {
+      if (direct.includes('ДЕФИС')) return 'ЧЕРЕЗ ДЕФИС';
+      if (direct.includes('РАЗД')) return 'РАЗДЕЛЬНО';
+      return 'СЛИТНО';
+    }
+    if (t === '15' && (direct === 'Н' || direct === 'НН')) {
+      return direct;
+    }
+    if (t === '4' && (direct === 'ВЕРНО' || direct === 'НЕВЕРНО')) {
+      return direct;
+    }
+    if (t === '6' && (direct.includes('ЗАМЕН') || direct.includes('ИСКЛЮЧ'))) {
+      return direct.includes('ЗАМЕН') ? 'ЗАМЕНИВ' : 'ИСКЛЮЧИВ';
+    }
+    if (t === '21' && (direct.includes('ТИРЕ') || direct.includes('ДВОЕТОЧ') || direct.includes('ЗАПЯТ'))) {
+      if (direct.includes('ДВОЕТОЧ')) return 'ДВОЕТОЧИЕ';
+      if (direct.includes('ЗАПЯТ')) return 'ЗАПЯТАЯ';
+      return 'ТИРЕ';
+    }
+    return direct;
+  }
+
+  // 2. Infer from correct rows and indices
+  if (Array.isArray(q.rows) && Array.isArray(q.correctIndices) && q.correctIndices.length > 0) {
+    const correctRows = q.correctIndices
+      .map((idx: number) => q.rows[idx - 1])
+      .filter(Boolean);
+    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase().trim());
+
+    if (t === '13') {
+      if (letters.every((l: string) => l === 'СЛИТНО') && letters.length > 0) return 'СЛИТНО';
+      if (letters.every((l: string) => l.includes('РАЗД')) && letters.length > 0) return 'РАЗДЕЛЬНО';
+    }
+
+    if (t === '14') {
+      if (letters.every((l: string) => l.includes('ДЕФИС')) && letters.length > 0) return 'ЧЕРЕЗ ДЕФИС';
+      if (letters.every((l: string) => l.includes('РАЗД')) && letters.length > 0) return 'РАЗДЕЛЬНО';
+      if (letters.every((l: string) => l.includes('СЛИТ')) && letters.length > 0) return 'СЛИТНО';
+    }
+
+    if (t === '15') {
+      if (letters.every((l: string) => l === 'Н') && letters.length > 0) return 'Н';
+      if (letters.every((l: string) => l === 'НН') && letters.length > 0) return 'НН';
+    }
+  }
+
+  // 3. Infer from explicit instruction text
+  const instr = String(q.instruction || '').toLowerCase();
+  if (instr.length > 0) {
+    if (t === '13') {
+      if (instr.includes('пишется слитно') || (instr.includes('слитно') && !instr.includes('раздельно'))) return 'СЛИТНО';
+      if (instr.includes('пишется раздельно') || (instr.includes('раздельно') && !instr.includes('слитно'))) return 'РАЗДЕЛЬНО';
+    }
+    if (t === '14') {
+      if (instr.includes('через дефис')) return 'ЧЕРЕЗ ДЕФИС';
+      if ((instr.includes('дефис') || instr.includes('дефисно')) && !instr.includes('слитн') && !instr.includes('раздельн')) return 'ЧЕРЕЗ ДЕФИС';
+      if (instr.includes('раздельно') && !instr.includes('слитн') && !instr.includes('дефис')) return 'РАЗДЕЛЬНО';
+      if (instr.includes('слитно') && !instr.includes('раздельн') && !instr.includes('дефис')) return 'СЛИТНО';
+    }
+    if (t === '15') {
+      if (/пишется\s+(?:одна\s+буква\s+)?н(?!н)/i.test(instr) || instr.includes('одна буква н')) return 'Н';
+      if (instr.includes('нн')) return 'НН';
+    }
+    if (t === '4') {
+      if (instr.includes('неверно')) return 'НЕВЕРНО';
+      if (instr.includes('верно')) return 'ВЕРНО';
+    }
+    if (t === '6') {
+      if (instr.includes('замен')) return 'ЗАМЕНИВ';
+      if (instr.includes('исключ') || instr.includes('лишн')) return 'ИСКЛЮЧИВ';
+    }
+    if (t === '21') {
+      if (instr.includes('двоеточи')) return 'ДВОЕТОЧИЕ';
+      if (instr.includes('запят')) return 'ЗАПЯТАЯ';
+      if (instr.includes('тире')) return 'ТИРЕ';
+    }
+  }
+
+  // 4. Infer from sentence / topic / rule (avoiding generic topic collisions)
+  const topicAndRule = `${q.topic || ''} ${q.rule || ''} ${q.sentence || ''}`.toLowerCase();
+  if (t === '6') {
+    if (topicAndRule.includes('замен')) return 'ЗАМЕНИВ';
+    return 'ИСКЛЮЧИВ';
+  }
+  if (t === '15') {
+    if (/пишется\s+(?:одна\s+буква\s+)?н(?!н)/i.test(topicAndRule) || topicAndRule.includes('одна буква н')) return 'Н';
+    return 'НН';
+  }
+  if (t === '21') {
+    if (topicAndRule.includes('двоеточи')) return 'ДВОЕТОЧИЕ';
+    if (topicAndRule.includes('запят')) return 'ЗАПЯТАЯ';
+    return 'ТИРЕ';
+  }
+  if (t === '4') {
+    if (topicAndRule.includes('неверно')) return 'НЕВЕРНО';
+    return 'ВЕРНО';
+  }
+  if (t === '13') {
+    // If topic contains both, default is СЛИТНО
+    return 'СЛИТНО';
+  }
+  if (t === '14') {
+    return 'СЛИТНО';
+  }
+
+  return undefined;
+}
+
 export function getOfficialTaskInstruction(
   task: TaskId | string,
-  variant?: { target?: string; ruleOrInstruction?: string }
+  variant?: { target?: string; ruleOrInstruction?: string; question?: any }
 ): string {
   const t = String(task);
-  const context = (variant?.ruleOrInstruction || variant?.target || '').toLowerCase();
+  const q = variant?.question;
+  const target = (
+    variant?.target ||
+    (q ? inferQuestionTarget(q, t) : undefined) ||
+    inferQuestionTarget({ instruction: variant?.ruleOrInstruction }, t) ||
+    ''
+  ).toUpperCase();
 
   switch (t) {
     case '4':
-      if (context.includes('неверно')) {
+      if (target === 'НЕВЕРНО') {
         return 'Укажите варианты ответов, в которых НЕВЕРНО выделена буква, обозначающая ударный гласный звук. Запишите номера ответов.';
       }
       return 'Укажите варианты ответов, в которых верно выделена буква, обозначающая ударный гласный звук. Запишите номера ответов.';
     case '5':
       return 'В одном из приведённых ниже предложений НЕВЕРНО употреблено выделенное слово. Исправьте лексическую ошибку, подобрав к выделенному слову пароним. Запишите подобранное слово.';
     case '6':
-      if (context.includes('заменив') || context.includes('замена')) {
+      if (target === 'ЗАМЕНИВ') {
         return 'Отредактируйте предложение: исправьте лексическую ошибку, заменив неверно употреблённое слово. Запишите подобранное слово.';
       }
       return 'Отредактируйте предложение: исправьте лексическую ошибку, исключив лишнее слово. Запишите это слово.';
@@ -3200,20 +3325,20 @@ export function getOfficialTaskInstruction(
     case '12':
       return 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.';
     case '13':
-      if (context.includes('слитно') && !context.includes('раздельно')) {
-        return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется СЛИТНО. Запишите номера ответов.';
+      if (target === 'РАЗДЕЛЬНО') {
+        return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО. Запишите номера ответов.';
       }
-      return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО. Запишите номера ответов.';
+      return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется СЛИТНО. Запишите номера ответов.';
     case '14':
-      if (context.includes('дефис')) {
+      if (target.includes('ДЕФИС')) {
         return 'Укажите варианты ответов, в которых все выделенные слова пишутся ЧЕРЕЗ ДЕФИС. Запишите номера ответов.';
       }
-      if (context.includes('раздельно')) {
+      if (target.includes('РАЗД')) {
         return 'Укажите варианты ответов, в которых все выделенные слова пишутся РАЗДЕЛЬНО. Запишите номера ответов.';
       }
       return 'Укажите варианты ответов, в которых все выделенные слова пишутся СЛИТНО. Запишите номера ответов.';
     case '15':
-      if (context.includes('одна буква н') || /пишется\s+(?:одна\s+буква\s+)?н(?!н)/i.test(context)) {
+      if (target === 'Н') {
         return 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.';
       }
       return 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.';
@@ -3225,10 +3350,10 @@ export function getOfficialTaskInstruction(
     case '20':
       return 'Расставьте знаки препинания: укажите все цифры, на месте которых в предложении должны стоять запятые.';
     case '21':
-      if (context.includes('двоеточи')) {
+      if (target.includes('ДВОЕТОЧ')) {
         return 'Найдите предложения, в которых двоеточие ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений.';
       }
-      if (context.includes('запят')) {
+      if (target.includes('ЗАПЯТ')) {
         return 'Найдите предложения, в которых запятая ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений.';
       }
       return 'Найдите предложения, в которых тире ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений.';
@@ -3246,57 +3371,14 @@ export function cleanQuestionRule(
   rawQuestion?: any
 ): string {
   const t = String(task);
-  if (['9', '10', '11', '12'].includes(t)) {
-    return 'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.';
-  }
+  const q = rawQuestion || (typeof rule === 'object' ? rule : undefined);
+  const ruleStr = typeof rule === 'string' ? rule : undefined;
 
-  // If task 13 and instruction doesn't clearly distinguish or is ambiguous
-  if (t === '13' && rawQuestion?.rows && rawQuestion?.correctIndices) {
-    const correctRows = (rawQuestion.correctIndices as number[])
-      .map((idx: number) => rawQuestion.rows[idx - 1])
-      .filter(Boolean);
-    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase());
-    if (letters.every((l: string) => l === 'СЛИТНО') && letters.length > 0) {
-      return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется СЛИТНО. Запишите номера ответов.';
-    }
-    if (letters.every((l: string) => l === 'РАЗДЕЛЬНО' || l === 'РАЗД.') && letters.length > 0) {
-      return 'Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО. Запишите номера ответов.';
-    }
-  }
-
-  // If task 14 and instruction doesn't clearly distinguish
-  if (t === '14' && rawQuestion?.rows && rawQuestion?.correctIndices) {
-    const correctRows = (rawQuestion.correctIndices as number[])
-      .map((idx: number) => rawQuestion.rows[idx - 1])
-      .filter(Boolean);
-    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase());
-    if (letters.every((l: string) => l.includes('ДЕФИС')) && letters.length > 0) {
-      return 'Укажите варианты ответов, в которых все выделенные слова пишутся ЧЕРЕЗ ДЕФИС. Запишите номера ответов.';
-    }
-    if (letters.every((l: string) => l.includes('РАЗДЕЛЬНО') || l.includes('РАЗД.')) && letters.length > 0) {
-      return 'Укажите варианты ответов, в которых все выделенные слова пишутся РАЗДЕЛЬНО. Запишите номера ответов.';
-    }
-    if (letters.every((l: string) => l.includes('СЛИТНО')) && letters.length > 0) {
-      return 'Укажите варианты ответов, в которых все выделенные слова пишутся СЛИТНО. Запишите номера ответов.';
-    }
-  }
-
-  // If task 15 and instruction doesn't clearly distinguish
-  if (t === '15' && rawQuestion?.rows && rawQuestion?.correctIndices) {
-    const correctRows = (rawQuestion.correctIndices as number[])
-      .map((idx: number) => rawQuestion.rows[idx - 1])
-      .filter(Boolean);
-    const letters = correctRows.map((r: any) => String(r.letter || '').toUpperCase());
-    if (letters.every((l: string) => l === 'Н') && letters.length > 0) {
-      return 'Укажите цифру(-ы), на месте которой(-ых) пишется Н.';
-    }
-    if (letters.every((l: string) => l === 'НН') && letters.length > 0) {
-      return 'Укажите цифру(-ы), на месте которой(-ых) пишется НН.';
-    }
-  }
-
-  const cand = (instruction && instruction.trim().length > 0) ? instruction : rule;
-  return getOfficialTaskInstruction(t, { ruleOrInstruction: cand });
+  return getOfficialTaskInstruction(t, {
+    target: q?.target,
+    ruleOrInstruction: instruction || ruleStr,
+    question: q,
+  });
 }
 
 export function resolveTask15Sentence(question: any): string {
@@ -3459,7 +3541,8 @@ export function getTrainerBank() {
           ? 'numbered_gaps'
           : 'rows');
 
-      const instruction = cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction, rawFq);
+      const target = rawFq.target || inferQuestionTarget(rawFq, rawFq.task);
+      const instruction = cleanQuestionRule(rawFq.instruction || rawFq.rule, rawFq.task, rawFq.instruction, { ...rawFq, target });
 
       const matchingLetters = rawFq.matchingLetters?.map((ml) => {
         if (typeof ml === 'string') {
@@ -3476,6 +3559,7 @@ export function getTrainerBank() {
 
       const fq: FipiQuestion = {
         ...rawFq,
+        target,
         questionKind,
         rule: instruction,
         instruction,
@@ -3674,10 +3758,28 @@ export function getTrainerBank() {
       const correctIndices: number[] = [];
       const pattern = FIPI_PATTERNS[(setNum + taskOffset * 2) % FIPI_PATTERNS.length];
 
+      let chosenTarget: string | undefined = undefined;
+      if (task === '13') {
+        chosenTarget = setNum % 2 === 0 ? 'СЛИТНО' : 'РАЗДЕЛЬНО';
+      } else if (task === '14') {
+        const t14Targets = ['СЛИТНО', 'РАЗДЕЛЬНО', 'ЧЕРЕЗ ДЕФИС'];
+        chosenTarget = t14Targets[setNum % t14Targets.length];
+      }
+
       for (let r = 0; r < 5; r++) {
         const isCorrectRow = pattern[r];
-        const primaryAns = answers[(r + setNum) % answers.length];
-        const otherAns = answers[(r + setNum + 1) % answers.length] || primaryAns;
+        let primaryAns = answers[(r + setNum) % answers.length];
+        let otherAns = answers[(r + setNum + 1) % answers.length] || primaryAns;
+
+        if (task === '13' && chosenTarget) {
+          primaryAns = isCorrectRow ? chosenTarget : (chosenTarget === 'СЛИТНО' ? 'РАЗДЕЛЬНО' : 'СЛИТНО');
+          otherAns = primaryAns;
+        } else if (task === '14' && chosenTarget) {
+          const targetAnswer = chosenTarget === 'ЧЕРЕЗ ДЕФИС' ? 'ДЕФИСНО' : chosenTarget;
+          const otherAnswers = ['СЛИТНО', 'РАЗДЕЛЬНО', 'ДЕФИСНО'].filter((a) => a !== targetAnswer);
+          primaryAns = isCorrectRow ? targetAnswer : otherAnswers[r % otherAnswers.length];
+          otherAns = primaryAns;
+        }
 
         const w1 = pickNextFromAnswer(primaryAns);
         const w2 = pickNextFromAnswer(primaryAns);
@@ -3761,12 +3863,13 @@ export function getTrainerBank() {
         }
       }
 
-      const officialInstruction = getOfficialTaskInstruction(task);
+      const officialInstruction = getOfficialTaskInstruction(task, { target: chosenTarget });
       const fq: FipiQuestion = {
         id: `fipi-${task}-${setNum}`,
         kind: 'fipi',
         questionKind: 'rows',
         task,
+        target: chosenTarget,
         topic: TASK_META[task].title,
         instruction: officialInstruction,
         rule: officialInstruction,

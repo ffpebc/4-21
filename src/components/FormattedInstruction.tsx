@@ -2,8 +2,11 @@ import React from 'react';
 import { cleanQuestionRule } from '../utils/trainerLogic';
 
 export interface FormattedInstructionProps {
-  rule: string | undefined;
+  rule?: string;
   task: string;
+  instruction?: string;
+  question?: any;
+  target?: string;
   className?: string;
 }
 
@@ -19,9 +22,17 @@ const TARGET_REGEX = /(НН\s*\(или\s*Н\)|(?<=пишется\s+)(?:две\s+
 export const FormattedInstruction: React.FC<FormattedInstructionProps> = React.memo(({
   rule,
   task,
+  instruction,
+  question,
+  target,
   className = '',
 }) => {
-  const cleanedRule = cleanQuestionRule(rule, task);
+  const cleanedRule = cleanQuestionRule(
+    rule,
+    task,
+    instruction || question?.instruction,
+    question || (target ? { target } : undefined)
+  );
   const match = cleanedRule.match(TARGET_REGEX);
 
   if (!match || match.index === undefined) {
