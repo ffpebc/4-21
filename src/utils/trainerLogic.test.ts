@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   getTrainerBank,
   createInitialState,
@@ -1695,6 +1696,24 @@ test('All-by-30 preset, Custom-N preset, and Reset-to-0 cover all 19 official EG
     assert.equal(steppedDown, 0, `Stepping down on task ${tid} must yield 0`);
   }
 });
+
+test('iOS PWA fullscreen layout and single-line quantity selector constraints', () => {
+  const indexHtml = fs.readFileSync('index.html', 'utf-8');
+  assert.ok(indexHtml.includes('viewport-fit=cover'), 'index.html must have viewport-fit=cover');
+  assert.ok(indexHtml.includes('apple-mobile-web-app-capable'), 'index.html must enable apple-mobile-web-app-capable');
+  assert.ok(indexHtml.includes('100dvh'), 'index.html must specify 100dvh');
+
+  const indexCss = fs.readFileSync('src/index.css', 'utf-8');
+  assert.ok(!indexCss.includes('-webkit-fill-available'), 'index.css must avoid -webkit-fill-available to prevent iOS standalone clipping');
+  assert.ok(indexCss.includes('min-height: 100dvh'), 'index.css must specify min-height: 100dvh');
+  assert.ok(indexCss.includes('bottom: 0'), 'ios-tabbar must be docked at bottom: 0');
+  assert.ok(indexCss.includes('env(safe-area-inset-bottom'), 'ios-tabbar must account for safe-area-inset-bottom');
+
+  const appTsx = fs.readFileSync('src/App.tsx', 'utf-8');
+  assert.ok(appTsx.includes('Настройте количество заданий:'), 'App.tsx must have concise single-line label without (4–22)');
+  assert.ok(appTsx.includes('whitespace-nowrap shrink-0 ml-2'), 'App.tsx badge must never wrap to multiple lines');
+});
+
 
 
 

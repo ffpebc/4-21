@@ -1321,8 +1321,11 @@ export default function App() {
                       className="px-1 mb-2 text-[11px] flex items-center justify-between"
                       style={{ color: 'var(--ios-label-sec)' }}
                     >
-                      <span>Настройте количество заданий каждого типа (4–22):</span>
-                      <span className="font-semibold" style={{ color: 'var(--ios-blue)' }}>
+                      <span>Настройте количество заданий:</span>
+                      <span
+                        className="font-semibold whitespace-nowrap shrink-0 ml-2"
+                        style={{ color: 'var(--ios-blue)' }}
+                      >
                         {totalPlanned > 0 ? `Выбрано: ${totalPlanned}` : 'Не выбрано'}
                       </span>
                     </div>
