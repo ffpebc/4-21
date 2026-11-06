@@ -237,7 +237,7 @@ body.keyboard-open .ios-tabbar {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: none;
   padding-top: calc(env(safe-area-inset-top, 0px) + 52px);
-  padding-bottom: calc(58px + max(12px, env(safe-area-inset-bottom, 0px)) + 24px);
+  padding-bottom: calc(58px + max(8px, env(safe-area-inset-bottom, 8px)) + 24px);
 }
 
 /* Dedicated Lock for Screens that fit 100% on iPhone 16 */
@@ -343,7 +343,7 @@ body.keyboard-open .ios-tabbar {
    ============================================================================ */
 .ios-tabbar {
   position: fixed;
-  bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 22px));
+  bottom: max(8px, env(safe-area-inset-bottom, 8px));
   left: 50%;
   transform: translate3d(-50%, 0, 0);
   width: calc(100% - 20px);
