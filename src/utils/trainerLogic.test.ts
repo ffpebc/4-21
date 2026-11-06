@@ -1701,7 +1701,7 @@ test('iOS PWA fullscreen layout and single-line quantity selector constraints', 
   const indexHtml = fs.readFileSync('index.html', 'utf-8');
   assert.ok(indexHtml.includes('viewport-fit=cover'), 'index.html must have viewport-fit=cover');
   assert.ok(indexHtml.includes('apple-mobile-web-app-capable'), 'index.html must enable apple-mobile-web-app-capable');
-  assert.ok(indexHtml.includes('inset: 0'), 'index.html must pin fullscreen layout via inset: 0');
+  assert.ok(indexHtml.includes('100dvh'), 'index.html must specify 100dvh');
 
   const indexCss = fs.readFileSync('src/index.css', 'utf-8');
   assert.ok(!indexCss.includes('-webkit-fill-available'), 'index.css must avoid -webkit-fill-available to prevent iOS standalone clipping');
