@@ -30,12 +30,7 @@
         padding: 0;
         width: 100%;
         height: 100%;
-        height: 100dvh;
-        height: var(--app-height, 100dvh);
         min-height: 100%;
-        min-height: -webkit-fill-available;
-        min-height: 100dvh;
-        min-height: var(--app-height, 100dvh);
         position: fixed;
         inset: 0;
         background-color: #E6ECF8;
@@ -52,17 +47,18 @@
         z-index: 1;
         width: 100%;
         height: 100%;
-        height: 100dvh;
-        height: var(--app-height, 100dvh);
         min-height: 100%;
-        min-height: -webkit-fill-available;
-        min-height: 100dvh;
-        min-height: var(--app-height, 100dvh);
         overflow: hidden;
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
         background: transparent;
+      }
+      body.keyboard-open #root {
+        height: var(--app-height, 100%);
+      }
+      body.keyboard-open .ios-tabbar {
+        display: none !important;
       }
       html.dark, html.dark body {
         background-color: #000000;
@@ -84,13 +80,20 @@
         }
 
         function syncAppViewport() {
-          var vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-          var h = Math.max(vh || 0, window.innerHeight || 0);
-          if (h && h > 0) {
-            document.documentElement.style.setProperty('--app-height', Math.round(h) + 'px');
-          }
-          if (!isInputActive()) {
-            restoreScrollPosition();
+          var isInput = isInputActive();
+          var vv = window.visualViewport;
+          var winH = window.innerHeight || (document.documentElement ? document.documentElement.clientHeight : 0) || 0;
+          var isKeyboard = isInput && vv && vv.height < winH * 0.88;
+
+          if (isKeyboard && vv && vv.height > 0) {
+            document.documentElement.style.setProperty('--app-height', Math.round(vv.height) + 'px');
+            document.body.classList.add('keyboard-open');
+          } else {
+            document.documentElement.style.removeProperty('--app-height');
+            if (document.body) document.body.classList.remove('keyboard-open');
+            if (!isInput) {
+              restoreScrollPosition();
+            }
           }
         }
         syncAppViewport();
@@ -121,6 +124,8 @@
           }, { passive: true });
         }
         window.addEventListener('focusout', function () {
+          document.documentElement.style.removeProperty('--app-height');
+          if (document.body) document.body.classList.remove('keyboard-open');
           restoreScrollPosition();
           setTimeout(restoreScrollPosition, 50);
           setTimeout(restoreScrollPosition, 150);

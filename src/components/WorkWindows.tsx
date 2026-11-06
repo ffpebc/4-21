@@ -106,7 +106,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       </div>
 
       {/* 9 Uniform Template Tiles (Photo 5 design) */}
-      <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar space-y-2 pr-0.5 pb-2">
+      <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar space-y-2 pr-0.5 pb-6">
         {/* 1. Слабая тема */}
         <button
           type="button"
@@ -377,7 +377,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
         {/* 8. Настраиваемый шаблон */}
         <div
           id="preset-modal-custom"
-          className="ios-inset-group !mb-0 p-3 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-2xl"
+          className="ios-inset-group !mb-0 p-3 text-left flex items-center justify-between gap-2 rounded-2xl w-full"
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div
@@ -398,7 +398,10 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
               </div>
             </div>
           </div>
-          <div className="flex items-center justify-end gap-1.5 shrink-0 pt-0.5 sm:pt-0">
+          <div
+            className="flex items-center justify-end gap-1.5 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             <input
               type="text"
               inputMode="numeric"
@@ -420,13 +423,13 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
                   onClose();
                 }
               }}
-              className="ios-count-badge has-value !w-11 text-center font-bold shrink-0"
+              className="ios-count-badge has-value !w-10 !h-7 !text-[13px] text-center font-bold shrink-0"
               aria-label="Количество заданий на тему"
             />
-            <div className="ios-stepper shrink-0">
+            <div className="ios-stepper !h-7 shrink-0">
               <button
                 type="button"
-                className="ios-stepper-btn"
+                className="ios-stepper-btn !w-7"
                 disabled={customCount <= 1}
                 onClick={() => handleStepCustomCount(-1)}
                 aria-label="Уменьшить количество"
@@ -436,7 +439,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
               <div className="ios-stepper-divider" />
               <button
                 type="button"
-                className="ios-stepper-btn"
+                className="ios-stepper-btn !w-7"
                 disabled={customCount >= 1000}
                 onClick={() => handleStepCustomCount(1)}
                 aria-label="Увеличить количество"

@@ -141,10 +141,21 @@ export default function App() {
   const [bankRev, setBankRev] = useState(0);
   useEffect(() => {
     const syncAppViewport = () => {
-      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-      const h = Math.max(vh || 0, window.innerHeight || 0);
-      if (h && h > 0) {
-        document.documentElement.style.setProperty('--app-height', `${Math.round(h)}px`);
+      const isInput = !!(
+        document.activeElement &&
+        (document.activeElement.tagName === 'INPUT' ||
+          document.activeElement.tagName === 'TEXTAREA')
+      );
+      const vv = window.visualViewport;
+      const winH = window.innerHeight || (document.documentElement ? document.documentElement.clientHeight : 0) || 0;
+      const isKeyboard = isInput && vv && vv.height < winH * 0.88;
+
+      if (isKeyboard && vv && vv.height > 0) {
+        document.documentElement.style.setProperty('--app-height', `${Math.round(vv.height)}px`);
+        document.body.classList.add('keyboard-open');
+      } else {
+        document.documentElement.style.removeProperty('--app-height');
+        document.body.classList.remove('keyboard-open');
       }
     };
     syncAppViewport();
@@ -443,6 +454,8 @@ export default function App() {
 
   const resetViewportOnBlur = useCallback(() => {
     const restore = () => {
+      document.documentElement.style.removeProperty('--app-height');
+      document.body.classList.remove('keyboard-open');
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       if (document.body) document.body.scrollTop = 0;
       if (document.documentElement) document.documentElement.scrollTop = 0;
