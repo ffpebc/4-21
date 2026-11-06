@@ -256,15 +256,16 @@ export async function loadFullDataBank(): Promise<boolean> {
   isFullBankLoading = true;
 
   try {
-    const localBase = '/data';
     const rawGithubBase = 'https://raw.githubusercontent.com/ffpebc/9-15/data/public/data';
     const vParam = '?v=33';
     const [fipiData, sprintData] = await Promise.all([
-      fetchJsonWithCache(`${localBase}/fipiTasksBank9_15.json${vParam}`, [
+      fetchJsonWithCache(`/data/fipiTasksBank9_15.json${vParam}`, [
+        `./data/fipiTasksBank9_15.json${vParam}`,
         `${rawGithubBase}/fipiTasksBank9_15.json${vParam}`,
         `${rawGithubBase}/fipiTasksBank.json${vParam}`,
       ]),
-      fetchJsonWithCache(`${localBase}/sprintBank9_15.json${vParam}`, [
+      fetchJsonWithCache(`/data/sprintBank9_15.json${vParam}`, [
+        `./data/sprintBank9_15.json${vParam}`,
         `${rawGithubBase}/sprintBank9_15.json${vParam}`,
         `${rawGithubBase}/sprintBank.json${vParam}`,
       ]),

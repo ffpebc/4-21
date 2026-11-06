@@ -7,8 +7,9 @@ createRoot(document.getElementById('root')!).render(<App />);
 // Register Service Worker with auto-update and cache busting for fresh deployments
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    const swUrl = (import.meta.env.BASE_URL || './').replace(/\/?$/, '/') + 'sw.js';
     navigator.serviceWorker
-      .register('/sw.js', { updateViaCache: 'none' })
+      .register(swUrl, { updateViaCache: 'none' })
       .then((reg) => {
         // Auto check for updates on load and on tab focus
         reg.update().catch(() => {});
