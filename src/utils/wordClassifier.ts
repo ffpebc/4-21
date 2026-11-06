@@ -49,7 +49,10 @@ export function classifyWordSubtopicAndException(
     .replace(/не\s+путать\s+с\s+исключен[^.;)]*/gi, '')
     .replace(/не\s+является\s+исключен[^.;)]*/gi, '')
     .replace(/кроме исключений\s*[:—\-–]?[^)]*/gi, '')
-    .replace(/за исключением[^)]*/gi, '');
+    .replace(/за исключением[^)]*/gi, '')
+    .replace(/\(или это слово-исключение[^)]*\)/gi, '')
+    .replace(/\(?слово не входит в (?:список|перечень) исключений[^)]*\)?/gi, '')
+    .replace(/\(?не входит в (?:список|перечень) исключений[^)]*\)?/gi, '');
   const directExplException =
     Boolean(explicitIsTrap) ||
     /исключен/i.test(strippedExpl) ||

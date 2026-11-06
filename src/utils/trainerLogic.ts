@@ -3273,10 +3273,10 @@ export function cleanQuestionRule(
     if (letters.every((l: string) => l.includes('ДЕФИС')) && letters.length > 0) {
       return 'Укажите варианты ответов, в которых все выделенные слова пишутся ЧЕРЕЗ ДЕФИС. Запишите номера ответов.';
     }
-    if (letters.every((l: string) => l === 'РАЗДЕЛЬНО' || l === 'РАЗД.') && letters.length > 0) {
+    if (letters.every((l: string) => l.includes('РАЗДЕЛЬНО') || l.includes('РАЗД.')) && letters.length > 0) {
       return 'Укажите варианты ответов, в которых все выделенные слова пишутся РАЗДЕЛЬНО. Запишите номера ответов.';
     }
-    if (letters.every((l: string) => l === 'СЛИТНО') && letters.length > 0) {
+    if (letters.every((l: string) => l.includes('СЛИТНО')) && letters.length > 0) {
       return 'Укажите варианты ответов, в которых все выделенные слова пишутся СЛИТНО. Запишите номера ответов.';
     }
   }
@@ -3313,6 +3313,8 @@ export function resolveTask15Sentence(question: any): string {
   // Strip scraper artifacts and normalize homoglyphs
   if (sent) {
     sent = cleanScraperArtifacts(sent).replace(/[«»]/g, '').trim();
+    // Strip redundant leading instruction captured by web scraper
+    sent = sent.replace(/^Укажите\s+[^.]*\.\s*/i, '').trim();
   }
 
   const rows = Array.isArray(question.rows) ? question.rows : [];
