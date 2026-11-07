@@ -144,23 +144,6 @@ const createEmptyKimAnswers = (): Record<TaskId, string> => {
 export default function App() {
   const [bankRev, setBankRev] = useState(0);
   useEffect(() => {
-    const isStandalone =
-      (window.navigator as any).standalone === true ||
-      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    if (isStandalone) {
-      document.documentElement.classList.add('is-standalone');
-    }
-
-    const kickstartReflow = () => {
-      if (isStandalone) {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-        window.dispatchEvent(new Event('resize'));
-        if (document.body) {
-          void document.body.offsetHeight;
-        }
-      }
-    };
-
     const syncAppViewport = () => {
       const isInput = !!(
         document.activeElement &&
@@ -180,21 +163,17 @@ export default function App() {
       }
     };
     syncAppViewport();
-    kickstartReflow();
 
     window.addEventListener('resize', syncAppViewport, { passive: true });
     window.addEventListener('orientationchange', syncAppViewport, { passive: true });
-    window.addEventListener('pageshow', () => {
-      syncAppViewport();
-      kickstartReflow();
-    }, { passive: true });
+    window.addEventListener('pageshow', syncAppViewport, { passive: true });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', syncAppViewport, { passive: true });
       window.visualViewport.addEventListener('scroll', syncAppViewport, { passive: true });
     }
-    const t1 = window.setTimeout(() => { syncAppViewport(); kickstartReflow(); }, 60);
-    const t2 = window.setTimeout(() => { syncAppViewport(); kickstartReflow(); }, 250);
-    const t3 = window.setTimeout(() => { syncAppViewport(); kickstartReflow(); }, 600);
+    const t1 = window.setTimeout(syncAppViewport, 60);
+    const t2 = window.setTimeout(syncAppViewport, 250);
+    const t3 = window.setTimeout(syncAppViewport, 600);
 
     const onLoaded = () => setBankRev((r) => r + 1);
     window.addEventListener('ege-bank-loaded', onLoaded);
@@ -208,13 +187,11 @@ export default function App() {
       };
       resetScroll();
       syncAppViewport();
-      kickstartReflow();
       window.setTimeout(resetScroll, 50);
       window.setTimeout(resetScroll, 150);
       window.setTimeout(resetScroll, 300);
       window.setTimeout(resetScroll, 500);
       window.setTimeout(syncAppViewport, 520);
-      window.setTimeout(kickstartReflow, 530);
     };
     window.addEventListener('focusout', onFocusOut);
 
@@ -1176,6 +1153,76 @@ export default function App() {
   const globalAccuracy = calculateAccuracyPercent(state.totalCorrect, state.totalSolved);
   const sprintAccuracy = calculateAccuracyPercent(state.sprintCorrect, state.sprintTotal);
 
+  // Desktop Keyboard Shortcuts (Alt+1..5 tabs, Esc to close modals, Enter to start workout)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // Escape: Close any open modal
+      if (e.key === 'Escape') {
+        if (isDictionaryOpen) { setIsDictionaryOpen(false); return; }
+        if (isRulesOpen) { setIsRulesOpen(false); return; }
+        if (isSyncOpen) { setIsSyncOpen(false); return; }
+        if (isAppearanceOpen) { setIsAppearanceOpen(false); return; }
+        if (isPresetsOpen) { setIsPresetsOpen(false); return; }
+        if (isResetOpen) { setIsResetOpen(false); return; }
+        if (inspectedQuestion) { closeRuleInspector(); return; }
+      }
+
+      // Alt + 1..5: Quick Tab Switching
+      if (e.altKey && ['1', '2', '3', '4', '5'].includes(e.key)) {
+        e.preventDefault();
+        const tabs: ActiveTab[] = ['workout', 'sprint', 'lab', 'errors', 'stats'];
+        const chosen = tabs[Number(e.key) - 1];
+        if (chosen) setActiveTab(chosen);
+        return;
+      }
+
+      // Enter in Workout Builder to start planned workout
+      if (activeTab === 'workout' && workoutView === 'builder' && e.key === 'Enter') {
+        if (totalPlanned > 0) {
+          e.preventDefault();
+          handleStartPlannedWorkout();
+        }
+        return;
+      }
+
+      // ArrowLeft / ArrowRight in Sprint Mode
+      if (activeTab === 'sprint') {
+        if (e.key === 'ArrowLeft' || e.key === '1') {
+          const btn = document.getElementById('sprint-option-0');
+          if (btn) { e.preventDefault(); btn.click(); return; }
+        }
+        if (e.key === 'ArrowRight' || e.key === '2') {
+          const btn = document.getElementById('sprint-option-1');
+          if (btn) { e.preventDefault(); btn.click(); return; }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    isDictionaryOpen,
+    isRulesOpen,
+    isSyncOpen,
+    isAppearanceOpen,
+    isPresetsOpen,
+    isResetOpen,
+    inspectedQuestion,
+    activeTab,
+    workoutView,
+    totalPlanned,
+  ]);
+
   return (
     <>
       {/* SVG Sprite for crisp iOS SF Symbols & Optical Filters */}
@@ -1265,6 +1312,11 @@ export default function App() {
       <header className="ios-navbar" role="banner">
         <div className="ios-navbar-inner">
           <div className="flex items-center justify-start gap-1.5 min-w-0">
+            <div className="hidden md:flex items-center gap-1.5 mr-2 shrink-0 select-none">
+              <span className="font-black text-[13px] tracking-tight bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
+                ЕГЭ 4–22
+              </span>
+            </div>
             <button
               id="nav-rules-btn"
               type="button"
@@ -1325,7 +1377,7 @@ export default function App() {
               >
                 <use href="#sf-cloud-fill" />
               </svg>
-              <span id="nav-sync-label" className="text-[11.5px] font-bold max-w-[76px] truncate">
+              <span id="nav-sync-label" className="text-[11.5px] font-bold max-w-[76px] md:max-w-[140px] truncate">
                 {state.profilePin ? state.profilePin : 'Память'}
               </span>
             </button>
@@ -1347,7 +1399,7 @@ export default function App() {
 
       {/* Main Viewport Scroll Container */}
       <div id="app-scroll-container" className={`ios-viewport-scroll ${isScrollLocked ? 'ios-scroll-locked' : ''}`}>
-        <main className="max-w-[600px] mx-auto px-3.5 pt-0.5 relative overflow-x-hidden min-h-full flex flex-col w-full flex-grow flex-shrink-0">
+        <main className="max-w-[600px] md:max-w-[920px] lg:max-w-[1060px] mx-auto px-3.5 md:px-6 pt-0.5 relative overflow-x-hidden min-h-full flex flex-col w-full flex-grow flex-shrink-0">
           <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
             {/* ======================================================================
                 TAB 1: WORKOUT BUILDER, ACTIVE WORKOUT & POST-SESSION SUMMARY

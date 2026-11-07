@@ -182,24 +182,6 @@ body {
   text-rendering: optimizeSpeed;
 }
 
-/* Standalone PWA cold-start lock: in standalone mode (Add to Home Screen), WebKit miscalculates 100dvh on cold launch.
-   Lock html, body, and #root to 100% of the standalone window frame to eliminate bottom chin gap. */
-@media (display-mode: standalone) {
-  html,
-  body,
-  #root {
-    height: 100% !important;
-    min-height: 100% !important;
-  }
-}
-
-html.is-standalone,
-html.is-standalone body,
-html.is-standalone #root {
-  height: 100% !important;
-  min-height: 100% !important;
-}
-
 /* iOS Safari: Prevent automatic viewport zoom on input focus by strictly enforcing 16px font size */
 input,
 select,
@@ -1865,5 +1847,162 @@ button,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   DESKTOP & TABLET ADAPTIVE LAYOUT (@media min-width: 768px & 1024px)
+   Strictly scoped: ZERO effect on mobile screens (iPhone / Android <= 440px)
+   ============================================================================ */
+
+@media (min-width: 768px) {
+  /* 1. Fluid Custom Apple-style Desktop Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--ios-fill-tertiary);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background-color 0.2s ease;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--ios-label-sec);
+    background-clip: content-box;
+  }
+
+  /* 2. Desktop Navigation Capsule (Wider, comfortable padding, polished hover) */
+  .ios-navbar {
+    max-width: 880px;
+    height: 48px;
+    top: 14px;
+    padding: 0 10px;
+    box-shadow: 0 10px 30px -6px rgba(0, 0, 0, 0.16), var(--ios-glass-inner-glow);
+  }
+
+  .ios-viewport-scroll {
+    padding-top: 74px;
+    padding-bottom: 94px;
+  }
+
+  /* Desktop Floating Dock Tabbar */
+  .ios-tabbar {
+    max-width: 660px;
+    height: 60px;
+    bottom: 20px;
+    box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.28), var(--ios-glass-inner-glow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .ios-tabbar:hover {
+    box-shadow: 0 24px 56px -8px rgba(0, 122, 255, 0.25), var(--ios-glass-inner-glow);
+  }
+
+  .ios-tab-item {
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), opacity 0.18s ease;
+  }
+  .ios-tab-item:hover {
+    opacity: 1 !important;
+    transform: translateY(-2px);
+  }
+
+  /* 3. Centered macOS-style Liquid Glass Modals */
+  .ios-sheet-root {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 24px;
+  }
+
+  .ios-sheet {
+    border-radius: 28px !important;
+    max-width: 740px;
+    max-height: 86vh;
+    padding: 20px 24px 28px 24px !important;
+    box-shadow: 0 28px 72px -16px rgba(0, 0, 0, 0.45), var(--ios-glass-inner-glow) !important;
+  }
+
+  .ios-sheet.closing {
+    opacity: 0;
+    transform: scale(0.96) !important;
+    transition: opacity 0.25s ease, transform 0.25s ease !important;
+  }
+
+  .ios-sheet.ios-cheatsheet-panel {
+    max-width: 900px;
+    height: 86vh !important;
+    max-height: 86vh !important;
+    border-radius: 28px !important;
+  }
+
+  .sheet-drag-handle {
+    cursor: default;
+    padding: 4px 0 10px 0;
+  }
+
+  /* 4. Desktop Buttons and Cards Interactive Polish */
+  .ios-cell,
+  .ios-inset-group,
+  .fipi-row-cell,
+  .liquid-pill-btn,
+  .ios-btn-primary,
+  .ios-btn-tinted,
+  .ios-btn-glass-secondary {
+    cursor: pointer;
+  }
+
+  button.ios-cell:hover,
+  button.fipi-row-cell:hover {
+    transform: translateY(-1px);
+    transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .ios-btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .desktop-action-bar {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Desktop Wide Navbar & Tabbar */
+  .ios-navbar {
+    max-width: 1020px;
+  }
+  .ios-tabbar {
+    max-width: 720px;
+  }
+
+  /* Workout Builder 2-Column Grid */
+  .desktop-blocks-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  /* Statistics Task Breakdown 2-Column Grid */
+  .desktop-task-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  /* Error Bank 2-Column Grid */
+  .desktop-errors-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
   }
 }
