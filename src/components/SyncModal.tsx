@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   TrainerState,
   encodeBackupCode,
   decodeBackupCode,
 } from '../utils/trainerLogic';
-import { pushStateToCloudPin, pullStateFromCloudPin } from '../utils/storageSync';
+import {
+  pushStateToCloudPin,
+  pullStateFromCloudPin,
+  mergeTrainerStates,
+  cloudSyncManager,
+} from '../utils/storageSync';
 import { SwipeableSheet } from './LiquidGlassControls';
 
 interface SyncModalProps {
@@ -26,6 +31,7 @@ export const SyncModal: React.FC<SyncModalProps> = React.memo(({
     'Автосохранение на сервере и в браузере активно'
   );
   const [statusTone, setStatusTone] = useState<'ok' | 'warn'>('ok');
+  const debounceRef = useRef<any>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -33,44 +39,79 @@ export const SyncModal: React.FC<SyncModalProps> = React.memo(({
       setBackupCodeInput(encodeBackupCode(state));
       setStatusMessage(
         state.profilePin
-          ? `Профиль «${state.profilePin}» синхронизирован`
+          ? `🟢 Профиль «${state.profilePin}» синхронизируется на лету`
           : 'Автосохранение активно (Сервер + Браузер)'
       );
       setStatusTone('ok');
     }
   }, [isOpen, state]);
 
+  // Subscribe to real-time status updates from cloud sync manager
+  useEffect(() => {
+    return cloudSyncManager.subscribeStatus((status) => {
+      if (status.message) {
+        setStatusMessage(status.message);
+        setStatusTone(status.state === 'error' ? 'warn' : 'ok');
+      }
+    });
+  }, []);
+
+  const triggerAutoSyncPin = (rawPin: string) => {
+    const cleanPin = rawPin.trim().toUpperCase().replace(/[^A-ZА-ЯЁ0-9_-]/g, '').slice(0, 32);
+    if (cleanPin.length >= 2) {
+      cloudSyncManager.setPin(cleanPin, state);
+      if (cleanPin !== state.profilePin) {
+        onRestoreState({ ...state, profilePin: cleanPin });
+      }
+    }
+  };
+
+  const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.toUpperCase();
+    setPinInput(val);
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      triggerAutoSyncPin(val);
+    }, 400);
+  };
+
   const handleSavePin = async () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     const cleanPin = pinInput
       .trim()
       .toUpperCase()
-      .replace(/[^A-ZА-ЯЁ0-9_-]/g, '');
+      .replace(/[^A-ZА-ЯЁ0-9_-]/g, '')
+      .slice(0, 32);
     if (cleanPin.length < 2) {
       setStatusTone('warn');
       setStatusMessage('Введите минимум 2 символа для кода профиля');
       return;
     }
 
+    const updatedState: TrainerState = { ...state, profilePin: cleanPin };
+    onRestoreState(updatedState);
+    cloudSyncManager.setPin(cleanPin, updatedState);
+    cloudSyncManager.notifyStateChanged(updatedState, true);
+
     const existing = await pullStateFromCloudPin(cleanPin);
-    if (
-      existing.found &&
-      existing.state &&
-      existing.state.totalSolved > state.totalSolved
-    ) {
-      onRestoreState({ ...existing.state, profilePin: cleanPin });
+    if (existing.found && existing.state) {
+      const merged = mergeTrainerStates(updatedState, existing.state, { incomingIsNewer: true });
+      onRestoreState(merged);
+      cloudSyncManager.notifyStateChanged(merged, true);
       setStatusTone('ok');
       setStatusMessage(
-        `Профиль «${cleanPin}» загружен (${existing.state.totalSolved} решённых)`
+        `🟢 Профиль «${cleanPin}» подключён! Объединено решённых: ${merged.totalSolved}`
       );
       return;
     }
 
-    const updatedState: TrainerState = { ...state, profilePin: cleanPin };
-    onRestoreState(updatedState);
     const res = await pushStateToCloudPin(cleanPin, updatedState);
     if (res.ok) {
       setStatusTone('ok');
-      setStatusMessage(`Профиль «${cleanPin}» сохранён на сервере`);
+      setStatusMessage(`🟢 Профиль «${cleanPin}» сохранён на сервере. Синхронизация активна!`);
     } else {
       setStatusTone('ok');
       setStatusMessage(`Профиль «${cleanPin}» сохранён в памяти устройства`);
@@ -78,24 +119,33 @@ export const SyncModal: React.FC<SyncModalProps> = React.memo(({
   };
 
   const handlePullFromPin = async () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     const cleanPin = pinInput
       .trim()
       .toUpperCase()
-      .replace(/[^A-ZА-ЯЁ0-9_-]/g, '');
-    const targetPin = cleanPin.length >= 2 ? cleanPin : undefined;
+      .replace(/[^A-ZА-ЯЁ0-9_-]/g, '')
+      .slice(0, 32);
+    const targetPin = cleanPin.length >= 2 ? cleanPin : state.profilePin;
+    if (!targetPin || targetPin.length < 2) {
+      setStatusTone('warn');
+      setStatusMessage('Укажите код профиля для загрузки');
+      return;
+    }
     const res = await pullStateFromCloudPin(targetPin);
     if (res.found && res.state) {
-      onRestoreState(res.state);
-      setBackupCodeInput(encodeBackupCode(res.state));
+      const merged = mergeTrainerStates(state, res.state, { incomingIsNewer: true });
+      onRestoreState(merged);
+      cloudSyncManager.setPin(targetPin, merged);
+      setBackupCodeInput(encodeBackupCode(merged));
       setStatusTone('ok');
       setStatusMessage(
-        `Прогресс ${cleanPin ? `«${cleanPin}»` : 'с сервера'} успешно загружен!`
+        `🟢 Прогресс «${targetPin}» загружен (${merged.totalSolved} решённых)!`
       );
     } else {
       setStatusTone('warn');
       setStatusMessage(
-        cleanPin
-          ? `Профиль «${cleanPin}» не найден — нажмите «Сохранить»`
+        targetPin
+          ? `Профиль «${targetPin}» не найден на сервере`
           : 'На сервере пока нет сохранённого профиля'
       );
     }
@@ -176,17 +226,24 @@ export const SyncModal: React.FC<SyncModalProps> = React.memo(({
           </span>
         </div>
         <p className="text-[12px] mb-2" style={{ color: 'var(--ios-label-sec)' }}>
-          Прогресс автоматически сохраняется на этом сервере и в памяти браузера. Для
-          синхронизации между телефоном и компьютером укажите общий код (например,{' '}
-          <strong>ALEX77</strong>).
+          Прогресс автоматически синхронизируется между ПК и телефоном на лету. Введите ваш
+          общий код профиля (например, <strong>FFPEBC</strong> или <strong>ALEX77</strong>),
+          и все задания мгновенно отобразятся на обоих устройствах.
         </p>
         <input
           id="profile-pin-input"
           type="text"
           maxLength={20}
           value={pinInput}
-          onChange={(e) => setPinInput(e.target.value.toUpperCase())}
-          placeholder="Код профиля (напр. ALEX77)"
+          onChange={handlePinChange}
+          onBlur={handleSavePin}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.currentTarget.blur();
+              handleSavePin();
+            }
+          }}
+          placeholder="Код профиля (напр. FFPEBC или ALEX77)"
           aria-label="Ваш личный пин-код или ник"
           className="w-full px-3 py-2 rounded-xl text-[16px] font-bold placeholder:font-medium outline-none mb-2"
           style={{

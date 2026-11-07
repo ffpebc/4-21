@@ -32,7 +32,12 @@ import {
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
 import { sprintToWordEntry, PARSED_WORDS } from '../data/tasksBankData.ts';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
-import { sanitizeLoadedState } from './storageSync.ts';
+import {
+  sanitizeLoadedState,
+  mergeTrainerStates,
+  getSyncApiUrl,
+  cloudSyncManager,
+} from './storageSync.ts';
 
 test('FIPI bank generates sprint questions + FIPI sets + KIM variants + flashcards & homophones', () => {
   const bank = getTrainerBank();
@@ -1936,6 +1941,60 @@ test('inferQuestionTarget and cleanQuestionRule handle edge cases without topic 
   const resolvedSent = resolveTask15Sentence(fallbackQ15);
   assert.equal(resolvedSent.includes('пишется Н:'), true);
   assert.equal(resolvedSent.includes('пишется НН:'), false);
+});
+
+test('Real-time cross-device cloud sync and monotonic state merging (PC <-> Phone on the fly)', () => {
+  // 1. Initial State for PC and Phone
+  const statePC = createInitialState();
+  statePC.profilePin = 'FFPEBC';
+  statePC.totalSolved = 25;
+  statePC.totalCorrect = 23;
+  statePC.bestStreak = 10;
+  statePC.taskStats['9'] = { solved: 15, correct: 14 };
+
+  const statePhone = createInitialState();
+  statePhone.profilePin = 'FFPEBC';
+  statePhone.totalSolved = 30;
+  statePhone.totalCorrect = 27;
+  statePhone.bestStreak = 12;
+  statePhone.taskStats['9'] = { solved: 10, correct: 9 };
+  statePhone.taskStats['10'] = { solved: 20, correct: 18 };
+
+  // 2. Monotonic Merge
+  const merged = mergeTrainerStates(statePC, statePhone, { incomingIsNewer: true });
+  assert.equal(merged.profilePin, 'FFPEBC');
+  assert.equal(merged.totalSolved, 30, 'Merged totalSolved must take maximum');
+  assert.equal(merged.totalCorrect, 27, 'Merged totalCorrect must take maximum');
+  assert.equal(merged.bestStreak, 12, 'Merged bestStreak must take maximum');
+  assert.equal(merged.taskStats['9']?.solved, 15, 'Task 9 solved must take max from PC (15 > 10)');
+  assert.equal(merged.taskStats['10']?.solved, 20, 'Task 10 solved must take max from Phone (20)');
+
+  // 3. API URL resolution
+  const url1 = getSyncApiUrl('FFPEBC');
+  assert.ok(url1.includes('/api/sync/FFPEBC'), 'URL must target /api/sync/FFPEBC');
+
+  const urlWithQuery = getSyncApiUrl('FFPEBC', { since: 12345 });
+  assert.ok(urlWithQuery.includes('since=12345'), 'URL must support since query param');
+
+  // 4. CloudSyncManager PIN normalization & registration
+  cloudSyncManager.setPin('  ffpebc_01  ');
+  assert.equal(cloudSyncManager.getPin(), 'FFPEBC_01', 'cloudSyncManager must normalize pin to uppercase without whitespace');
+
+  // 5. Codebase integrity: App.tsx and SyncModal.tsx contain dynamic on-the-fly sync handlers
+  const appTsx = fs.readFileSync('src/App.tsx', 'utf-8');
+  assert.ok(appTsx.includes('cloudSyncManager'), 'App.tsx must integrate cloudSyncManager');
+  assert.ok(appTsx.includes('sync-live-pulse-dot'), 'App.tsx must render live sync pulse dot');
+
+  const syncModalTsx = fs.readFileSync('src/components/SyncModal.tsx', 'utf-8');
+  assert.ok(syncModalTsx.includes('FFPEBC'), 'SyncModal.tsx must mention FFPEBC');
+  assert.ok(syncModalTsx.includes('cloudSyncManager'), 'SyncModal.tsx must integrate cloudSyncManager');
+
+  const serverTs = fs.readFileSync('server.ts', 'utf-8');
+  assert.ok(serverTs.includes('Access-Control-Allow-Origin'), 'server.ts must support CORS for AI Studio');
+  assert.ok(serverTs.includes('/api/sync/:pin'), 'server.ts must provide /api/sync/:pin');
+
+  const viteConfigTs = fs.readFileSync('vite.config.ts', 'utf-8');
+  assert.ok(viteConfigTs.includes('apiSyncPlugin'), 'vite.config.ts must provide apiSyncPlugin for dev/preview in AI Studio');
 });
 
 

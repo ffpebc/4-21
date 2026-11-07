@@ -42,6 +42,9 @@ import {
   persistStateMultiLayer,
   pushStateToCloudPin,
   pullStateFromCloudPin,
+  mergeTrainerStates,
+  cloudSyncManager,
+  SyncStatus,
 } from './utils/storageSync';
 import { CheatsheetModal } from './components/CheatsheetModal';
 import { SyncModal } from './components/SyncModal';
@@ -231,7 +234,28 @@ export default function App() {
   }, []);
   const bank = useMemo(() => getTrainerBank(), [bankRev]);
 
-  const [state, setState] = useState<TrainerState>(() => loadInitialStateSync());
+  const [state, setState] = useState<TrainerState>(() => {
+    const initial = loadInitialStateSync();
+    if (typeof window !== 'undefined') {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        const urlPin = urlParams.get('pin') || hashParams.get('pin');
+        if (urlPin && urlPin.trim().length >= 2) {
+          initial.profilePin = urlPin
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-ZА-ЯЁ0-9_-]/g, '')
+            .slice(0, 32);
+        }
+      } catch (_) {}
+    }
+    return initial;
+  });
+
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({ state: 'idle' });
   const [activeTab, setActiveTab] = useState<ActiveTab>('workout');
   const [workoutView, setWorkoutView] = useState<WorkoutSubView>('builder');
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<TaskBlockId, boolean>>({
@@ -371,7 +395,7 @@ export default function App() {
     }, 480);
   };
 
-  // 1. Load IndexedDB + Hosted Server Memory after initial paint so cold start is 0ms non-blocking
+  // 1. Load IndexedDB + Realtime Hosted Cloud Sync (0ms non-blocking cold start)
   useEffect(() => {
     const idbTimer = window.setTimeout(() => {
       loadFromIndexedDB().then((idbState) => {
@@ -379,52 +403,41 @@ export default function App() {
           setState((prev) => (idbState.totalSolved > prev.totalSolved ? idbState : prev));
         }
       });
-    }, 60);
+    }, 50);
 
-    const cloudTimer = window.setTimeout(() => {
-      let initialPin: string | undefined;
-      try {
-        const hash = window.location.hash.replace(/^#/, '');
-        const params = new URLSearchParams(hash);
-        const urlPin = params.get('pin');
-        if (urlPin && urlPin.trim().length >= 2) {
-          initialPin = urlPin.trim().toUpperCase();
-        }
-      } catch {
-        // Ignore
-      }
+    // Subscribe to cloud sync manager status & remote device updates (PC <-> Phone on the fly)
+    const unsubStatus = cloudSyncManager.subscribeStatus((status) => {
+      setSyncStatus(status);
+    });
 
-      pullStateFromCloudPin(initialPin).then((res) => {
-        if (res.found && res.state) {
-          setState((prev) =>
-            res.state!.totalSolved > prev.totalSolved ? res.state! : prev
-          );
-        }
+    const unsubRemote = cloudSyncManager.subscribeRemoteUpdate((mergedRemoteState) => {
+      setState((prev) => {
+        return mergeTrainerStates(prev, mergedRemoteState, { incomingIsNewer: true });
       });
-    }, 450);
+    });
+
+    // Initialize sync manager with current state getter and pin
+    cloudSyncManager.init(() => stateRef.current, state.profilePin);
 
     return () => {
       window.clearTimeout(idbTimer);
-      window.clearTimeout(cloudTimer);
+      unsubStatus();
+      unsubRemote();
     };
   }, []);
 
-  // 2. Non-blocking debounced persistence (zero redundant background requests or double re-renders)
+  // 2. Real-time background persistence and auto-push to server
   useEffect(() => {
     const localTimer = setTimeout(() => {
       persistStateMultiLayer(state);
-    }, 250);
+    }, 200);
 
-    let cloudTimer: NodeJS.Timeout | undefined;
     if (state.profilePin && state.profilePin.trim().length >= 2) {
-      cloudTimer = setTimeout(() => {
-        pushStateToCloudPin(state.profilePin, state);
-      }, 2500);
+      cloudSyncManager.notifyStateChanged(state);
     }
 
     return () => {
       clearTimeout(localTimer);
-      if (cloudTimer) clearTimeout(cloudTimer);
     };
   }, [state]);
 
@@ -1259,13 +1272,28 @@ export default function App() {
               id="nav-sync-btn"
               type="button"
               onClick={() => setIsSyncOpen(true)}
-              className="flex items-center gap-1 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
-              style={{ background: 'var(--ios-blue-soft)', color: 'var(--ios-blue)' }}
+              className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
+              style={{
+                background: state.profilePin ? 'var(--ios-green-soft)' : 'var(--ios-blue-soft)',
+                color: state.profilePin ? 'var(--ios-green)' : 'var(--ios-blue)',
+              }}
               aria-label="Память и сохранение"
+              title={
+                state.profilePin
+                  ? `Профиль «${state.profilePin}» синхронизируется на лету между ПК и телефоном`
+                  : 'Память и синхронизация'
+              }
             >
               <svg className="w-3.5 h-3.5 shrink-0">
                 <use href="#sf-cloud-fill" />
               </svg>
+              {state.profilePin && (
+                <span
+                  id="sync-live-pulse-dot"
+                  className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"
+                  aria-hidden="true"
+                />
+              )}
               <span id="nav-sync-label" className="text-[11.5px] font-bold max-w-[76px] truncate">
                 {state.profilePin ? state.profilePin : 'Память'}
               </span>

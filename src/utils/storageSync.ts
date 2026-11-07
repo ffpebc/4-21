@@ -1,6 +1,9 @@
 import {
   TaskId,
   TrainerState,
+  TaskMasteryStat,
+  ErrorBankEntry,
+  SessionJournalEntry,
   createInitialState,
   createDefaultEnabledTasks,
   encodeBackupCode,
@@ -191,6 +194,138 @@ export function persistStateMultiLayer(state: TrainerState): string {
   return code;
 }
 
+export function getSyncApiUrl(
+  pin: string,
+  queryParams?: Record<string, string | number>
+): string {
+  const targetPin = encodeURIComponent((pin || DEFAULT_HOSTED_PIN).trim().toUpperCase());
+  let base = '';
+  if (typeof window !== 'undefined') {
+    const pathName = window.location.pathname;
+    const dir = pathName.replace(/\/([^\/]*\.[^\/]*|)$/, '');
+    if (dir && dir !== '/') {
+      base = dir;
+    }
+  }
+  let url = `${base}/api/sync/${targetPin}`;
+  if (queryParams) {
+    const search = new URLSearchParams();
+    for (const [k, v] of Object.entries(queryParams)) {
+      search.set(k, String(v));
+    }
+    url += `?${search.toString()}`;
+  }
+  return url;
+}
+
+export function mergeTrainerStates(
+  local: TrainerState,
+  incoming: TrainerState,
+  options?: { incomingIsNewer?: boolean }
+): TrainerState {
+  if (!local) return sanitizeLoadedState(incoming);
+  if (!incoming) return sanitizeLoadedState(local);
+
+  const sanitizedIncoming = sanitizeLoadedState(incoming);
+  const sanitizedLocal = sanitizeLoadedState(local);
+
+  // 1. Cumulative numerical progress: Monotonically advance so neither PC nor Phone ever loses solved tasks
+  const totalSolved = Math.max(sanitizedLocal.totalSolved, sanitizedIncoming.totalSolved);
+  const totalCorrect = Math.max(sanitizedLocal.totalCorrect, sanitizedIncoming.totalCorrect);
+  const sessionsCompleted = Math.max(
+    sanitizedLocal.sessionsCompleted,
+    sanitizedIncoming.sessionsCompleted
+  );
+  const sprintStreak = Math.max(sanitizedLocal.sprintStreak, sanitizedIncoming.sprintStreak);
+  const sprintTotal = Math.max(sanitizedLocal.sprintTotal, sanitizedIncoming.sprintTotal);
+  const sprintCorrect = Math.max(sanitizedLocal.sprintCorrect, sanitizedIncoming.sprintCorrect);
+  const bestStreak = Math.max(sanitizedLocal.bestStreak || 0, sanitizedIncoming.bestStreak || 0);
+  const bestBlitz60 = Math.max(sanitizedLocal.bestBlitz60 || 0, sanitizedIncoming.bestBlitz60 || 0);
+  const bestSurvival = Math.max(
+    sanitizedLocal.bestSurvival || 0,
+    sanitizedIncoming.bestSurvival || 0
+  );
+
+  // 2. Per-task mastery statistics: Max on solved & correct
+  const taskStats: Record<TaskId, TaskMasteryStat> = { ...sanitizedLocal.taskStats };
+  for (const id of TASK_IDS) {
+    const loc = sanitizedLocal.taskStats?.[id] || { solved: 0, correct: 0 };
+    const inc = sanitizedIncoming.taskStats?.[id] || { solved: 0, correct: 0 };
+    taskStats[id] = {
+      solved: Math.max(loc.solved, inc.solved),
+      correct: Math.max(loc.correct, inc.correct),
+    };
+  }
+
+  // 3. Error Bank: Union of errors by questionId with latest timestamp
+  const errorMap = new Map<string, ErrorBankEntry>();
+  for (const err of sanitizedLocal.errorBank || []) {
+    if (err && err.questionId) {
+      errorMap.set(err.questionId, err);
+    }
+  }
+  for (const err of sanitizedIncoming.errorBank || []) {
+    if (err && err.questionId) {
+      const existing = errorMap.get(err.questionId);
+      if (!existing || (err.timestamp || 0) >= (existing.timestamp || 0)) {
+        errorMap.set(err.questionId, err);
+      }
+    }
+  }
+  const mergedErrorBank = Array.from(errorMap.values()).slice(0, 50);
+
+  // 4. Session Journal: Deduplicate by title + dateLabel + total + correct
+  const journalMap = new Map<string, SessionJournalEntry>();
+  for (const j of sanitizedLocal.sessionJournal || []) {
+    journalMap.set(`${j.title}|${j.dateLabel}|${j.total}|${j.correct}`, j);
+  }
+  for (const j of sanitizedIncoming.sessionJournal || []) {
+    journalMap.set(`${j.title}|${j.dateLabel}|${j.total}|${j.correct}`, j);
+  }
+  const mergedJournal = Array.from(journalMap.values()).slice(0, 25);
+
+  // 5. Settings: If incoming is newer or incoming has higher totalSolved, take incoming settings
+  const takeIncomingSettings =
+    options?.incomingIsNewer ?? (sanitizedIncoming.totalSolved > sanitizedLocal.totalSolved);
+
+  const quantities = takeIncomingSettings
+    ? sanitizedIncoming.quantities
+    : sanitizedLocal.quantities;
+  const enabledTasks = takeIncomingSettings
+    ? sanitizedIncoming.enabledTasks
+    : sanitizedLocal.enabledTasks;
+  const isShuffled = takeIncomingSettings
+    ? sanitizedIncoming.isShuffled
+    : sanitizedLocal.isShuffled;
+  const darkMode = takeIncomingSettings
+    ? sanitizedIncoming.darkMode
+    : sanitizedLocal.darkMode;
+  const profilePin =
+    sanitizedIncoming.profilePin || sanitizedLocal.profilePin || '';
+
+  return {
+    ...sanitizedLocal,
+    workoutMode: 'fipi',
+    isShuffled,
+    darkMode,
+    profilePin,
+    quantities,
+    enabledTasks,
+    totalSolved,
+    totalCorrect,
+    sessionsCompleted,
+    sprintStreak,
+    sprintTotal,
+    sprintCorrect,
+    bestStreak,
+    bestBlitz60,
+    bestSurvival,
+    taskStats,
+    errorBank: mergedErrorBank,
+    sessionJournal: mergedJournal,
+  };
+}
+
 export async function pushStateToCloudPin(
   pin: string,
   state: TrainerState
@@ -201,9 +336,13 @@ export async function pushStateToCloudPin(
   }
   try {
     const code = encodeBackupCode(state);
-    const res = await fetch(`/api/sync/${encodeURIComponent(targetPin)}`, {
+    const url = getSyncApiUrl(targetPin);
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
       body: JSON.stringify({ payload: { code, totalSolved: state.totalSolved } }),
     });
     if (!res.ok) {
@@ -217,14 +356,33 @@ export async function pushStateToCloudPin(
 }
 
 export async function pullStateFromCloudPin(
-  pin?: string
-): Promise<{ found: boolean; state?: TrainerState; updatedAt?: number }> {
+  pin?: string,
+  options?: { since?: number }
+): Promise<{
+  found: boolean;
+  notModified?: boolean;
+  state?: TrainerState;
+  updatedAt?: number;
+}> {
   const targetPin = (pin || DEFAULT_HOSTED_PIN).trim().toUpperCase();
   if (targetPin.length < 2) return { found: false };
   try {
-    const res = await fetch(`/api/sync/${encodeURIComponent(targetPin)}`);
+    const queryParams: Record<string, string | number> = {
+      t: Date.now(), // Anti-cache query for iOS WebKit & Safari
+    };
+    if (options?.since && options.since > 0) {
+      queryParams.since = options.since;
+    }
+    const url = getSyncApiUrl(targetPin, queryParams);
+    const res = await fetch(url, {
+      headers: { 'Cache-Control': 'no-cache, no-store' },
+      cache: 'no-store',
+    });
     if (!res.ok) return { found: false };
     const data = await res.json();
+    if (data.notModified) {
+      return { found: true, notModified: true, updatedAt: data.updatedAt };
+    }
     const code = data?.payload?.code;
     if (typeof code === 'string' && code.startsWith('EGE27-')) {
       const decoded = decodeBackupCode(code);
@@ -241,3 +399,228 @@ export async function pullStateFromCloudPin(
     return { found: false };
   }
 }
+
+export interface SyncStatus {
+  state: 'idle' | 'syncing' | 'synced' | 'error';
+  lastSyncedAt?: number;
+  message?: string;
+}
+
+export type SyncStatusListener = (status: SyncStatus) => void;
+export type RemoteUpdateListener = (mergedState: TrainerState) => void;
+
+class CloudSyncManagerImpl {
+  private pin: string = '';
+  private lastKnownServerUpdatedAt: number = 0;
+  private lastPushedCode: string = '';
+  private isPushing: boolean = false;
+  private isPulling: boolean = false;
+  private pollTimer: any = null;
+  private pushTimer: any = null;
+  private statusListeners = new Set<SyncStatusListener>();
+  private updateListeners = new Set<RemoteUpdateListener>();
+  private currentStateGetter: (() => TrainerState) | null = null;
+  private isInitialized: boolean = false;
+
+  public init(getState: () => TrainerState, initialPin?: string): void {
+    this.currentStateGetter = getState;
+    if (initialPin && initialPin.trim().length >= 2) {
+      this.setPin(initialPin.trim().toUpperCase());
+    }
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', () => this.poll(true));
+      window.addEventListener('online', () => {
+        this.poll(true);
+        if (this.currentStateGetter) {
+          this.notifyStateChanged(this.currentStateGetter(), true);
+        }
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          this.poll(true);
+        }
+      });
+      window.addEventListener('pagehide', () => {
+        this.flushPendingPush();
+      });
+      window.addEventListener('beforeunload', () => {
+        this.flushPendingPush();
+      });
+    }
+
+    this.scheduleNextPoll();
+  }
+
+  public subscribeStatus(listener: SyncStatusListener): () => void {
+    this.statusListeners.add(listener);
+    return () => this.statusListeners.delete(listener);
+  }
+
+  public subscribeRemoteUpdate(listener: RemoteUpdateListener): () => void {
+    this.updateListeners.add(listener);
+    return () => this.updateListeners.delete(listener);
+  }
+
+  private emitStatus(status: SyncStatus): void {
+    for (const listener of this.statusListeners) {
+      try {
+        listener(status);
+      } catch (_) {}
+    }
+  }
+
+  private emitRemoteUpdate(merged: TrainerState): void {
+    for (const listener of this.updateListeners) {
+      try {
+        listener(merged);
+      } catch (_) {}
+    }
+  }
+
+  public setPin(rawPin: string, immediateState?: TrainerState): void {
+    const clean = (rawPin || '').trim().toUpperCase().replace(/[^A-ZА-ЯЁ0-9_-]/g, '').slice(0, 32);
+    if (clean === this.pin && this.pin.length >= 2) return;
+    this.pin = clean;
+    this.lastKnownServerUpdatedAt = 0;
+    this.lastPushedCode = '';
+
+    if (this.pin.length >= 2) {
+      this.emitStatus({ state: 'syncing', message: `Подключение к профилю «${this.pin}»...` });
+      this.poll(true, immediateState);
+    } else {
+      this.emitStatus({ state: 'idle', message: 'Автосохранение активно локально' });
+    }
+  }
+
+  public getPin(): string {
+    return this.pin;
+  }
+
+  public notifyStateChanged(state: TrainerState, immediate = false): void {
+    const pin = (state.profilePin || this.pin || '').trim().toUpperCase();
+    if (pin.length < 2) return;
+    this.pin = pin;
+
+    if (this.pushTimer) {
+      clearTimeout(this.pushTimer);
+      this.pushTimer = null;
+    }
+
+    if (immediate) {
+      this.executePush(state);
+    } else {
+      this.pushTimer = setTimeout(() => {
+        this.executePush(state);
+      }, 500);
+    }
+  }
+
+  private async executePush(state: TrainerState): Promise<void> {
+    if (!this.pin || this.pin.length < 2) return;
+    const code = encodeBackupCode(state);
+    if (code === this.lastPushedCode) return;
+
+    this.isPushing = true;
+    this.emitStatus({ state: 'syncing', message: `Синхронизация профиля «${this.pin}»...` });
+
+    try {
+      const res = await pushStateToCloudPin(this.pin, state);
+      if (res.ok) {
+        this.lastPushedCode = code;
+        if (res.updatedAt) {
+          this.lastKnownServerUpdatedAt = res.updatedAt;
+        }
+        this.emitStatus({
+          state: 'synced',
+          lastSyncedAt: Date.now(),
+          message: `Профиль «${this.pin}» синхронизирован на лету`,
+        });
+      } else {
+        this.emitStatus({
+          state: 'error',
+          message: res.error || 'Локальное сохранение активно',
+        });
+      }
+    } catch {
+      this.emitStatus({
+        state: 'error',
+        message: 'Локальное сохранение активно',
+      });
+    } finally {
+      this.isPushing = false;
+    }
+  }
+
+  private flushPendingPush(): void {
+    if (!this.pin || this.pin.length < 2 || !this.currentStateGetter) return;
+    try {
+      const state = this.currentStateGetter();
+      const code = encodeBackupCode(state);
+      if (code === this.lastPushedCode) return;
+      const url = getSyncApiUrl(this.pin);
+      const body = JSON.stringify({ payload: { code, totalSolved: state.totalSolved } });
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        navigator.sendBeacon(url, body);
+      } else {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch (_) {}
+  }
+
+  public async poll(force = false, seedState?: TrainerState): Promise<void> {
+    if (!this.pin || this.pin.length < 2 || this.isPushing) return;
+    if (this.isPulling && !force) return;
+
+    this.isPulling = true;
+    try {
+      const res = await pullStateFromCloudPin(this.pin, {
+        since: this.lastKnownServerUpdatedAt > 0 ? this.lastKnownServerUpdatedAt : undefined,
+      });
+
+      if (res.found && res.state) {
+        const remoteState = res.state;
+        const current = this.currentStateGetter ? this.currentStateGetter() : seedState;
+        if (current) {
+          const merged = mergeTrainerStates(current, remoteState, { incomingIsNewer: true });
+          this.lastKnownServerUpdatedAt = res.updatedAt || Date.now();
+          this.lastPushedCode = encodeBackupCode(remoteState);
+          this.emitRemoteUpdate(merged);
+          persistStateMultiLayer(merged);
+          this.emitStatus({
+            state: 'synced',
+            lastSyncedAt: Date.now(),
+            message: `Синхронизировано на лету: ${this.pin}`,
+          });
+        }
+      } else if (!res.found && seedState) {
+        await this.executePush(seedState);
+      }
+    } catch (_) {
+      // Ignore background network errors
+    } finally {
+      this.isPulling = false;
+    }
+  }
+
+  private scheduleNextPoll(): void {
+    if (this.pollTimer) clearTimeout(this.pollTimer);
+    const isHidden = typeof document !== 'undefined' && document.hidden;
+    const interval = isHidden ? 10000 : 2500;
+
+    this.pollTimer = setTimeout(() => {
+      this.poll().finally(() => {
+        this.scheduleNextPoll();
+      });
+    }, interval);
+  }
+}
+
+export const cloudSyncManager = new CloudSyncManagerImpl();
