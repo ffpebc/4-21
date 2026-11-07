@@ -1399,7 +1399,7 @@ export default function App() {
 
       {/* Main Viewport Scroll Container */}
       <div id="app-scroll-container" className={`ios-viewport-scroll ${isScrollLocked ? 'ios-scroll-locked' : ''}`}>
-        <main className="max-w-[600px] md:max-w-[920px] lg:max-w-[1060px] mx-auto px-3.5 md:px-6 pt-0.5 relative overflow-x-hidden min-h-full flex flex-col w-full flex-grow flex-shrink-0">
+        <main className="max-w-[600px] md:max-w-[920px] lg:max-w-[1240px] xl:max-w-[1440px] 2xl:max-w-[1560px] desktop-container mx-auto px-3.5 md:px-6 pt-0.5 relative overflow-x-hidden min-h-full flex flex-col w-full flex-grow flex-shrink-0">
           <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
             {/* ======================================================================
                 TAB 1: WORKOUT BUILDER, ACTIVE WORKOUT & POST-SESSION SUMMARY
@@ -1497,8 +1497,8 @@ export default function App() {
                       </span>
                     </div>
 
-                    {/* Shuffle Order Switch (Вразброс / По порядку) */}
-                    <div className="ios-inset-group !mb-3">
+                    {/* Shuffle Order Switch (Вразброс / По порядку) - Mobile view */}
+                    <div className="ios-inset-group !mb-3 md:hidden">
                       <div
                         id="shuffle-toggle-row"
                         className="ios-cell cursor-pointer select-none"
@@ -1642,11 +1642,11 @@ export default function App() {
                                       {taskId}
                                     </div>
                                     <div className="flex-1 min-w-0 pr-1.5">
-                                      <div className="text-[13px] font-bold tracking-[-0.25px] leading-tight whitespace-nowrap truncate">
+                                      <div className="text-[13px] font-bold tracking-[-0.25px] leading-tight whitespace-nowrap truncate task-cell-title">
                                         {meta.title}
                                       </div>
                                       <div
-                                        className="text-[11px] leading-tight truncate mt-0.5"
+                                        className="text-[11px] leading-tight truncate mt-0.5 task-cell-sub"
                                         style={{ color: 'var(--ios-label-sec)' }}
                                       >
                                         {meta.subtitle}
@@ -1723,6 +1723,67 @@ export default function App() {
                                   </div>
                                 );
                               })}
+                            </div>
+                          )}
+
+                          {block.id === 'expressive' && (
+                            <div className="hidden md:block mt-2.5">
+                              <div className="ios-inset-group !mb-0 overflow-hidden">
+                                <div
+                                  id="shuffle-toggle-row-desktop"
+                                  className="ios-cell cursor-pointer select-none py-1.5"
+                                  onClick={() =>
+                                    setState((prev) => ({ ...prev, isShuffled: !prev.isShuffled }))
+                                  }
+                                  role="switch"
+                                  aria-checked={state.isShuffled}
+                                  aria-label="Вразброс: перемешать задания"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      setState((prev) => ({ ...prev, isShuffled: !prev.isShuffled }));
+                                    }
+                                  }}
+                                >
+                                  <div
+                                    className="ios-row-icon shrink-0 transition-colors duration-200"
+                                    style={{
+                                      background: state.isShuffled
+                                        ? 'linear-gradient(135deg, #0A84FF, #007AFF)'
+                                        : 'var(--ios-fill-tertiary)',
+                                      color: state.isShuffled ? '#FFFFFF' : 'var(--ios-label-sec)',
+                                    }}
+                                  >
+                                    <svg className="w-4 h-4 shrink-0">
+                                      <use href="#sf-shuffle" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1 min-w-0 pr-1.5">
+                                    <div className="text-[13px] font-bold tracking-[-0.2px] leading-tight text-[var(--ios-label)] task-cell-title">
+                                      Вразброс
+                                    </div>
+                                    <div
+                                      className="text-[10.5px] leading-tight truncate mt-0.5 task-cell-sub"
+                                      style={{ color: 'var(--ios-label-sec)' }}
+                                    >
+                                      {state.isShuffled ? 'Случайный порядок' : 'По порядку'}
+                                    </div>
+                                  </div>
+                                  <div
+                                    id="shuffle-switch-btn-desktop"
+                                    className={`ios-switch shrink-0 ${state.isShuffled ? 'is-active' : ''}`}
+                                    aria-hidden="true"
+                                  >
+                                    <div className="ios-switch-knob" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-2.5 p-2 rounded-2xl bg-[var(--ios-bg-secondary)] border border-[var(--ios-separator)] flex items-center justify-between text-[11px] font-semibold text-[var(--ios-label-sec)]">
+                                <span>В занятии: <strong className="text-[var(--ios-blue)]">{totalPlanned}</strong></span>
+                                <span>[ Enter ] старт</span>
+                              </div>
                             </div>
                           )}
                         </div>
