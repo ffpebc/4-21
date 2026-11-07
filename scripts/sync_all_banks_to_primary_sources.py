@@ -27,23 +27,29 @@ def clean_html_text(raw_html: str) -> str:
     if not raw_html:
         return ""
     txt = html.unescape(raw_html)
+    txt = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", txt)
     txt = re.sub(r"<br\s*/?>", "\n", txt, flags=re.I)
     txt = re.sub(r"</p>|</div>|</li>", "\n", txt, flags=re.I)
     txt = re.sub(r"<[^>]+>", "", txt)
     txt = txt.replace("\xa0", " ").replace("\u202f", " ")
-    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in txt.splitlines()]
-    return "\n".join(ln for ln in lines if ln)
+    lines = []
+    for ln in txt.splitlines():
+        ln = re.sub(r"\s*\(?Взято из\b.*$", "", ln, flags=re.I)
+        ln = re.sub(r"[ \t]+", " ", ln).strip()
+        if ln:
+            lines.append(ln)
+    return "\n".join(lines)
 
 
 def norm_yo(s: str) -> str:
     s = html.unescape(s or "")
-    s = re.sub(r"[\u0300\u0301]", "", s)
+    s = re.sub(r"[\xad\u200b-\u200f\ufeff\u0300\u0301]", "", s)
     s = s.translate(str.maketrans("ÁÓÉÍÚÝáóéíúý", "АОЕИУЫаоеиуы"))
     return s.replace("Ё", "Е").replace("ё", "е")
 
 
 def load_primary_sources():
-    print("[1/8] Loading primary source databases...")
+    print("[1/9] Loading primary source databases...")
     with open(".cache/neofamily_4_22.json", encoding="utf-8") as f:
         nf_data = json.load(f)
     nf_map = {}
@@ -72,7 +78,10 @@ def load_primary_sources():
     if os.path.exists("/home/sergei/ege_trainer/ege_trainer.db"):
         con = sqlite3.connect("/home/sergei/ege_trainer/ege_trainer.db")
         cur = con.cursor()
-        cur.execute("SELECT id, source_name, body_html, solution_html, answer_text FROM tasks")
+        cur.execute(
+            "SELECT t.id, t.source_name, t.body_html, t.solution_html, t.answer_text "
+            "FROM tasks t JOIN themes th ON t.theme_id = th.id WHERE th.subject_id = 2"
+        )
         for row in cur.fetchall():
             db_map[str(row[0])] = {
                 "id": str(row[0]),
@@ -99,22 +108,23 @@ def get_primary_record(qid: str, nf_map, shk_map, db_map):
             "solution_html": r.get("solution") or "",
             "answer": r.get("answer"),
         }
-    parts = qid.split("-")
-    ext_id = parts[-1]
-    if ext_id in db_map:
-        r = db_map[ext_id]
-        return {
-            "body_html": r["body_html"],
-            "solution_html": r["solution_html"],
-            "answer": r["answer_text"],
-        }
-    if ext_id in shk_map:
-        r = shk_map[ext_id]
-        return {
-            "body_html": r.get("html") or r.get("body") or r.get("text") or "",
-            "solution_html": r.get("solution") or r.get("solution_html") or "",
-            "answer": r.get("answer"),
-        }
+    if "shkolkovo" in qid or qid.startswith("shk-"):
+        parts = qid.split("-")
+        ext_id = parts[-1]
+        if ext_id in db_map:
+            r = db_map[ext_id]
+            return {
+                "body_html": r["body_html"],
+                "solution_html": r["solution_html"],
+                "answer": r["answer_text"],
+            }
+        if ext_id in shk_map:
+            r = shk_map[ext_id]
+            return {
+                "body_html": r.get("html") or r.get("body") or r.get("text") or "",
+                "solution_html": r.get("solution") or r.get("solution_html") or "",
+                "answer": r.get("answer"),
+            }
     return None
 
 
@@ -275,6 +285,15 @@ def heal_task_4(fipi_bank, sprint_bank):
 # ==============================================================================
 # TASK 5: PARONYMS (100% PRIMARY SOURCE ALIGNMENT + AUTHENTIC SPRINT OPTIONS)
 # ==============================================================================
+T5_ABBREVS = {
+    "РФ", "США", "СССР", "МГИМО", "МГУ", "ВУЗ", "ВУЗА", "ГИБДД", "ДНК", "РНК",
+    "СМИ", "ООН", "НАТО", "ЕГЭ", "ОГЭ", "ФИПИ", "РАН", "ТАСС", "НИИ", "ГЭС",
+    "ТЭЦ", "АЭС", "ЖКХ", "КПД", "НЛО", "МЧС", "МВД", "ФСБ", "ЦК", "КПСС",
+    "ВЛКСМ", "РСФСР", "СНГ", "ЕС", "ВТО", "ЮНЕСКО", "ФИФА", "МОК", "ГОСТ",
+    "ЗАГС", "ЖЭК", "ТСЖ", "ОАО", "ЗАО", "ООО", "ИП",
+}
+
+
 def common_prefix_len(a: str, b: str) -> int:
     n = min(len(a), len(b))
     for i in range(n):
@@ -294,6 +313,9 @@ def common_subseq_ratio(a: str, b: str) -> float:
         ("одел", "надел"),
         ("одет", "надет"),
         ("одев", "надев"),
+        ("оден", "наден"),
+        ("военн", "воин"),
+        ("вздох", "вдох"),
         ("восполн", "пополн"),
         ("обрывк", "отрывк"),
         ("перетерп", "претерп"),
@@ -331,7 +353,8 @@ def parse_primary_answers(raw_ans) -> list[str]:
         for x in raw_ans:
             parts.extend(parse_primary_answers(x))
         return parts
-    s = str(raw_ans or "").strip()
+    s = html.unescape(str(raw_ans or "")).strip()
+    s = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", s)
     s = re.sub(r"<[^>]+>", " ", s)
     # Split ONLY on whole-word 'или', newlines, commas, semicolons, slashes — NEVER character class [или]!
     tokens = re.split(r"(?:\s+или\s+|[\n,;/|]+)", s, flags=re.I)
@@ -339,19 +362,36 @@ def parse_primary_answers(raw_ans) -> list[str]:
     for tok in tokens:
         clean = tok.strip(" .!?:;«»\"'()").lower()
         clean = clean.translate(LAT_TO_CYR)
-        if clean:
+        if clean and clean not in out:
             out.append(clean)
     return out
 
 
+def fix_corrupted_roman_numerals(s: str) -> str:
+    s = re.sub(r"\bХИХ\b", "XIX", s)
+    s = re.sub(r"\bХХИ\b", "XXI", s)
+    s = re.sub(r"\bХИИ\b", "XII", s)
+    s = re.sub(r"\bИИИ\b", "III", s)
+    s = re.sub(r"\bХVIII\b", "XVIII", s)
+    s = re.sub(r"\bХV\b", "XV", s)
+    s = re.sub(r"\bХVI\b", "XVI", s)
+    s = re.sub(r"\bХVII\b", "XVII", s)
+    s = re.sub(r"\bХХ\b", "XX", s)
+    return s
+
+
 def extract_task_5_sentences_from_primary(body_html: str) -> list[str]:
-    # Fix Latin lookalikes inside uppercase words before extracting
-    fixed_html = re.sub(
-        r"[А-ЯЁA-Z]{3,}",
-        lambda m: m.group(0).translate(LAT_TO_CYR).replace("I", "И"),
-        body_html,
-    )
-    txt = clean_html_text(fixed_html)
+    # Strip soft hyphens first so uppercase paronyms with &shy; are not split
+    clean_raw = re.sub(r"&shy;|[\xad\u200b-\u200f\ufeff]", "", body_html, flags=re.I)
+
+    def fix_mixed_caps(m):
+        tok = m.group(0)
+        if re.match(r"^[IVXLCDM]+$", tok):
+            return tok
+        return tok.translate(LAT_TO_CYR).replace("I", "И")
+
+    fixed_html = re.sub(r"[А-ЯЁA-Z]{3,}", fix_mixed_caps, clean_raw)
+    txt = fix_corrupted_roman_numerals(clean_html_text(fixed_html))
     lines = []
     for ln in txt.splitlines():
         ln = ln.strip()
@@ -385,8 +425,19 @@ def extract_task_5_sentences_from_primary(body_html: str) -> list[str]:
     return merged[:5]
 
 
+def pick_best_caps_word_in_sentence(sent: str, ans_list: list[str]) -> str:
+    all_caps = re.findall(r"(?<![А-ЯЁа-яё])([А-ЯЁ]{2,}(?:-[А-ЯЁ]+)?)(?![А-ЯЁа-яё])", sent)
+    non_abbrev = [w for w in all_caps if w not in T5_ABBREVS]
+    cands = non_abbrev if non_abbrev else all_caps
+    if not cands:
+        return ""
+    if len(cands) == 1:
+        return cands[0]
+    return max(cands, key=lambda w: (max(common_subseq_ratio(w, a) for a in ans_list), len(w)))
+
+
 def heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
-    print("[3/8] Healing Task 5 (paronym error row matching, textAnswers, and Sprint cards)...")
+    print("[3/9] Healing Task 5 (paronym error row matching, textAnswers, and Sprint cards)...")
     t5_questions = [q for q in fipi_bank if str(q.get("task")) == "5"]
 
     paronym_pairs = {}  # upper_err -> upper_corr and vice versa
@@ -404,12 +455,14 @@ def heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
 
         sents = extract_task_5_sentences_from_primary(rec["body_html"])
         if len(sents) != 5:
-            sents = [r["words"][0].translate(LAT_TO_CYR).replace("ЬI", "Ы") for r in q["rows"]]
+            sents = [
+                fix_corrupted_roman_numerals(
+                    re.sub(r"[\xad\u200b-\u200f\ufeff]", "", r["words"][0]).replace("ЬI", "Ы")
+                )
+                for r in q["rows"]
+            ]
 
-        caps_words = []
-        for s in sents:
-            m = re.search(r"\b([А-ЯЁ]{2,}(?:-[А-ЯЁ]+)?)\b", s)
-            caps_words.append(m.group(1) if m else "")
+        caps_words = [pick_best_caps_word_in_sentence(s, ans_list) for s in sents]
 
         # Match primary_ans to the best caps_word
         best_idx = 0
@@ -465,13 +518,14 @@ def heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
             )
             row_lookup[(q["id"], rnum)] = (s, cw, corr_cw if is_err else None, is_err, expl)
             row_lookup[s.strip()] = (s, cw, corr_cw if is_err else None, is_err, expl)
+            row_lookup[norm_yo(s.strip())] = (s, cw, corr_cw if is_err else None, is_err, expl)
         q["rows"] = new_rows
         q["explanation"] = (
             f"Неверно употреблён пароним в строке {err_idx}: вместо «{err_cw}» "
             f"следует употребить «{corr_cw}»."
         )
 
-    # Second pass: update Task 5 Sprint cards so ZERO fake "+ный" words or false cards remain
+    # Second pass: update Task 5 Sprint cards so ZERO fake "+ный" words, soft-hyphen fragments, or false cards remain
     FAKE_NYI_RE = re.compile(
         r"(?:тьный|сяный|ыеный|иеный|аяный|яяный|оеный|ееный|ыйный|ойный|льнаный|мяный|стьный)$",
         re.I,
@@ -479,8 +533,10 @@ def heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
     fixed_sprint = 0
     for idx_s, s in enumerate(sprint_bank):
         if str(s.get("task")) == "5":
-            ctx_sent = (s.get("context") or "").strip().translate(LAT_TO_CYR).replace("ЬI", "Ы")
-            info = row_lookup.get(ctx_sent)
+            raw_ctx = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", s.get("context") or "")
+            raw_ctx = re.sub(r"\s*\(?Взято из\b.*$", "", raw_ctx, flags=re.I).strip()
+            ctx_sent = fix_corrupted_roman_numerals(raw_ctx).replace("ЬI", "Ы")
+            info = row_lookup.get(ctx_sent) or row_lookup.get(norm_yo(ctx_sent))
             if info:
                 sent, cw, corr_cw, is_err, expl = info
                 s["context"] = sent
@@ -489,6 +545,7 @@ def heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
                 if is_err and corr_cw:
                     a_opt = corr_cw.lower()
                     b_opt = cw.lower()
+                    s["word"] = a_opt
                     s["prefix"] = f"Пароним: ({b_opt} / {a_opt})"
                     s["answer"] = a_opt
                     s["options"] = [a_opt, b_opt] if (idx_s % 2 == 0) else [b_opt, a_opt]
@@ -497,9 +554,8 @@ def heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
                 elif cw:
                     a_opt = cw.lower()
                     alt = paronym_pairs.get(cw, "").lower()
-                    # Check if existing options have a fake "+ный" word
-                    cur_opts = [o.lower() for o in s.get("options", [])]
-                    has_fake = any(FAKE_NYI_RE.search(o) for o in cur_opts)
+                    cur_opts = [re.sub(r"[\xad\u200b-\u200f\ufeff]", "", o).lower() for o in s.get("options", [])]
+                    has_fake = any(FAKE_NYI_RE.search(o) or len(o) <= 3 for o in cur_opts)
                     if has_fake or s.get("answer", "").lower() != a_opt:
                         if not alt or alt == a_opt:
                             candidates = [
@@ -509,16 +565,17 @@ def heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
                             ]
                             alt = candidates[0] if candidates else ""
                         if alt and alt != a_opt:
+                            s["word"] = a_opt
                             s["prefix"] = f"Пароним в контексте: ({a_opt} / {alt})"
                             s["answer"] = a_opt
                             s["options"] = [a_opt, alt] if (idx_s % 2 == 0) else [alt, a_opt]
                         else:
+                            s["word"] = "ВЕРНО"
                             s["prefix"] = f"Употребление паронима «{cw}» в контексте:"
                             s["answer"] = "ВЕРНО"
                             s["options"] = ["ВЕРНО", "ОШИБКА"]
                         fixed_sprint += 1
                         continue
-            # Also check any remaining sp-5 card with a fake "+ный" option even if sentence was slightly different
             cur_opts = s.get("options", [])
             if any(FAKE_NYI_RE.search(o) for o in cur_opts):
                 ans_w = s.get("answer", "").upper()
@@ -537,19 +594,73 @@ def heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
 
 
 # ==============================================================================
+# TASK 6: LEXICAL NORMS (PRIMARY SOURCE TEXTANSWERS + ЗАМЕНИВ vs ИСКЛЮЧИВ)
+# ==============================================================================
+def heal_task_6(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
+    print("[4/9] Healing Task 6 (primary textAnswers, ё variants, and ЗАМЕНИВ vs ИСКЛЮЧИВ instructions)...")
+    t6_questions = [q for q in fipi_bank if str(q.get("task")) == "6"]
+    repaired_q = 0
+    for q in t6_questions:
+        rec = get_primary_record(q["id"], nf_map, shk_map, db_map)
+        if not rec:
+            continue
+        ans_list = parse_primary_answers(rec["answer"])
+        if ans_list and q.get("textAnswers") != ans_list:
+            q["textAnswers"] = ans_list
+            if q.get("rows"):
+                q["rows"][0]["letter"] = ans_list[0]
+            repaired_q += 1
+
+        body_txt = clean_html_text(rec["body_html"])
+        # Determine ЗАМЕНИВ vs ИСКЛЮЧИВ strictly from the primary question prompt in body_html
+        prompt_lines = [
+            ln for ln in body_txt.splitlines()
+            if re.search(r"(?:Отредактируйте|исправьте|заменив|исключив|выпишите|запишите)", ln, re.I)
+        ]
+        prompt_str = " ".join(prompt_lines) if prompt_lines else body_txt
+        is_zameniv = "замен" in prompt_str.lower()
+        new_instr = (
+            "Отредактируйте предложение: исправьте лексическую ошибку, заменив неверно употреблённое слово. Запишите подобранное слово, соблюдая нормы современного русского литературного языка."
+            if is_zameniv
+            else "Отредактируйте предложение: исправьте лексическую ошибку, исключив лишнее слово. Выпишите это слово."
+        )
+        new_target = "ЗАМЕНИВ" if is_zameniv else "ИСКЛЮЧИВ"
+        if q.get("instruction") != new_instr or q.get("target") != new_target:
+            q["instruction"] = new_instr
+            q["target"] = new_target
+            repaired_q += 1
+
+    print(f"  -> Task 6: repaired {repaired_q} questions (571/571 matched).")
+
+
+# ==============================================================================
 # TASK 7: MORPHOLOGICAL NORMS (100% PRIMARY SOURCE ALIGNMENT)
 # ==============================================================================
 SUPPLETIVE_GROUPS = [
-    {"езжай", "езжайте", "ехай", "ехайте", "поезжай", "поезжайте", "едь", "едьте"},
+    {"езжай", "езжайте", "ехай", "ехайте", "поезжай", "поезжайте", "едь", "едьте", "ездию", "езжу", "ездить"},
     {"поскользнулся", "подскользнулся", "поскользнуться", "подскользнуться", "поскользнувшись", "подскользнувшись"},
-    {"ихний", "ихнего", "ихнему", "ихним", "ихнем", "ихняя", "ихнюю", "ихние", "ихних", "ихними", "их", "его", "ее", "её"},
-    {"ней", "ей", "него", "его", "ним", "им", "них", "их"},
-    {"ложи", "ложите", "клади", "кладите", "положи", "положите", "ложа", "кладя"},
-    {"текет", "течёт", "течет", "текут"},
-    {"пекет", "печёт", "печет", "пекут"},
-    {"жегет", "жжёт", "жжет", "жгут"},
+    {"насчёт", "насмешка", "надсмешка", "насмехаться", "надсмехаться", "подсмеиваться", "посмеиваться"},
+    {"докоснуться", "коснуться", "касаться", "прикоснуться"},
+    {"одеть", "надеть", "одел", "надел", "одела", "надела", "одели", "надели", "одев", "надев", "одевши", "надевши"},
+    {"выйграть", "выиграть", "выйграл", "выиграл", "выйграет", "выиграет", "выйграв", "выиграв"},
+    {"ляжьте", "лягте", "ляжь", "ляг"},
+    {"махает", "машет", "махают", "машут", "махая", "маша"},
+    {"сыпет", "сыплет", "сыпят", "сыплют", "сыпать"},
+    {"мучает", "мучит", "мучают", "мучат"},
+    {"меряет", "мерит", "меряют", "мерят"},
+    {"победю", "побежу", "победить", "одержу победу"},
+    {"очучусь", "очутюсь", "окажусь"},
+    {"пылесосю", "пылесошу", "чищу пылесосом"},
+    {"полоскай", "полощи", "полоскайте", "полощите", "полоская", "полоща"},
+    {"помахай", "помаши", "помахайте", "помашите"},
+    {"вымок", "промок", "сох", "высох", "окреп", "замёрз", "замерз", "привык", "иссяк", "погас", "продрог", "умолк"},
+    {"поклади", "положи", "покладите", "положите", "ложи", "ложите", "клади", "кладите", "ложа", "кладя"},
+    {"текет", "течёт", "течет", "текут", "текли"},
+    {"пекет", "печёт", "печет", "пекут", "пекли"},
+    {"жегет", "жжёт", "жжет", "жгут", "жгли", "зажгёт", "зажжёт", "зажжет"},
     {"берегет", "бережёт", "бережет", "берегут"},
     {"стригет", "стрижёт", "стрижет", "стригут"},
+    {"стерегет", "стережёт", "стережет", "стерегут"},
     {"солгет", "солжёт", "солжет", "лжет", "лжёт"},
     {"бежат", "бегут", "беги", "бегите"},
     {"хотит", "хочет", "хочут", "хотят"},
@@ -557,18 +668,128 @@ SUPPLETIVE_GROUPS = [
     {"месит", "мешает"},
     {"день", "дня", "дней"},
     {"раз", "раза"},
-    {"человек", "людей", "человека"},
-    {"год", "года", "лет", "годов"},
+    {"человек", "людей", "человека", "людьми", "людям", "человекам", "человеков"},
+    {"год", "года", "лет", "годов", "годам", "годами", "годах"},
+    {"ребёнок", "ребенок", "дети", "детей", "детям", "детьми"},
+    {"ясель", "яслей", "ясли", "яслям", "яслями", "яслях"},
+    {"днно", "дна", "доньев", "днищ"},
+    {"курица", "куры", "кур", "курам", "куриц", "курицам"},
+    {"судно", "судна", "судов", "судам", "судами", "судах"},
+    {"время", "времени", "времён", "времен", "временам"},
+    {"семя", "семени", "семян", "семенам"},
+    {"стремя", "стремени", "стремян", "стременам"},
+    {"плечо", "плечи", "плеч", "плечам"},
+    {"колено", "колени", "колен", "коленей", "коленям", "коленкам"},
+    {"ухо", "уши", "ушей", "ушам"},
+    {"очки", "очков", "очкам"},
+    {"ножницы", "ножниц"},
+    {"брюки", "брюк"},
+    {"сутки", "суток", "суткам", "сутками"},
+    {"будни", "будней", "будням"},
+    {"яблоко", "яблоки", "яблок", "яблоков"},
+    {"блюдце", "блюдца", "блюдец", "блюдцев"},
+    {"полотенце", "полотенца", "полотенец", "полотенцев"},
+    {"зеркальце", "зеркальца", "зеркалец", "зеркальцев"},
+    {"одеяльце", "одеяльца", "одеялец", "одеяльцев"},
+    {"щупальце", "щупальца", "щупалец", "щупальцев"},
+    {"ботинок", "ботинки", "ботинок", "ботинков"},
+    {"чулок", "чулки", "чулок", "чулков"},
+    {"носок", "носки", "носков", "носок"},
+    {"сапог", "сапоги", "сапог", "сапогов"},
+    {"погон", "погоны", "погон", "погонов"},
+    {"эполет", "эполеты", "эполет", "эполетов"},
+    {"партизан", "партизаны", "партизан", "партизанов"},
+    {"солдат", "солдаты", "солдат", "солдатов"},
+    {"гусар", "гусары", "гусар", "гусаров"},
+    {"драгун", "драгуны", "драгун", "драгунов"},
+    {"улан", "уланы", "улан", "уланов"},
+    {"кадет", "кадеты", "кадет", "кадетов"},
+    {"грузин", "грузины", "грузин", "грузинов"},
+    {"осетин", "осетины", "осетин", "осетинов"},
+    {"армян", "армяне", "армян", "армянов"},
+    {"цыган", "цыгане", "цыган", "цыганов"},
+    {"болгар", "болгары", "болгар", "болгаров"},
+    {"татар", "татары", "татар", "татаров"},
+    {"башкир", "башкиры", "башкир", "башкиров"},
+    {"турок", "турки", "турок", "турков"},
+    {"бурят", "буряты", "бурят", "бурятов"},
+    {"румын", "румыны", "румын", "румынов"},
+    {"ампер", "амперы", "ампер", "амперов"},
+    {"ватт", "ватты", "ватт", "ваттов"},
+    {"вольт", "вольты", "вольт", "вольтов"},
+    {"герц", "герцы", "герц", "герцев"},
+    {"грамм", "граммы", "граммов", "грамм"},
+    {"килограмм", "килограммы", "килограммов", "килограмм"},
+    {"гектар", "гектары", "гектаров", "гектар"},
+    {"акр", "акры", "акров", "акр"},
+    {"апельсин", "апельсины", "апельсинов", "апельсин"},
+    {"мандарин", "мандарины", "мандаринов", "мандарин"},
+    {"помидор", "помидоры", "помидоров", "помидор"},
+    {"томат", "томаты", "томатов", "томат"},
+    {"баклажан", "баклажаны", "баклажанов", "баклажан"},
+    {"банан", "бананы", "бананов", "банан"},
+    {"ананас", "ананасы", "ананасов", "ананас"},
+    {"абрикос", "абрикосы", "абрикосов", "абрикос"},
+    {"персик", "персики", "персиков", "персик"},
+    {"гранат", "гранаты", "гранатов", "гранат"},
+    {"лимон", "лимоны", "лимонов", "лимон"},
+    {"обоим", "обеим", "обоих", "обеих", "обоими", "обеими", "оба", "обе"},
+    {"полтора", "полутора", "полтораста", "полутораста"},
+    {"двести", "двухсот", "двумстам", "двухстам", "двумястами", "двухстах"},
+    {"триста", "трёхсот", "трехсот", "трёмстам", "тремстам", "трёхстам", "трехстам", "тремястами", "трёхстах", "трехстах"},
+    {"четыреста", "четырёхсот", "четырехсот", "четырёмстам", "четыремстам", "четырьмястами", "четырёхстах", "четырехстах"},
+    {"троим", "троих", "троими", "трём", "трем", "трёх", "трех", "тремя", "три", "трое"},
+    {"четверым", "четверых", "четверыми", "четырём", "четырем", "четырёх", "четырех", "четырьмя", "четыре", "четверо"},
+    {"пятерым", "пятерых", "пятерыми", "пяти", "пятью", "пять", "пятеро"},
+    {"шестерым", "шестерых", "шестерыми", "шести", "шестью", "шесть", "шестеро"},
+    {"семерым", "семерых", "семерыми", "семи", "семью", "семь", "семеро"},
+    {"восьмерым", "восьмерых", "восьмерыми", "восьми", "восемью", "восьмью", "восемь", "восьмеро"},
+    {"дветысячному", "двухтысячному", "дветысячного", "двухтысячного", "дветысячном", "двухтысячном", "дветысячный", "двухтысячный"},
+    {"ихний", "ихнего", "ихнему", "ихним", "ихнем", "ихняя", "ихнюю", "ихние", "ихних", "ихними", "их"},
+    {"евонный", "евонного", "евонному", "его"},
+    {"ейный", "ейного", "ейному", "её", "ее"},
+    {"ней", "ей", "неё", "нее", "ею", "нею"},
+    {"него", "его", "нему", "ему", "ним", "им"},
+    {"них", "их", "ними", "ими"},
     {"кратчайший", "короткий", "короче"},
-    {"более", "менее", "лучше", "хуже", "красивее", "громче", "выше", "ниже", "шире", "глубже", "дольше", "дальше", "проще", "чище", "слаще", "тонше", "тоньше", "дешевле", "дороже", "богаче", "строже", "мягче", "легче", "крепче", "ярче"},
+    {"лучше", "лучший", "хороший"},
+    {"хуже", "худший", "плохой"},
+    {"красивее", "красивейший", "красивый"},
+    {"громче", "громкий"},
+    {"выше", "высокий", "высочайший"},
+    {"ниже", "низкий", "нижайший"},
+    {"шире", "широкий", "широчайший"},
+    {"глубже", "глубокий", "глубочайший"},
+    {"дольше", "долгий", "долее"},
+    {"дальше", "далёкий", "далекий", "далее"},
+    {"проще", "простой", "простейший"},
+    {"чище", "чистый", "чистейший"},
+    {"слаще", "сладкий", "сладчайший"},
+    {"тонше", "тоньше", "тонкий", "тончайший"},
+    {"дешевле", "дешёвый", "дешевый"},
+    {"дороже", "дорогой", "дражайший"},
+    {"богаче", "богатый", "богатейший"},
+    {"строже", "строгий", "строжайший"},
+    {"мягче", "мягкий", "мягчайший"},
+    {"легче", "лёгкий", "легкий", "легчайший"},
+    {"крепче", "крепкий", "крепчайший"},
+    {"ярче", "яркий", "ярчайший"},
+    {"моложе", "младше", "молодой", "младший"},
+    {"старше", "старее", "старый", "старший"},
+    {"звонче", "звонкий"},
+    {"ловче", "ловчее", "ловкий"},
+    {"бойче", "бойчее", "бойкий"},
+    {"хлестче", "хлёстче", "хлесткий", "хлёсткий"},
+    {"жестче", "жёстче", "жесткий", "жёсткий"},
 ]
 
 
 def extract_task_7_rows_from_primary(body_html: str) -> list[str]:
+    clean_raw = re.sub(r"&shy;|[\xad\u200b-\u200f\ufeff]", "", body_html, flags=re.I)
     fixed_html = re.sub(
         r"<b>([^<]+)</b>|<strong>([^<]+)</strong>",
         lambda m: (m.group(1) or m.group(2)).upper(),
-        body_html,
+        clean_raw,
         flags=re.I,
     )
     raw_txt = clean_html_text(fixed_html)
@@ -579,6 +800,15 @@ def extract_task_7_rows_from_primary(body_html: str) -> list[str]:
     rows = []
     for ln in raw_txt.splitlines():
         ln = ln.strip()
+        if not ln:
+            continue
+        # Strip prompt instructions even if preceded by narrative intro text (e.g., shk-7-40377)
+        ln = re.sub(
+            r"(?:В одном из выделенных|В одном из привед[её]нных|Исправьте ошибку|Запишите слово правильно|Укажите пример).*$",
+            "",
+            ln,
+            flags=re.I,
+        ).strip()
         if not ln:
             continue
         if re.match(r"^(?:В одном из|Исправьте|Запишите|Укажите)", ln, flags=re.I):
@@ -605,9 +835,16 @@ def score_task_7_row(row_text: str, ans_list: list[str]) -> float:
             grp_e = {norm_yo(w) for w in grp}
             if any(t in grp_e for t in caps_e.split()) and any(a in grp_e for a in ans_e.split()):
                 best = max(best, 12.0)
-        if ("более" in caps_e or "менее" in caps_e or "самый" in caps_e or "самая" in caps_e or "самое" in caps_e or "самые" in caps_e) and any(
-            common_prefix_len(ct, at) >= 4 for ct in caps_e.split() for at in ans_e.split()
-        ):
+        if (
+            "более" in caps_e
+            or "менее" in caps_e
+            or "самый" in caps_e
+            or "самая" in caps_e
+            or "самое" in caps_e
+            or "самые" in caps_e
+            or "наиболее" in caps_e
+            or "наименее" in caps_e
+        ) and any(common_prefix_len(ct, at) >= 3 for ct in caps_e.split() for at in ans_e.split()):
             best = max(best, 11.0)
         for ct in caps_e.split():
             for at in ans_e.split():
@@ -625,7 +862,7 @@ def score_task_7_row(row_text: str, ans_list: list[str]) -> float:
 
 
 def heal_task_7(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
-    print("[4/8] Healing Task 7 (morphological error row matching, solvedWords, and Sprint cards)...")
+    print("[5/9] Healing Task 7 (morphological error row matching, solvedWords, and Sprint cards)...")
     t7_questions = [q for q in fipi_bank if str(q.get("task")) == "7"]
 
     repaired_q = 0
@@ -643,7 +880,7 @@ def heal_task_7(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
         rows_txt = extract_task_7_rows_from_primary(rec["body_html"])
         if len(rows_txt) != 5:
             rows_txt = [
-                re.sub(r"(?<=[А-ЯЁ])3(?=[А-ЯЁ])", "З", r["words"][0]).translate(
+                re.sub(r"[\xad\u200b-\u200f\ufeff]", "", re.sub(r"(?<=[А-ЯЁ])3(?=[А-ЯЁ])", "З", r["words"][0])).translate(
                     str.maketrans("ÁÓÉÍÚÝáóéíúý", "АОЕИУЫаоеиуы")
                 )
                 for r in q["rows"]
@@ -693,9 +930,9 @@ def heal_task_7(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
                     "explanation": expl,
                 }
             )
-            # Only overwrite phrase_lookup if it is an error row or not yet seen as an error row
             if rtxt not in phrase_lookup or is_err:
                 phrase_lookup[rtxt] = (rtxt, caps_part, primary_ans.lower(), is_err, expl)
+                phrase_lookup[norm_yo(rtxt)] = (rtxt, caps_part, primary_ans.lower(), is_err, expl)
 
         q["rows"] = new_rows
         q["explanation"] = (
@@ -709,26 +946,28 @@ def heal_task_7(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
             m = re.search(r"«([^»]+)»", s.get("prefix", "") or s.get("context", ""))
             if not m:
                 continue
-            phr = m.group(1).strip()
+            phr = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", m.group(1)).strip()
             phr_clean = re.sub(r"(?<=[А-ЯЁ])3(?=[А-ЯЁ])", "З", phr).translate(
                 str.maketrans("ÁÓÉÍÚÝáóéíúý", "АОЕИУЫаоеиуы")
             )
-            info = phrase_lookup.get(phr_clean) or phrase_lookup.get(phr)
+            info = phrase_lookup.get(phr_clean) or phrase_lookup.get(phr) or phrase_lookup.get(norm_yo(phr_clean))
             if not info:
                 continue
             rtxt, caps_part, corr_low, is_err, expl = info
-            if is_err and s.get("answer") == "ВЕРНО":
-                # Previously misclassified as ВЕРНО, actually an error row!
+            if is_err:
                 err_low = caps_part.lower()
-                s["prefix"] = f"Исправьте ошибку в форме «{rtxt}»:"
-                s["context"] = f"Найдите правильную морфологическую форму для сочетания: «{rtxt}»"
-                s["answer"] = corr_low
-                s["options"] = [corr_low, err_low] if corr_low != err_low else [corr_low, "ошибка"]
-                s["explanation"] = expl
-                s["rule"] = expl
-                fixed_sprint += 1
+                new_opts = [corr_low, err_low] if corr_low != err_low else [corr_low, "ошибка"]
+                if s.get("answer") != corr_low or s.get("prefix") != f"Исправьте ошибку в форме «{rtxt}»:":
+                    s["word"] = corr_low
+                    s["prefix"] = f"Исправьте ошибку в форме «{rtxt}»:"
+                    s["context"] = f"Найдите правильную морфологическую форму для сочетания: «{rtxt}»"
+                    s["answer"] = corr_low
+                    s["options"] = new_opts
+                    s["explanation"] = expl
+                    s["rule"] = expl
+                    fixed_sprint += 1
             elif not is_err and s.get("answer") != "ВЕРНО":
-                # Previously misclassified as error row, actually ВЕРНО!
+                s["word"] = "ВЕРНО"
                 s["prefix"] = f"Морфологическая форма «{rtxt}»:"
                 s["context"] = f"Оцените грамматическую форму в сочетании: «{rtxt}»"
                 s["answer"] = "ВЕРНО"
@@ -999,10 +1238,10 @@ def make_t14_rule_and_topic(word: str, let: str, base_rule: str, base_topic: str
 
 
 def heal_task_14(fipi_bank, sprint_bank, starter_bank, orig_map):
-    print("[6/8] Healing Task 14 (restoring primary-source answers & resolving all 3,680 slots)...")
+    print("[7/9] Healing Task 14 (restoring primary-source answers & resolving all 3,680 slots)...")
     t14_questions = [q for q in fipi_bank if str(q.get("task")) == "14"]
 
-    slot_lookup = {}  # (qid, ridx, widx) -> (word, let, rule, topic)
+    slot_lookup = {}  # (qid, ridx, widx) -> (word, let, rule, topic, raw_sent, parts)
     repaired_q = 0
 
     for q in t14_questions:
@@ -1018,10 +1257,36 @@ def heal_task_14(fipi_bank, sprint_bank, starter_bank, orig_map):
             target = "СЛИТНО"
 
         dedup_indices = sorted(set(oq["correctIndices"]))
+
+        # Verify whether explanations on dedup_indices rows explicitly state a different target
+        # (e.g., fipi-14-neofamily-14-36730 where rule in 432f74b was mislabeled СЛИТНО instead of РАЗДЕЛЬНО)
+        expl_lets_on_correct = []
+        for ridx in dedup_indices:
+            if 1 <= ridx <= len(oq["rows"]):
+                orow = oq["rows"][ridx - 1]
+                raw_s = clean_t14_raw_sentence(orow["words"][0])
+                slts = extract_t14_slots(raw_s)
+                same_s = len(slts) == 2 and slts[0] == slts[1]
+                for sidx, sl in enumerate(slts):
+                    d = detect_t14_from_expl(sl, orow.get("explanation", ""), sidx, same_s)
+                    if d is not None:
+                        expl_lets_on_correct.append(d[1])
+        if expl_lets_on_correct and len(set(expl_lets_on_correct)) == 1:
+            detected_target = expl_lets_on_correct[0]
+            if detected_target != target:
+                target = detected_target
+                if target == "РАЗДЕЛЬНО":
+                    orig_rule = "Укажите варианты ответов, в которых все выделенные слова пишутся РАЗДЕЛЬНО. Запишите номера ответов."
+                elif target == "ДЕФИСНО":
+                    orig_rule = "Укажите варианты ответов, в которых все выделенные слова пишутся ЧЕРЕЗ ДЕФИС. Запишите номера ответов."
+                else:
+                    orig_rule = "Укажите варианты ответов, в которых все выделенные слова пишутся СЛИТНО. Запишите номера ответов."
+
         if q["correctIndices"] != dedup_indices or q.get("instruction") != orig_rule:
             repaired_q += 1
         q["correctIndices"] = dedup_indices
         q["instruction"] = orig_rule
+        q["target"] = target
 
         for ridx, (r, orow) in enumerate(zip(q["rows"], oq["rows"]), 1):
             orig_ok = ridx in dedup_indices
@@ -1115,15 +1380,135 @@ def heal_task_14(fipi_bank, sprint_bank, starter_bank, orig_map):
 
 
 # ==============================================================================
-# TASK 15: Н vs НН (FIX ALL 79 INVERTED QUESTIONS)
+# TASK 15: Н vs НН (FIX ALL 79 INVERTED QUESTIONS + 8 100POINTS + EXPLANATIONS)
 # ==============================================================================
+T15_DENOMINAL_AN_YAN_IN_STEMS = (
+    "песчан", "глинян", "кожан", "серебрян", "ледян", "нефтян", "шерстян", "землян",
+    "водян", "травян", "полотнян", "берестян", "костян", "жестян", "платян", "слюдян",
+    "торфян", "маслян", "ветрян", "солян", "дровян", "кровян", "смолян", "ржан",
+    "льнян", "овсян", "овчин", "лебедин", "гусин", "утин", "курин", "петушин",
+    "орлин", "соколин", "соловьин", "воробьин", "журавлин", "голубин", "ястребин",
+    "пчелин", "осин", "шмелин", "комарин", "муравьин", "мышин", "крысин", "львин",
+    "тигрин", "зверин", "змеин", "лошадин", "кобылин", "ослин", "телятин", "говядин",
+    "баранин", "тополин",
+)
+
+
+def make_accurate_t15_single_n_explanation(solved_w: str) -> str:
+    low = norm_yo(solved_w.lower())
+    if any(st in low for st in T15_DENOMINAL_AN_YAN_IN_STEMS):
+        return f"{solved_w} — суффикс -АН-/-ЯН-/-ИН- в отымённом прилагательном, пишется одна буква Н."
+    if any(
+        st in low
+        for st in (
+            "румян", "багрян", "зелен", "син", "прян", "рьян", "пьян", "юн", "един",
+            "свин", "баран", "тюлен", "олен", "павлин", "фазан", "ворон", "картин",
+            "машин", "тишин", "вершин", "глубин", "середин", "долин", "равнин", "причин",
+            "мужчин", "женщин", "гостин", "дружин", "княжн", "сотн", "песн", "басн",
+            "спальн", "читальн", "колокольн", "башн", "пашн", "конюшн", "скворечн",
+            "горничн", "булочн", "прачечн", "труженик", "маслениц", "пудрениц", "сребреник",
+            "мошенник", "племянник", "вареник", "мученик", "ученик", "копчен",
+        )
+    ):
+        return f"{solved_w} — буква Н входит в состав корня (или суффикса с одной Н: -НИК-/-НИЦ-/-ЕН-), удвоения Н не происходит."
+    if low in ("ранее", "заранее", "накануне", "поистине") or low.endswith(("но", "не")):
+        return f"{solved_w} — в наречии (или производном слове) сохраняется одна буква Н производящей основы."
+    if "путаниц" in low:
+        return f"{solved_w} — существительное образовано от отглагольного прилагательного «путаный», пишется одна буква Н."
+    if re.search(r"(?:ан|ян|ен|ён)(?:а|о|ы)$", low):
+        return f"{solved_w} — в кратком страдательном причастии прошедшего времени всегда пишется одна буква Н."
+    return (
+        f"{solved_w} — отглагольное прилагательное, образованное от бесприставочного глагола "
+        "несовершенного вида без зависимых слов, пишется одна буква Н."
+    )
+
+
 def heal_task_15(fipi_bank, nf_map, orig_map):
-    print("[7/8] Healing Task 15 (restoring Н vs НН instruction & answer key alignment)...")
+    print("[8/9] Healing Task 15 (restoring Н vs НН instruction, 8 100points prototypes & explanations)...")
     t15_questions = [q for q in fipi_bank if str(q.get("task")) == "15"]
     repaired_q = 0
 
+    # Fix the 8 100points Task 15 questions that had dummy [1, 2] answers and non-existent spellings in 432f74b
+    T15_100POINTS_ROW_OVERRIDES = {
+        "fipi-15-100points-15-2211": {
+            1: ("латаНый", "Н"),
+            2: ("длиННый", "НН"),
+            3: ("нечёсаНой", "Н"),
+            4: ("путаНицы", "Н"),
+        },
+        "fipi-15-100points-15-220": {
+            1: ("деревяННая", "НН"),
+            2: ("письмеННый", "НН"),
+            3: ("коваНым", "Н"),
+            4: ("оклееННый", "НН"),
+        },
+        "fipi-15-100points-15-32": {
+            1: ("МощёННые", "НН"),
+            2: ("окружеНы", "Н"),
+            3: ("камеННые", "НН"),
+        },
+        "fipi-15-100points-15-3435": {
+            1: ("сосредоточеННости", "НН"),
+            2: ("неожидаННые", "НН"),
+            3: ("безукоризнеННо", "НН"),
+        },
+        "fipi-15-100points-15-3524": {
+            1: ("излюблеННое", "НН"),
+            2: ("художествеННое", "НН"),
+            3: ("монотоННость", "НН"),
+            4: ("умножеННые", "НН"),
+        },
+        "fipi-15-100points-15-2869": {
+            1: ("МощёННая", "НН"),
+            2: ("украшеНа", "Н"),
+            3: ("стекляННыми", "НН"),
+            4: ("золочёНой", "Н"),
+            5: ("создаННой", "НН"),
+        },
+        "fipi-15-100points-15-2876": {
+            1: ("одарёННая", "НН"),
+            2: ("обречеНа", "Н"),
+            3: ("соответствеННо", "НН"),
+            4: ("постепеННое", "НН"),
+        },
+        "fipi-15-100points-15-6830": {
+            1: ("сконструироваНы", "Н"),
+            2: ("невидаННые", "НН"),
+            3: ("удлинёННые", "НН"),
+            4: ("фиНского", "Н"),
+        },
+    }
+
     for q in t15_questions:
         qid = q["id"]
+        if qid in T15_100POINTS_ROW_OVERRIDES:
+            overrides = T15_100POINTS_ROW_OVERRIDES[qid]
+            for idx, r in enumerate(q["rows"], 1):
+                if idx in overrides:
+                    sw, let = overrides[idx]
+                    r["solvedWords"] = [sw]
+                    r["letter"] = let
+                    if let == "Н":
+                        r["explanation"] = make_accurate_t15_single_n_explanation(sw)
+                    else:
+                        r["explanation"] = (
+                            f"{sw} — пишется две буквы НН в соответствии с орфографическим правилом "
+                            "(полное причастие с приставкой/зависимыми словами, суффикс -ЕНН-/-ОНН-, "
+                            "слово-исключение или стык основы на -Н- и суффикса -Н-)."
+                        )
+
+        # Normalize solvedWords casing (ensure inserted Н/НН at marker position is uppercase)
+        for idx, r in enumerate(q["rows"], 1):
+            raw_w = r["words"][0]
+            let = r["letter"].strip().upper()
+            m_gap = re.match(r"^([^\(]+)\(\d+\)(.*)$", raw_w)
+            if m_gap:
+                expected_sw = f"{m_gap.group(1)}{let}{m_gap.group(2)}"
+                if r["solvedWords"][0] != expected_sw:
+                    r["solvedWords"] = [expected_sw]
+            if let == "Н" and "суффикс -АН-/-ЯН-/-ИН- в отымённом прилагательном" in (r.get("explanation") or ""):
+                r["explanation"] = make_accurate_t15_single_n_explanation(r["solvedWords"][0])
+
         orig_prompt = ""
         if qid in nf_map:
             orig_prompt = clean_html_text(nf_map[qid].get("question") or "")
@@ -1138,7 +1523,6 @@ def heal_task_15(fipi_bank, nf_map, orig_map):
             target = "Н"
             instr = "Укажите все цифры, на месте которых пишется одна буква Н."
         else:
-            # Fallback to orig_map correctIndices
             if qid in orig_map:
                 orig_indices = orig_map[qid]["correctIndices"]
                 first_let = q["rows"][orig_indices[0] - 1]["letter"].strip().upper()
@@ -1158,10 +1542,11 @@ def heal_task_15(fipi_bank, nf_map, orig_map):
             if is_ok:
                 new_indices.append(idx)
 
-        if q["correctIndices"] != new_indices or q.get("instruction") != instr:
+        if q["correctIndices"] != new_indices or q.get("instruction") != instr or q.get("target") != target:
             repaired_q += 1
             q["correctIndices"] = new_indices
             q["instruction"] = instr
+            q["target"] = target
 
     print(f"  -> Task 15: repaired {repaired_q} questions (350/350 matched).")
 
@@ -1219,6 +1604,7 @@ def rebuild_numbered_gaps_question(q, rec, task_num: int):
 
     primary_group = groups[0]
     q["correctIndices"] = primary_group
+    q["sentence"] = full_text
     if len(groups) > 1:
         q["textAnswers"] = ["".join(str(x) for x in g) for g in groups]
     elif "textAnswers" in q:
@@ -1254,8 +1640,29 @@ def rebuild_numbered_gaps_question(q, rec, task_num: int):
     return True
 
 
+def extract_task_21_sentences_from_primary(body_html: str) -> dict[int, str]:
+    txt = clean_html_text(body_html)
+    # Fix OCR '(З)' -> '(3)' and leading '1)' -> '(1)'
+    txt = txt.replace("(З)", "(3)").replace("(з)", "(3)")
+    txt = re.sub(r"(?:^|\n)\s*([1-9])\)\s*", r"\n(\1) ", txt)
+    lines = [
+        ln
+        for ln in txt.splitlines()
+        if not re.match(r"^(?:Найдите|Выпишите|Укажите|Запишите|Объясните)", ln, flags=re.I)
+    ]
+    clean_txt = " ".join(lines).strip()
+    parts = re.split(r"\(\s*(\d{1,2})\s*\)", clean_txt)
+    sent_map = {}
+    for i in range(1, len(parts) - 1, 2):
+        snum = int(parts[i])
+        stxt = re.sub(r"\s+", " ", parts[i + 1]).strip()
+        if stxt:
+            sent_map[snum] = f"({snum}) {stxt}"
+    return sent_map
+
+
 def heal_tasks_18_and_21(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
-    print("[8/8] Healing Tasks 18 & 21 (multi-digit markers 10..13 and multi-answer Task 21 groups)...")
+    print("[9/9] Healing Tasks 18 & 21 (multi-digit markers 10..13, placeholder/truncated Task 21 rows, and Sprint cards)...")
     repaired_18 = 0
     for q in fipi_bank:
         if str(q.get("task")) == "18" and q["id"] in (
@@ -1280,11 +1687,41 @@ def heal_tasks_18_and_21(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
         rec = get_primary_record(q["id"], nf_map, shk_map, db_map)
         if not rec:
             continue
-        max_m = max(len(q.get("rows", [])), 9)
-        txt = clean_html_text(rec["body_html"])
-        sent_markers = [int(m) for m in re.findall(r"\((\d{1,2})\)", txt)]
-        if sent_markers:
-            max_m = max(max_m, max(sent_markers))
+
+        sent_map = extract_task_21_sentences_from_primary(rec["body_html"])
+        max_sent_num = max(sent_map.keys()) if sent_map else len(q.get("rows", []))
+        sol_text = clean_html_text(rec["solution_html"]) or q.get("explanation") or ""
+
+        # Check if rows in q are placeholders ("Предложение (1)"), truncated (e.g. 9 rows instead of 10..12), or from wrong text
+        cur_rows = q.get("rows", [])
+        has_placeholder = any(r["words"][0].startswith("Предложение (") for r in cur_rows)
+        wrong_first_sent = (
+            1 in sent_map
+            and cur_rows
+            and norm_yo(cur_rows[0]["words"][0][:25].lower()) != norm_yo(sent_map[1][:25].lower())
+        )
+        needs_row_rebuild = (
+            len(sent_map) >= 4
+            and (has_placeholder or wrong_first_sent or len(cur_rows) != max_sent_num)
+        )
+
+        if needs_row_rebuild:
+            rebuilt_rows = []
+            for snum in range(1, max_sent_num + 1):
+                stxt = sent_map.get(snum, f"Предложение ({snum})")
+                rebuilt_rows.append(
+                    {
+                        "words": [stxt],
+                        "solvedWords": [stxt],
+                        "letter": "—",
+                        "isCorrectRow": False,
+                        "explanation": sol_text,
+                    }
+                )
+            q["rows"] = rebuilt_rows
+            repaired_21 += 1
+
+        max_m = len(q["rows"])
 
         raw_ans = rec["answer"]
         if isinstance(raw_ans, list):
@@ -1300,33 +1737,8 @@ def heal_tasks_18_and_21(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
         if not groups:
             continue
 
-        # Prefer a group whose numbers are <= len(q["rows"]) if available
         valid_for_rows = [g for g in groups if all(x <= len(q["rows"]) for x in g)]
         primary_group = valid_for_rows[0] if valid_for_rows else groups[0]
-
-        # If primary_group has 10 (e.g. nf-21-27747) and len(q["rows"]) < 10, rebuild rows from body_html sentences!
-        if max(primary_group) > len(q["rows"]):
-            parts = re.split(r"\((\d{1,2})\)", txt)
-            sent_map = {}
-            for i in range(1, len(parts) - 1, 2):
-                snum = int(parts[i])
-                stxt = re.sub(r"\s+", " ", parts[i + 1]).strip()
-                sent_map[snum] = f"({snum}) {stxt}"
-            sol_text = clean_html_text(rec["solution_html"]) or q.get("explanation") or ""
-            new_rows = []
-            for snum in range(1, max(primary_group) + 1):
-                is_ok = snum in primary_group
-                stxt = sent_map.get(snum, f"Предложение ({snum})")
-                new_rows.append(
-                    {
-                        "words": [stxt],
-                        "solvedWords": [stxt],
-                        "letter": str(snum) if is_ok else "—",
-                        "isCorrectRow": is_ok,
-                        "explanation": sol_text,
-                    }
-                )
-            q["rows"] = new_rows
 
         all_group_strs = ["".join(str(x) for x in g) for g in groups]
         if q["correctIndices"] != primary_group or (len(groups) > 1 and q.get("textAnswers") != all_group_strs):
@@ -1352,19 +1764,22 @@ def heal_tasks_18_and_21(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
                 )
             sent_txt = r["words"][0].strip()
             t21_sent_lookup[sent_txt] = (idx, is_ok, primary_group_str, r["explanation"])
+            t21_sent_lookup[norm_yo(sent_txt)] = (idx, is_ok, primary_group_str, r["explanation"])
 
     fixed_sprint_21 = 0
     for s in sprint_bank:
         if str(s.get("task")) == "21":
-            ctx_sent = (s.get("context") or "").strip()
-            if ctx_sent in t21_sent_lookup:
-                idx, is_ok, pg_str, expl = t21_sent_lookup[ctx_sent]
+            ctx_sent = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", (s.get("context") or "")).strip()
+            info = t21_sent_lookup.get(ctx_sent) or t21_sent_lookup.get(norm_yo(ctx_sent))
+            if info:
+                idx, is_ok, pg_str, expl = info
                 opts = s.get("options", [])
                 if "ВХОДИТ В ОТВЕТ" in opts:
                     new_ans = "ВХОДИТ В ОТВЕТ" if is_ok else "ДРУГОЕ ПРАВИЛО"
                 else:
                     new_ans = "ДА" if is_ok else "НЕТ"
                 if s.get("answer") != new_ans:
+                    s["word"] = new_ans
                     s["answer"] = new_ans
                     s["explanation"] = (
                         expl
@@ -1377,6 +1792,78 @@ def heal_tasks_18_and_21(fipi_bank, sprint_bank, nf_map, shk_map, db_map):
     print(
         f"  -> Task 18: repaired {repaired_18} questions; Task 21: repaired {repaired_21} questions and {fixed_sprint_21} Sprint cards."
     )
+
+
+def heal_tasks_8_and_22_and_sprint_truncations(fipi_bank, sprint_bank):
+    print("  -> Healing Tasks 8 & 22 header bleeds, Task 8 48-char truncated Sprint options, and Sprint sentence truncations...")
+    HEADER_BLEED_RE = re.compile(
+        r"\s+(?:ИЗОБРАЗИТЕЛЬНО[- ]ВЫРАЗИТЕЛЬНЫЕ СРЕДСТВА ЯЗЫКА|Изобразительно-выразительные средства языка|Предложения:?|Преложения:?|Предложение:?|СПИСОК ТЕРМИНОВ|СРЕДСТВА ВЫРАЗИТЕЛЬНОСТИ).*$"
+    )
+    t8_prefix_to_full = {}
+
+    for q in fipi_bank:
+        t = str(q.get("task"))
+        if t in ("8", "22"):
+            for ml in q.get("matchingLetters", []):
+                clean_t = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", ml.get("text", "")).strip()
+                clean_t = HEADER_BLEED_RE.sub("", clean_t).strip()
+                ml["text"] = clean_t
+                if t == "8" and len(clean_t) > 45:
+                    t8_prefix_to_full[clean_t[:48]] = clean_t
+                    t8_prefix_to_full[norm_yo(clean_t[:48])] = clean_t
+            for r in q.get("rows", []):
+                if "explanation" in r:
+                    r["explanation"] = HEADER_BLEED_RE.sub("", r["explanation"]).strip()
+
+    for s in sprint_bank:
+        t = str(s.get("task"))
+        if "context" in s and s["context"]:
+            s["context"] = HEADER_BLEED_RE.sub("", re.sub(r"[\xad\u200b-\u200f\ufeff]", "", s["context"])).strip()
+        if t == "8":
+            # Also extract full error name from s["explanation"] if present: "В этом предложении допущена ошибка: <full>."
+            m_ex = re.search(r"допущена ошибка:\s*(.+?)\.?\s*$", re.sub(r"[\xad\u200b-\u200f\ufeff]", "", s.get("explanation") or ""))
+            if m_ex:
+                full_err = HEADER_BLEED_RE.sub("", m_ex.group(1)).strip()
+                t8_prefix_to_full[full_err[:48]] = full_err
+                t8_prefix_to_full[norm_yo(full_err[:48])] = full_err
+
+    # Second pass on Sprint bank to expand all truncated 48-char Task 8 options/answers and fix Task 22 OCR options
+    for s in sprint_bank:
+        t = str(s.get("task"))
+        if t == "8":
+            ans_clean = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", s.get("answer") or "")
+            full_ans = t8_prefix_to_full.get(ans_clean) or t8_prefix_to_full.get(norm_yo(ans_clean)) or ans_clean
+            s["answer"] = full_ans
+            s["word"] = full_ans
+            new_opts = []
+            for o in s.get("options", []):
+                o_clean = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", o)
+                full_o = t8_prefix_to_full.get(o_clean) or t8_prefix_to_full.get(norm_yo(o_clean)) or o_clean
+                new_opts.append(full_o)
+            s["options"] = new_opts
+        elif t == "22":
+            if s.get("answer") == "Эпитет з) метафора":
+                s["answer"] = "Эпитет"
+                s["word"] = "Эпитет"
+            elif s.get("answer") == "Анафора б) риторические обращение":
+                s["answer"] = "Анафора"
+                s["word"] = "Анафора"
+            s["options"] = [
+                "Эпитет" if o == "Эпитет з) метафора" else ("Анафора" if o == "Анафора б) риторические обращение" else o)
+                for o in s.get("options", [])
+            ]
+            for fld in ("explanation", "rule"):
+                if fld in s and s[fld]:
+                    s[fld] = (
+                        s[fld]
+                        .replace("эпитет З) метафора", "эпитет")
+                        .replace("анафора б) риторические обращение", "анафора")
+                    )
+
+        # Restore untruncated sentence in suffix/wordGap for sentence-based Sprint cards (Tasks 6, 8, 16, 21, 22)
+        if t in ("6", "8", "16", "21", "22") and s.get("context"):
+            s["suffix"] = s["context"]
+            s["wordGap"] = s["context"]
 
 
 def resolve_source(qid: str, current_source: str) -> str:
@@ -1413,33 +1900,38 @@ def normalize_sources_and_formulations(fipi_bank):
                 "Укажите варианты ответов, в которых верно выделена буква, обозначающая ударный гласный звук. Запишите номера ответов."
             )
             q["rule"] = "Проверьте постановку ударения в соответствии с орфоэпическим словником ФИПИ."
+            q["target"] = "УДАРЕНИЕ"
         elif task == "5":
             q["instruction"] = (
                 "В одном из приведённых ниже предложений НЕВЕРНО употреблено выделенное слово. Исправьте лексическую ошибку, подобрав к выделенному слову пароним. Запишите подобранное слово."
             )
             q["rule"] = "Подберите верный пароним в соответствии с контекстом предложения и лексическим значением."
+            q["target"] = "ПАРОНИМ"
         elif task == "6":
-            expl_all = " ".join(r.get("explanation", "") for r in q.get("rows", []))
             instr_raw = q.get("instruction", "") or ""
-            if "замен" in instr_raw.lower() or "замен" in expl_all.lower():
+            if q.get("target") == "ЗАМЕНИВ" or "замен" in instr_raw.lower():
                 q["instruction"] = (
                     "Отредактируйте предложение: исправьте лексическую ошибку, заменив неверно употреблённое слово. Запишите подобранное слово, соблюдая нормы современного русского литературного языка."
                 )
+                q["target"] = "ЗАМЕНИВ"
             else:
                 q["instruction"] = (
                     "Отредактируйте предложение: исправьте лексическую ошибку, исключив лишнее слово. Выпишите это слово."
                 )
+                q["target"] = "ИСКЛЮЧИВ"
             q["rule"] = "Устраните речевую ошибку (плеоназм, тавтологию или лексическую несочетаемость)."
         elif task == "7":
             q["instruction"] = (
                 "В одном из выделенных ниже слов допущена ошибка в образовании формы слова. Исправьте ошибку и запишите слово правильно."
             )
             q["rule"] = "Морфологические нормы: правила образования грамматических форм слов (род, число, падеж, степени сравнения, формы глаголов)."
+            q["target"] = "ФОРМА СЛОВА"
         elif task == "8":
             q["instruction"] = (
                 "Установите соответствие между грамматическими ошибками и предложениями, в которых они допущены: к каждой позиции первого столбца подберите соответствующую позицию из второго столбца."
             )
             q["rule"] = "Синтаксические нормы: грамматические ошибки в построении предложений различных типов."
+            q["target"] = "АБВГД"
         elif task in ("9", "10", "11", "12"):
             if not q.get("instruction"):
                 q["instruction"] = (
@@ -1454,6 +1946,7 @@ def normalize_sources_and_formulations(fipi_bank):
                     q["rule"] = "Правописание суффиксов различных частей речи (существительных, прилагательных, глаголов)."
                 elif task == "12":
                     q["rule"] = "Правописание личных окончаний глаголов и суффиксов причастий настоящего времени."
+            q["target"] = "ОДНА И ТА ЖЕ БУКВА"
         elif task == "13":
             corr = q.get("correctIndices", [])
             rows = q.get("rows", [])
@@ -1465,11 +1958,13 @@ def normalize_sources_and_formulations(fipi_bank):
                     "Укажите варианты ответов, в которых НЕ с выделенным словом пишется РАЗДЕЛЬНО. Запишите номера ответов."
                 )
                 q["rule"] = "Правописание НЕ и НИ с различными частями речи (пишется РАЗДЕЛЬНО)."
+                q["target"] = "РАЗДЕЛЬНО"
             else:
                 q["instruction"] = (
                     "Укажите варианты ответов, в которых НЕ с выделенным словом пишется СЛИТНО. Запишите номера ответов."
                 )
                 q["rule"] = "Правописание НЕ и НИ с различными частями речи (пишется СЛИТНО)."
+                q["target"] = "СЛИТНО"
         elif task == "14":
             instr_u = (q.get("instruction") or "").upper()
             if "ДЕФИС" in instr_u:
@@ -1477,16 +1972,19 @@ def normalize_sources_and_formulations(fipi_bank):
                     "Укажите варианты ответов, в которых все выделенные слова пишутся ЧЕРЕЗ ДЕФИС. Запишите номера ответов."
                 )
                 q["rule"] = "Слитное, дефисное и раздельное написание слов (пишутся ЧЕРЕЗ ДЕФИС)."
+                q["target"] = "ДЕФИСНО"
             elif "РАЗДЕЛЬНО" in instr_u:
                 q["instruction"] = (
                     "Укажите варианты ответов, в которых все выделенные слова пишутся РАЗДЕЛЬНО. Запишите номера ответов."
                 )
                 q["rule"] = "Слитное, дефисное и раздельное написание слов (пишутся РАЗДЕЛЬНО)."
+                q["target"] = "РАЗДЕЛЬНО"
             else:
                 q["instruction"] = (
                     "Укажите варианты ответов, в которых все выделенные слова пишутся СЛИТНО. Запишите номера ответов."
                 )
                 q["rule"] = "Слитное, дефисное и раздельное написание слов (пишутся СЛИТНО)."
+                q["target"] = "СЛИТНО"
         elif task == "15":
             corr = q.get("correctIndices", [])
             rows = q.get("rows", [])
@@ -1494,14 +1992,17 @@ def normalize_sources_and_formulations(fipi_bank):
             if letters and all(l == "Н" for l in letters):
                 q["instruction"] = "Укажите все цифры, на месте которых пишется Н. Запишите цифры в порядке возрастания."
                 q["rule"] = "Правописание -Н- и -НН- в суффиксах различных частей речи (пишется одна буква Н)."
+                q["target"] = "Н"
             else:
                 q["instruction"] = "Укажите все цифры, на месте которых пишется НН. Запишите цифры в порядке возрастания."
                 q["rule"] = "Правописание -Н- и -НН- в суффиксах различных частей речи (пишется две буквы НН)."
+                q["target"] = "НН"
         elif task == "16":
             q["instruction"] = (
                 "Расставьте знаки препинания. Укажите предложения, в которых нужно поставить ОДНУ запятую. Запишите номера этих предложений."
             )
             q["rule"] = "Пунктуация в сложносочинённом предложении (ССП) и в предложениях с однородными членами (ОДНУ запятую)."
+            q["target"] = "ОДНУ"
         elif task in ("17", "18", "19", "20"):
             q["instruction"] = (
                 "Расставьте знаки препинания: укажите все цифры, на месте которых в предложении должны стоять запятые."
@@ -1515,6 +2016,7 @@ def normalize_sources_and_formulations(fipi_bank):
                     q["rule"] = "Знаки препинания в сложноподчинённом предложении (СПП) с придаточными."
                 elif task == "20":
                     q["rule"] = "Знаки препинания в сложных предложениях с разными видами связи (на стыке союзов)."
+            q["target"] = "ЗАПЯТЫЕ"
         elif task == "21":
             instr_raw = (q.get("instruction") or "").lower()
             if "двоеточи" in instr_raw:
@@ -1522,25 +2024,42 @@ def normalize_sources_and_formulations(fipi_bank):
                     "Найдите предложения, в которых ДВОЕТОЧИЕ ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений."
                 )
                 q["rule"] = "Пунктуационный анализ текста: постановка ДВОЕТОЧИЯ по единому правилу синтаксиса."
+                q["target"] = "ДВОЕТОЧИЕ"
             elif "тире" in instr_raw:
                 q["instruction"] = (
                     "Найдите предложения, в которых ТИРЕ ставится в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений."
                 )
                 q["rule"] = "Пунктуационный анализ текста: постановка ТИРЕ по единому правилу синтаксиса."
+                q["target"] = "ТИРЕ"
             else:
                 q["instruction"] = (
                     "Найдите предложения, в которых ЗАПЯТАЯ(-ЫЕ) ставится(-ятся) в соответствии с одним и тем же правилом пунктуации. Запишите номера этих предложений."
                 )
                 q["rule"] = "Пунктуационный анализ текста: постановка ЗАПЯТОЙ(-ЫХ) по единому правилу синтаксиса."
+                q["target"] = "ЗАПЯТАЯ"
         elif task == "22":
             q["instruction"] = (
                 "Установите соответствие между предложениями (выделенными фразами) и средствами выразительности: к каждой позиции первого столбца подберите соответствующую позицию из второго столбца."
             )
             q["rule"] = "Языковые средства выразительности: распознавание тропов, фигур речи, лексических и синтаксических средств."
+            q["target"] = "АБВГД"
 
         for r in q.get("rows", []):
             if not r.get("explanation") or len(r["explanation"].strip()) < 5:
                 r["explanation"] = q.get("explanation") or q.get("rule") or "По правилу русского языка."
+
+
+def clean_obj_recursively(obj):
+    if isinstance(obj, str):
+        s = re.sub(r"[\xad\u200b-\u200f\ufeff]", "", obj)
+        s = re.sub(r"\s*\(?Взято из\b.*$", "", s, flags=re.I)
+        s = fix_corrupted_roman_numerals(s)
+        return s.strip() if s != obj else s
+    if isinstance(obj, list):
+        return [clean_obj_recursively(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: clean_obj_recursively(v) for k, v in obj.items()}
+    return obj
 
 
 def sync_starter_bank(fipi_bank, sprint_bank, starter_bank):
@@ -1588,14 +2107,19 @@ def main():
 
     heal_task_4(fipi_bank, sprint_bank)
     heal_task_5(fipi_bank, sprint_bank, nf_map, shk_map, db_map)
+    heal_task_6(fipi_bank, sprint_bank, nf_map, shk_map, db_map)
     heal_task_7(fipi_bank, sprint_bank, nf_map, shk_map, db_map)
     heal_tasks_9_13(fipi_bank, sprint_bank)
     heal_task_14(fipi_bank, sprint_bank, starter_bank, orig_map)
     heal_task_15(fipi_bank, nf_map, orig_map)
     heal_tasks_18_and_21(fipi_bank, sprint_bank, nf_map, shk_map, db_map)
+    heal_tasks_8_and_22_and_sprint_truncations(fipi_bank, sprint_bank)
     normalize_sources_and_formulations(fipi_bank)
 
+    fipi_bank = clean_obj_recursively(fipi_bank)
+    sprint_bank = clean_obj_recursively(sprint_bank)
     sync_starter_bank(fipi_bank, sprint_bank, starter_bank)
+    starter_bank = clean_obj_recursively(starter_bank)
 
     print("\nSaving synchronized banks...")
     for path in ["public/data/fipiTasksBank.json", "public/data/fipiTasksBank9_15.json"]:

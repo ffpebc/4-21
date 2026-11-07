@@ -3079,6 +3079,7 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
       handleId="dictionary-drag-handle"
       isOpen={isOpen}
       onClose={onClose}
+      sheetClassName="ios-cheatsheet-panel"
       ariaLabel="Словарь исключений и база слов ФИПИ"
       handleAriaLabel="Потяните вниз, чтобы закрыть словарь"
     >
@@ -3135,14 +3136,15 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
         />
       </div>
 
-      <div className="shrink-0 mb-2 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar w-full">
+      <div className="shrink-0 mb-2 flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 no-scrollbar w-full min-h-[36px]">
         <button
           type="button"
           onClick={() => setFilterTask('all')}
-          className="px-3 py-1 rounded-full text-[11.5px] font-extrabold shrink-0 cursor-pointer transition-all"
+          className="px-3 py-1.5 min-h-[28px] leading-none rounded-full text-[12px] font-extrabold shrink-0 cursor-pointer transition-all flex items-center justify-center"
           style={{
             background: filterTask === 'all' ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
             color: filterTask === 'all' ? '#FFFFFF' : 'var(--ios-label-sec)',
+            border: '0.5px solid var(--ios-glass-border)',
           }}
         >
           Все
@@ -3152,10 +3154,11 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
             key={tId}
             type="button"
             onClick={() => setFilterTask(tId)}
-            className="px-2.5 py-1 rounded-full text-[11.5px] font-extrabold shrink-0 cursor-pointer transition-all"
+            className="px-2.5 py-1.5 min-h-[28px] leading-none rounded-full text-[12px] font-extrabold shrink-0 cursor-pointer transition-all flex items-center justify-center"
             style={{
               background: filterTask === tId ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
               color: filterTask === tId ? '#FFFFFF' : 'var(--ios-label-sec)',
+              border: '0.5px solid var(--ios-glass-border)',
             }}
           >
             № {tId}

@@ -3029,7 +3029,7 @@ export function cleanScraperArtifacts(text: string | undefined): string {
   res = res
     .replace(/&#[хx]2013;\s*\"?>\s*—?/gi, '—')
     .replace(/\s*Изобразительно-выразительные средства языка\s*$/i, '')
-    .replace(/\s*\((?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
+    .replace(/\s*\(?(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
     .trim();
 
   return res.trim();
@@ -3053,7 +3053,7 @@ export function cleanWord(str: string | undefined): string {
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
     .replace(/\u00cb/g, 'Ё')
     .replace(/\u00eb/g, 'ё')
-    .replace(/\s*\((?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
+    .replace(/\s*\(?(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
     .trim();
 
   res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2 $3)');
@@ -3089,6 +3089,7 @@ export function cleanExplanation(str: string | undefined): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/\s*Изобразительно-выразительные средства языка\s*$/i, '')
+    .replace(/\s*\(?(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
     .trim();
 
   // Normalize digit 3 inside Russian words
@@ -3481,7 +3482,8 @@ export function getTrainerBank() {
     for (const rawFq of PARSED_FIPI_QUESTIONS) {
       const isFiveRowTask = ['4', '9', '10', '11', '12', '13', '14', '16'].includes(rawFq.task);
       if (isFiveRowTask && rawFq.rows.length !== 5) continue;
-      if (['8', '21', '22'].includes(rawFq.task) && (rawFq.rows.length < 4 || rawFq.rows.length > 9)) continue;
+      if (['8', '22'].includes(rawFq.task) && (rawFq.rows.length < 4 || rawFq.rows.length > 9)) continue;
+      if (rawFq.task === '21' && (rawFq.rows.length < 4 || rawFq.rows.length > 12)) continue;
       if (rawFq.task === '15') {
         if (!rawFq.sentence || rawFq.sentence.length < 20 || rawFq.rows.length < 3) continue;
       }
@@ -4013,16 +4015,109 @@ export function calculateAccuracyPercent(correct: number, total: number): number
   return Math.round((correct / total) * 100);
 }
 
+export function parseKimAnswerIndices(raw: string, maxDigit = 9): number[] {
+  const str = String(raw || '').trim();
+  if (!str) return [];
+
+  if (maxDigit <= 9) {
+    const regex = new RegExp(`[^1-${maxDigit}]`, 'g');
+    return Array.from(
+      new Set(
+        str
+          .replace(regex, '')
+          .split('')
+          .map(Number)
+          .filter((n) => n >= 1 && n <= maxDigit)
+      )
+    ).sort((a, b) => a - b);
+  }
+
+  const rawTokens = str.match(/\d+/g) || [];
+  if (rawTokens.length > 1) {
+    return Array.from(
+      new Set(
+        rawTokens
+          .map(Number)
+          .filter((n) => Number.isFinite(n) && n >= 1 && n <= maxDigit)
+      )
+    ).sort((a, b) => a - b);
+  }
+
+  const s = str.replace(/\D/g, '');
+  if (!s) return [];
+
+  // Try strictly increasing partitions 1 <= n_1 < n_2 < ... <= maxDigit (preferring length >= 2)
+  const validAscending: number[][] = [];
+  const dfs = (idx: number, prev: number, acc: number[]) => {
+    if (idx === s.length) {
+      validAscending.push(acc.slice());
+      return;
+    }
+    if (s[idx] === '0') return;
+    // Try 1-digit if it doesn't strand a following '0'
+    if (idx + 1 >= s.length || s[idx + 1] !== '0') {
+      const d1 = Number(s[idx]);
+      if (d1 > prev && d1 <= maxDigit) {
+        acc.push(d1);
+        dfs(idx + 1, d1, acc);
+        acc.pop();
+      }
+    }
+    // Try 2-digit if it doesn't strand a following '0'
+    if (idx + 1 < s.length && (idx + 2 >= s.length || s[idx + 2] !== '0')) {
+      const d2 = Number(s.slice(idx, idx + 2));
+      if (d2 > prev && d2 >= 10 && d2 <= maxDigit) {
+        acc.push(d2);
+        dfs(idx + 2, d2, acc);
+        acc.pop();
+      }
+    }
+  };
+  dfs(0, 0, []);
+  if (validAscending.length > 0) {
+    const multi = validAscending.filter((p) => p.length >= 2);
+    const chosen = multi.length > 0 ? multi[0] : validAscending[0];
+    return chosen;
+  }
+
+  // Fallback left-to-right scan without stranding '0'
+  const out: number[] = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === '0') {
+      i++;
+      continue;
+    }
+    if (i + 1 < s.length && (i + 2 >= s.length || s[i + 2] !== '0')) {
+      const two = Number(s.slice(i, i + 2));
+      if (two >= 10 && two <= maxDigit) {
+        out.push(two);
+        i += 2;
+        continue;
+      }
+    }
+    const one = Number(s[i]);
+    if (one >= 1 && one <= maxDigit) {
+      out.push(one);
+    }
+    i++;
+  }
+  return Array.from(new Set(out)).sort((a, b) => a - b);
+}
+
 export function normalizeKimDigits(raw: string, maxDigit = 5): string {
-  const regex = new RegExp(`[^1-${maxDigit}]`, 'g');
-  const digits = Array.from(
-    new Set(
-      String(raw || '')
-        .replace(regex, '')
-        .split('')
-    )
-  ).sort();
-  return digits.join('');
+  if (maxDigit <= 9) {
+    const regex = new RegExp(`[^1-${maxDigit}]`, 'g');
+    const digits = Array.from(
+      new Set(
+        String(raw || '')
+          .replace(regex, '')
+          .split('')
+      )
+    ).sort();
+    return digits.join('');
+  }
+  return parseKimAnswerIndices(raw, maxDigit).join('');
 }
 
 export function normalizeWordAnswer(raw: string): string {
@@ -4094,6 +4189,7 @@ export function checkFipiQuestionAnswer(
   }
 
   // Standard multi-digit sorted answer (4, 9–21)
+  const maxRowDigit = Math.max(9, q.rows?.length || 9, ...(q.correctIndices || [9]));
   const correctIndicesSorted = q.correctIndices.slice().sort((a, b) => a - b);
   const correctStr = correctIndicesSorted.join('');
   const validJoinedSet = new Set<string>([correctStr]);
@@ -4106,6 +4202,8 @@ export function checkFipiQuestionAnswer(
         validJoinedSet.add(digitsOnly);
         if (/^[1-9]+$/.test(digitsOnly) && digitsOnly.length <= 9) {
           validJoinedSet.add(normalizeKimDigits(digitsOnly, 9));
+        } else {
+          validJoinedSet.add(normalizeKimDigits(digitsOnly, maxRowDigit));
         }
       }
       const tokenNums = (altTrim.match(/\d+/g) || [])
@@ -4136,7 +4234,7 @@ export function checkFipiQuestionAnswer(
     const tokenJoined = Array.from(new Set(tokenNums))
       .sort((a, b) => a - b)
       .join('');
-    const kimNorm = normalizeKimDigits(rawTrim, 9);
+    const kimNorm = normalizeKimDigits(rawTrim, maxRowDigit);
     if (digitsOnly.length > 0 && validJoinedSet.has(digitsOnly)) {
       userStr = digitsOnly;
     } else if (tokenNums.length > 1 && validJoinedSet.has(tokenJoined)) {

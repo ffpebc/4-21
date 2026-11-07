@@ -139,7 +139,13 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       // Non-orthography tasks (4–8, 16–22): show prompt/statement cleanly
       if (!['9', '10', '11', '12', '13', '14', '15'].includes(question.task)) {
         const promptTitle = question.prefix.trim();
-        const promptBody = question.suffix.trim();
+        const isSentenceTask = ['5', '6', '8', '16', '17', '18', '19', '20', '21', '22'].includes(
+          question.task
+        );
+        const rawBody = isSentenceTask
+          ? (question.context || question.suffix).trim()
+          : (question.suffix || question.context).trim();
+        const promptBody = rawBody === promptTitle ? '' : rawBody;
         return (
           <div className="my-2 flex flex-col items-center justify-center gap-1.5 px-1">
             {promptTitle && (
@@ -358,10 +364,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
           {renderWordWithSlot()}
 
           {question.context &&
-            (!['4', '5', '6', '7', '8', '16', '17', '18', '19', '20', '21', '22'].includes(question.task) ||
-              (!question.suffix.trim() && !question.prefix.trim()) ||
-              (!question.context.trim().includes(question.suffix.trim()) &&
-                !question.suffix.trim().includes(question.context.trim()))) && (
+            ['9', '10', '11', '12', '13', '14', '15'].includes(question.task) && (
             <div
               className="text-[13.5px] font-medium mt-1 leading-snug px-1 text-center"
               style={{ color: 'var(--ios-label-sec)' }}
@@ -582,7 +585,8 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
   const getRowFeedbackLabel = (
     row: FipiQuestion['rows'][number],
-    rowIsCorrect: boolean = Boolean(row.isCorrectRow)
+    rowIsCorrect: boolean = Boolean(row.isCorrectRow),
+    rowNum?: number
   ): string => {
     if (fipiQ.task === '4') {
       return rowIsCorrect
@@ -596,7 +600,13 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       return rowIsCorrect ? 'Подходит: одна запятая' : `Не подходит (${row.letter})`;
     }
     if (fipiQ.task === '21') {
-      return rowIsCorrect ? `Входит в ответ (${row.letter})` : row.letter || 'Не входит в ответ';
+      const displayRuleOrNum =
+        row.letter && row.letter !== '—' ? row.letter : String(rowNum ?? '');
+      return rowIsCorrect
+        ? `Входит в ответ (${displayRuleOrNum})`
+        : row.letter && row.letter !== '—'
+          ? row.letter
+          : 'Не входит в ответ';
     }
     if (fipiQ.task === '13' || fipiQ.task === '14') {
       return rowIsCorrect ? `Подходит: ${row.letter}` : `Не подходит: ${row.letter}`;
@@ -669,6 +679,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               rows={fipiQ.rows}
               selectedDigits={fipiSelectedRows}
               isSubmitted={fipiSubmitted}
+              isAnswerCorrect={fipiResultOk}
               onToggleDigit={toggleRow}
               task={fipiQ.task}
             />
@@ -759,6 +770,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                     <>
                       {fipiQ.rows.map((row, idx) => {
                         const digit = idx + 1;
+                        const rowIsCorrect = isRowEffectivelyCorrect(digit, row);
                         const solvedWord = fipiQ.task === '15'
                           ? cleanWord(row.solvedWords[0] || row.words[0])
                           : `Позиция (${digit})`;
@@ -772,8 +784,8 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                               <span
                                 className="w-5 h-5 rounded-full text-[11px] font-extrabold flex items-center justify-center shrink-0"
                                 style={{
-                                  background: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-bg-tertiary)',
-                                  color: row.isCorrectRow ? '#fff' : 'var(--ios-label-sec)',
+                                  background: rowIsCorrect ? 'var(--ios-green)' : 'var(--ios-bg-tertiary)',
+                                  color: rowIsCorrect ? '#fff' : 'var(--ios-label-sec)',
                                 }}
                               >
                                 {digit}
@@ -783,11 +795,11 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                               </span>
                               <span
                                 className="text-[11px] ml-auto font-semibold"
-                                style={{ color: row.isCorrectRow ? 'var(--ios-green)' : 'var(--ios-label-sec)' }}
+                                style={{ color: rowIsCorrect ? 'var(--ios-green)' : 'var(--ios-label-sec)' }}
                               >
                                 {fipiQ.task === '15'
                                   ? `пишется «${row.letter}»`
-                                  : row.isCorrectRow
+                                  : rowIsCorrect
                                     ? 'запятая ставится'
                                     : 'без запятой'}
                               </span>
@@ -1180,7 +1192,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                           : 'var(--ios-label-sec)',
                       }}
                     >
-                      {getRowFeedbackLabel(row, rowIsCorrect)}
+                      {getRowFeedbackLabel(row, rowIsCorrect, rowNum)}
                     </div>
                   )}
                   {fipiSubmitted && row.explanation && (

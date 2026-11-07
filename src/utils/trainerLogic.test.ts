@@ -12,6 +12,7 @@ import {
   decodeBackupCode,
   calculateAccuracyPercent,
   normalizeKimDigits,
+  parseKimAnswerIndices,
   FLASHCARDS_BANK,
   HOMOPHONE_PAIRS_BANK,
   cleanScraperArtifacts,
@@ -336,8 +337,10 @@ test('All FIPI questions across tasks 4-22 in trainer bank have strictly valid r
       assert.ok(sent && sent.length >= 15, `Question ${q.id} (task ${q.task}) must have a non-empty sentence`);
     } else if (['5', '6', '7'].includes(q.task)) {
       assert.ok(q.rows.length >= 1, `Question ${q.id} (task ${q.task}) must have at least 1 row`);
-    } else if (['8', '21', '22'].includes(q.task)) {
+    } else if (['8', '22'].includes(q.task)) {
       assert.ok(q.rows.length >= 4 && q.rows.length <= 9, `Question ${q.id} (task ${q.task}) must have 4..9 rows`);
+    } else if (q.task === '21') {
+      assert.ok(q.rows.length >= 4 && q.rows.length <= 12, `Question ${q.id} (task 21) must have 4..12 rows`);
     }
 
     for (const c of q.correctIndices) {
@@ -2057,18 +2060,27 @@ test('Primary-source synchronization: Tasks 4, 5, 7, 10, 11, 13, 14, 15, 18, and
   assert.deepEqual(q13_54453.correctIndices, [1, 3, 5]);
   assert.equal(q13_54453.rows[4].letter, 'РАЗДЕЛЬНО');
 
-  // 5. Multi-digit markers (10..13) in Task 18 & Task 21
+  // 5. Multi-digit markers (10..13) in Task 18 & Task 21 (present in getTrainerBank)
   const q18_47794 = bank.fipiQuestions.find((q) => q.id === 'nf-18-47794');
   assert.ok(q18_47794);
   assert.deepEqual(q18_47794.correctIndices, [2, 3, 4, 5, 10, 11]);
   assert.equal(checkFipiQuestionAnswer(q18_47794, [2, 3, 4, 5, 10, 11]).isCorrect, true);
   assert.equal(checkFipiQuestionAnswer(q18_47794, '23451011').isCorrect, true);
 
-  const q21_27747 = PARSED_FIPI_QUESTIONS.find((q) => q.id === 'nf-21-27747');
-  assert.ok(q21_27747);
+  const q21_27747 = bank.fipiQuestions.find((q) => q.id === 'nf-21-27747');
+  assert.ok(q21_27747, 'nf-21-27747 (10 rows) must be included in getTrainerBank().fipiQuestions');
   assert.deepEqual(q21_27747.correctIndices, [3, 10]);
   assert.equal(checkFipiQuestionAnswer(q21_27747, [3, 10]).isCorrect, true);
   assert.equal(checkFipiQuestionAnswer(q21_27747, '310').isCorrect, true);
+
+  assert.deepEqual(parseKimAnswerIndices('310', 10), [3, 10]);
+  assert.deepEqual(parseKimAnswerIndices('11011', 12), [1, 10, 11]);
+  assert.deepEqual(
+    parseKimAnswerIndices('123467810111213', 13),
+    [1, 2, 3, 4, 6, 7, 8, 10, 11, 12, 13]
+  );
+  assert.equal(normalizeKimDigits('310', 10), '310');
+  assert.equal(normalizeKimDigits('11011', 12), '11011');
 
   // 6. Alternative valid answer groups in Task 21 & shk-18-29059
   const q18_29059 = bank.fipiQuestions.find((q) => q.id === 'shk-18-29059');
@@ -2090,5 +2102,146 @@ test('Primary-source synchronization: Tasks 4, 5, 7, 10, 11, 13, 14, 15, 18, and
       );
     }
   }
+
+  // 7. Zero soft hyphens (\u00ad), zero-width chars, or "(Взято из сборника...)" footnote bleeds
+  for (const q of bank.fipiQuestions) {
+    const rawJson = JSON.stringify(q);
+    assert.equal(/\u00ad/.test(rawJson), false, `[${q.id}] FIPI question must not contain soft hyphens`);
+    assert.equal(/Взято из сборника/i.test(rawJson), false, `[${q.id}] FIPI question must not contain source footnote bleed`);
+  }
+  for (const s of bank.sprintQuestions) {
+    const rawJson = JSON.stringify(s);
+    assert.equal(/\u00ad/.test(rawJson), false, `[${s.id}] Sprint question must not contain soft hyphens`);
+    assert.equal(/Взято из сборника/i.test(rawJson), false, `[${s.id}] Sprint question must not contain source footnote bleed`);
+  }
+
+  // 8. Task 5: shk-5-28866 (РФ vs ДИПЛОМАТИЧНУЮ), nf-5-29630 (КРАСОЧНЫМИ -> КРАСЯЩИМИ), and Roman numerals
+  const q5_28866 = bank.fipiQuestions.find((q) => q.id === 'shk-5-28866');
+  assert.ok(q5_28866);
+  assert.deepEqual(q5_28866.correctIndices, [4]);
+  assert.ok(q5_28866.rows[3].solvedWords[0].includes('ДИПЛОМАТИЧЕСКУЮ'));
+
+  const q5_29630 = bank.fipiQuestions.find((q) => q.id === 'nf-5-29630');
+  assert.ok(q5_29630);
+  assert.ok(q5_29630.rows[0].solvedWords[0].includes('КРАСЯЩИМИ'));
+  assert.equal(q5_29630.rows[0].solvedWords[0].includes('КРАСЯЩИМИСОЧНЫМИ'), false);
+
+  const q5_117430 = bank.fipiQuestions.find((q) => q.id === 'shk-5-117430');
+  assert.ok(q5_117430);
+  assert.deepEqual(q5_117430.correctIndices, [2]);
+  assert.ok(q5_117430.rows[1].solvedWords[0].includes('АВТОРИТАРНЫЙ'));
+
+  const q5_76742 = bank.fipiQuestions.find((q) => q.id === 'nf-5-76742');
+  assert.ok(q5_76742);
+  assert.ok(q5_76742.rows[1].words[0].includes('XIX'));
+  assert.equal(q5_76742.rows[1].words[0].includes('ХИХ'), false);
+
+  // 9. Task 6: ИСКЛЮЧИВ vs ЗАМЕНИВ instructions and ё variants
+  const q6_134692 = bank.fipiQuestions.find((q) => q.id === 'shk-6-134692');
+  assert.ok(q6_134692);
+  assert.equal(q6_134692.target, 'ИСКЛЮЧИВ');
+  const q6_78380 = bank.fipiQuestions.find((q) => q.id === 'nf-6-78380');
+  assert.ok(q6_78380);
+  assert.equal(q6_78380.target, 'ИСКЛЮЧИВ');
+  const q6_150345 = PARSED_FIPI_QUESTIONS.find((q) => q.id === 'shk-6-150345');
+  assert.ok(q6_150345);
+  assert.equal(q6_150345.target, 'ИСКЛЮЧИВ');
+  const q6_37417 = bank.fipiQuestions.find((q) => q.id === 'nf-6-37417');
+  assert.ok(q6_37417);
+  assert.equal(checkFipiQuestionAnswer(q6_37417, 'произошёл').isCorrect, true);
+  assert.equal(checkFipiQuestionAnswer(q6_37417, 'произошел').isCorrect, true);
+
+  // 10. Task 7: suppletive & morphological error row accuracy and non-error row preservation
+  const task7Checks: Array<[string, number, string]> = [
+    ['nf-7-77800', 4, 'ЯСЛЕЙ'],
+    ['nf-7-77797', 3, 'ТРЁХСОТ'],
+    ['nf-7-77791', 5, 'КОСНУТЬСЯ'],
+    ['nf-7-76466', 4, 'НАДЕТЬ'],
+    ['nf-7-74930', 3, 'ЕЗЖУ'],
+    ['nf-7-74926', 3, 'ДВУХТЫСЯЧНОМУ'],
+    ['nf-7-73939', 5, 'ЛЯГТЕ'],
+    ['nf-7-55407', 2, 'ОБЕИМ'],
+    ['shk-7-40377', 5, 'ДВУМСТАМ'],
+    ['shk-7-42646', 2, 'ЕМУ'],
+    ['shk-7-119123', 2, 'МАШЕТ'],
+    ['shk-7-172338', 2, 'ТРЁМ'],
+    ['shk-7-172344', 3, 'ВЫИГРАТЬ'],
+    ['nf-7-48402', 2, 'ПОЛУТОРА'],
+  ];
+  for (const [id, expectedRow, expectedWord] of task7Checks) {
+    const q7 = bank.fipiQuestions.find((q) => q.id === id);
+    assert.ok(q7, `Missing Task 7 question ${id}`);
+    assert.deepEqual(q7.correctIndices, [expectedRow], `[${id}] expected correctIndices [${expectedRow}]`);
+    assert.ok(
+      q7.rows[expectedRow - 1].solvedWords[0].toUpperCase().includes(expectedWord),
+      `[${id}] expected solvedWords "${q7.rows[expectedRow - 1].solvedWords[0]}" to include "${expectedWord}"`
+    );
+  }
+  for (const q7 of bank.fipiQuestions.filter((q) => q.task === '7')) {
+    for (const r of q7.rows) {
+      if (!r.isCorrectRow) {
+        assert.equal(r.solvedWords[0], r.words[0], `[${q7.id}] non-error row must keep solvedWords[0] === words[0]`);
+      }
+    }
+  }
+
+  // 11. Tasks 8 & 22: zero header bleeds in matchingLetters and zero truncated 48-char Task 8 Sprint options
+  for (const q of bank.fipiQuestions.filter((item) => item.task === '8' || item.task === '22')) {
+    for (const ml of q.matchingLetters || []) {
+      const txt = typeof ml === 'string' ? ml : ml.text;
+      assert.equal(
+        /ИЗОБРАЗИТЕЛЬНО-ВЫРАЗИТЕЛЬНЫЕ|ПРЕДЛОЖЕНИЯ:|ПРЕЛОЖЕНИЯ:/i.test(txt),
+        false,
+        `[${q.id}] matchingLetters has header bleed: "${txt}"`
+      );
+    }
+  }
+  for (const s of bank.sprintQuestions.filter((item) => item.task === '8')) {
+    for (const opt of s.options) {
+      assert.equal(
+        opt.endsWith('несогласова') || opt.endsWith('(сложноподчинённого') || opt.endsWith('причастного об'),
+        false,
+        `[${s.id}] Task 8 Sprint option is truncated: "${opt}"`
+      );
+    }
+  }
+
+  // 12. Task 14: fipi-14-neofamily-14-36730 restored to РАЗДЕЛЬНО
+  const q14_36730 = bank.fipiQuestions.find((q) => q.id === 'fipi-14-neofamily-14-36730');
+  assert.ok(q14_36730);
+  assert.equal(q14_36730.target, 'РАЗДЕЛЬНО');
+  assert.deepEqual(q14_36730.correctIndices, [1, 2]);
+  assert.equal(q14_36730.rows[0].letter, 'РАЗДЕЛЬНО / РАЗДЕЛЬНО');
+  assert.equal(q14_36730.rows[1].letter, 'РАЗДЕЛЬНО / РАЗДЕЛЬНО');
+
+  // 13. Task 15: 8 100points questions have authentic correctIndices & solvedWords, zero bogus -АН-/-ЯН-/-ИН-
+  const q15_2211 = bank.fipiQuestions.find((q) => q.id === 'fipi-15-100points-15-2211');
+  assert.ok(q15_2211);
+  assert.deepEqual(q15_2211.correctIndices, [1, 3, 4]);
+  assert.equal(q15_2211.rows[0].solvedWords[0], 'латаНый');
+  assert.equal(q15_2211.rows[1].solvedWords[0], 'длиННый');
+  assert.equal(q15_2211.rows[2].solvedWords[0], 'нечёсаНой');
+  assert.equal(q15_2211.rows[3].solvedWords[0], 'путаНицы');
+
+  const q15_6830 = bank.fipiQuestions.find((q) => q.id === 'fipi-15-100points-15-6830');
+  assert.ok(q15_6830);
+  assert.deepEqual(q15_6830.correctIndices, [2, 3]);
+  assert.equal(q15_6830.rows[1].solvedWords[0], 'невидаННые');
+  assert.equal(q15_6830.rows[2].solvedWords[0], 'удлинёННые');
+
+  // 14. Task 21: zero "Предложение (1)" placeholders and nf-21-28346 restored
+  for (const q21 of bank.fipiQuestions.filter((q) => q.task === '21')) {
+    for (const r of q21.rows) {
+      assert.equal(
+        /^Предложение\s*\(\d+\)$/i.test(r.words[0].trim()),
+        false,
+        `[${q21.id}] Task 21 row must not be a placeholder "${r.words[0]}"`
+      );
+    }
+  }
+  const q21_28346 = bank.fipiQuestions.find((q) => q.id === 'nf-21-28346');
+  assert.ok(q21_28346);
+  assert.deepEqual(q21_28346.correctIndices, [1, 2, 5, 6]);
 });
+
 

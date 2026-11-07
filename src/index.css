@@ -280,6 +280,14 @@ body.keyboard-open .ios-tabbar {
   display: none;
 }
 
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Dedicated Physical Bottom Clearance Spacer for Truly Scrollable Long Views */
 .ios-bottom-clearance {
   width: 100%;

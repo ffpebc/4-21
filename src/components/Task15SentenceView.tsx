@@ -6,6 +6,7 @@ export interface Task15SentenceViewProps {
   rows: FipiRow[];
   selectedDigits: number[];
   isSubmitted: boolean;
+  isAnswerCorrect?: boolean | null;
   onToggleDigit?: (digit: number) => void;
   className?: string;
   task?: string;
@@ -16,6 +17,7 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
   rows,
   selectedDigits,
   isSubmitted,
+  isAnswerCorrect,
   onToggleDigit,
   className = '',
   task,
@@ -41,7 +43,10 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
     const suffix = isWordGap ? match[3] : '';
     const digit = parseInt(digitStr, 10);
     const rowIdx = digit - 1;
-    const row = rows.find((r) => r.words.some((w) => w.includes(`(${digit})`))) || rows[rowIdx];
+    const row =
+      (isWordGap
+        ? rows.find((r) => r.words.some((w) => w.includes(`(${digit})`)))
+        : rows[rowIdx]) || rows[rowIdx];
 
     // Append preceding plain text
     if (matchStart > lastIdx) {
@@ -54,19 +59,20 @@ export const Task15SentenceView: React.FC<Task15SentenceViewProps> = React.memo(
     let badgeText = `(${digit})`;
 
     if (isSubmitted && row) {
-      const displayLetter = row.letter || (row.isCorrectRow ? ',' : '—');
+      const isEffectivelyCorrect = isAnswerCorrect ? isSelected : row.isCorrectRow;
+      const displayLetter = row.letter || (isEffectivelyCorrect ? ',' : '—');
       const stateBadge = isWordGap
         ? displayLetter
-        : row.isCorrectRow
+        : isEffectivelyCorrect
           ? `, (${digit})`
           : `(${digit})`;
-      if (row.isCorrectRow && isSelected) {
+      if (isEffectivelyCorrect && isSelected) {
         badgeClass += 'bg-[var(--ios-green-soft)] text-[var(--ios-green)] border border-[rgba(52,199,89,0.35)] shadow-xs';
         badgeText = stateBadge;
-      } else if (row.isCorrectRow && !isSelected) {
+      } else if (isEffectivelyCorrect && !isSelected) {
         badgeClass += 'bg-[var(--ios-orange-soft)] text-[var(--ios-orange)] border border-[rgba(255,149,0,0.35)]';
         badgeText = stateBadge;
-      } else if (!row.isCorrectRow && isSelected) {
+      } else if (!isEffectivelyCorrect && isSelected) {
         badgeClass += 'bg-[var(--ios-red-soft)] text-[var(--ios-red)] border border-[rgba(255,59,48,0.35)]';
         badgeText = stateBadge;
       } else {
