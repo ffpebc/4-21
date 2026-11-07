@@ -1988,7 +1988,8 @@ test('Real-time cross-device cloud sync and monotonic state merging (PC <-> Phon
   // 5. Codebase integrity: App.tsx and SyncModal.tsx contain dynamic on-the-fly sync handlers
   const appTsx = fs.readFileSync('src/App.tsx', 'utf-8');
   assert.ok(appTsx.includes('cloudSyncManager'), 'App.tsx must integrate cloudSyncManager');
-  assert.ok(appTsx.includes('sync-live-pulse-dot'), 'App.tsx must render live sync pulse dot');
+  assert.ok(appTsx.includes('isSyncActive'), 'App.tsx must track isSyncActive for dynamic cloud indicator');
+  assert.ok(!appTsx.includes('sync-live-pulse-dot'), 'App.tsx must NOT render separate green dot per user design');
 
   const syncModalTsx = fs.readFileSync('src/components/SyncModal.tsx', 'utf-8');
   assert.ok(syncModalTsx.includes('FFPEBC'), 'SyncModal.tsx must mention FFPEBC');

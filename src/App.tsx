@@ -256,6 +256,7 @@ export default function App() {
   const stateRef = useRef(state);
   stateRef.current = state;
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ state: 'idle' });
+  const [isSyncActive, setIsSyncActive] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('workout');
   const [workoutView, setWorkoutView] = useState<WorkoutSubView>('builder');
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<TaskBlockId, boolean>>({
@@ -406,11 +407,25 @@ export default function App() {
     }, 50);
 
     // Subscribe to cloud sync manager status & remote device updates (PC <-> Phone on the fly)
+    let activeTimer: any = null;
     const unsubStatus = cloudSyncManager.subscribeStatus((status) => {
       setSyncStatus(status);
+      if (status.state === 'syncing') {
+        setIsSyncActive(true);
+      } else {
+        if (activeTimer) clearTimeout(activeTimer);
+        activeTimer = setTimeout(() => {
+          setIsSyncActive(false);
+        }, 700);
+      }
     });
 
     const unsubRemote = cloudSyncManager.subscribeRemoteUpdate((mergedRemoteState) => {
+      setIsSyncActive(true);
+      if (activeTimer) clearTimeout(activeTimer);
+      activeTimer = setTimeout(() => {
+        setIsSyncActive(false);
+      }, 900);
       setState((prev) => {
         return mergeTrainerStates(prev, mergedRemoteState, { incomingIsNewer: true });
       });
@@ -421,6 +436,7 @@ export default function App() {
 
     return () => {
       window.clearTimeout(idbTimer);
+      if (activeTimer) clearTimeout(activeTimer);
       unsubStatus();
       unsubRemote();
     };
@@ -1274,26 +1290,25 @@ export default function App() {
               onClick={() => setIsSyncOpen(true)}
               className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
               style={{
-                background: state.profilePin ? 'var(--ios-green-soft)' : 'var(--ios-blue-soft)',
-                color: state.profilePin ? 'var(--ios-green)' : 'var(--ios-blue)',
+                background: 'var(--ios-blue-soft)',
+                color: 'var(--ios-blue)',
               }}
               aria-label="Память и сохранение"
               title={
                 state.profilePin
-                  ? `Профиль «${state.profilePin}» синхронизируется на лету между ПК и телефоном`
+                  ? `Профиль «${state.profilePin}»${isSyncActive ? ' (синхронизация...)' : ''}`
                   : 'Память и синхронизация'
               }
             >
-              <svg className="w-3.5 h-3.5 shrink-0">
+              <svg
+                className="w-3.5 h-3.5 shrink-0 transition-all duration-300"
+                style={{
+                  color: isSyncActive ? '#30D158' : 'var(--ios-blue)',
+                  filter: isSyncActive ? 'drop-shadow(0 0 5px rgba(48, 209, 88, 0.7))' : 'none',
+                }}
+              >
                 <use href="#sf-cloud-fill" />
               </svg>
-              {state.profilePin && (
-                <span
-                  id="sync-live-pulse-dot"
-                  className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"
-                  aria-hidden="true"
-                />
-              )}
               <span id="nav-sync-label" className="text-[11.5px] font-bold max-w-[76px] truncate">
                 {state.profilePin ? state.profilePin : 'Память'}
               </span>
