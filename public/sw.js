@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ege-4-22-ios27-v24';
+const CACHE_NAME = 'ege-4-22-ios27-v25';
 const CORE_SHELL = [
   './',
   './index.html',

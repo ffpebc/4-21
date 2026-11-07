@@ -182,6 +182,24 @@ body {
   text-rendering: optimizeSpeed;
 }
 
+/* Standalone PWA cold-start lock: in standalone mode (Add to Home Screen), WebKit miscalculates 100dvh on cold launch.
+   Lock html, body, and #root to 100% of the standalone window frame to eliminate bottom chin gap. */
+@media (display-mode: standalone) {
+  html,
+  body,
+  #root {
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+}
+
+html.is-standalone,
+html.is-standalone body,
+html.is-standalone #root {
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
 /* iOS Safari: Prevent automatic viewport zoom on input focus by strictly enforcing 16px font size */
 input,
 select,
@@ -220,7 +238,7 @@ body::before {
 }
 
 body.keyboard-open #root {
-  height: var(--app-height, 100%);
+  height: var(--app-height, 100%) !important;
 }
 
 body.keyboard-open .ios-tabbar {
