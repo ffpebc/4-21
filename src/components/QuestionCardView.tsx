@@ -9,6 +9,7 @@ import {
   checkFipiQuestionAnswer,
 } from '../utils/trainerLogic';
 import { classifyWordSubtopicAndException } from '../utils/wordClassifier';
+import type { SavedQuestionAnswerState } from '../utils/storageSync';
 import { Task15SentenceView } from './Task15SentenceView';
 import { FormattedInstruction } from './FormattedInstruction';
 
@@ -36,22 +37,47 @@ const SHORT_MORPHEME_BY_TASK: Record<TrainerQuestion['task'], string> = {
 
 interface QuestionCardViewProps {
   question: TrainerQuestion;
-  onAnswer: (isCorrect: boolean, userChoiceLabel: string) => void;
+  onAnswer?: (isCorrect: boolean, userChoiceLabel: string) => void;
   onOpenRuleForTask?: (task: TrainerQuestion['task']) => void;
+  savedAnswerState?: SavedQuestionAnswerState | null;
+  onCheckAnswer?: (
+    isCorrect: boolean,
+    userAnswer: string,
+    answerSnapshot: SavedQuestionAnswerState
+  ) => void;
+  onProceedNext?: () => void;
+  onDraftChange?: (answerSnapshot: SavedQuestionAnswerState) => void;
 }
 
 export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
   question,
   onAnswer,
+  onOpenRuleForTask,
+  savedAnswerState,
+  onCheckAnswer,
+  onProceedNext,
+  onDraftChange,
 }) => {
-  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(
+    (savedAnswerState?.selectedChoice as any) || null
+  );
   const [isExiting, setIsExiting] = useState(false);
-  const [fipiSelectedRows, setFipiSelectedRows] = useState<number[]>([]);
-  const [fipiWordInput, setFipiWordInput] = useState<string>('');
-  const [fipiMatchingDigits, setFipiMatchingDigits] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [fipiSelectedRows, setFipiSelectedRows] = useState<number[]>(
+    savedAnswerState?.selectedRows || []
+  );
+  const [fipiWordInput, setFipiWordInput] = useState<string>(
+    savedAnswerState?.wordInput || ''
+  );
+  const [fipiMatchingDigits, setFipiMatchingDigits] = useState<number[]>(
+    savedAnswerState?.matchingDigits || [0, 0, 0, 0, 0]
+  );
   const [activeMatchSlot, setActiveMatchSlot] = useState<number>(0);
-  const [fipiSubmitted, setFipiSubmitted] = useState(false);
-  const [fipiResultOk, setFipiResultOk] = useState<boolean | null>(null);
+  const [fipiSubmitted, setFipiSubmitted] = useState<boolean>(
+    Boolean(savedAnswerState?.isSubmitted)
+  );
+  const [fipiResultOk, setFipiResultOk] = useState<boolean | null>(
+    savedAnswerState?.isSubmitted ? Boolean(savedAnswerState.resultOk) : null
+  );
 
   const exitTimerRef = useRef<NodeJS.Timeout | null>(null);
   const answerTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -63,19 +89,41 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     answerTimerRef.current = null;
   };
 
+  const notifyDraft = (
+    rows: number[],
+    word: string,
+    matching: number[],
+    choice: string | null
+  ) => {
+    if (fipiSubmitted) return;
+    if (onDraftChange) {
+      onDraftChange({
+        isSubmitted: false,
+        resultOk: false,
+        userAnswerStr: '',
+        selectedRows: rows,
+        wordInput: word,
+        matchingDigits: matching,
+        selectedChoice: choice as any,
+      });
+    }
+  };
+
   useEffect(() => {
     clearTimers();
-    setSelectedChoice(null);
+    setSelectedChoice((savedAnswerState?.selectedChoice as any) || null);
     setIsExiting(false);
-    setFipiSelectedRows([]);
-    setFipiWordInput('');
-    setFipiMatchingDigits([0, 0, 0, 0, 0]);
+    setFipiSelectedRows(savedAnswerState?.selectedRows || []);
+    setFipiWordInput(savedAnswerState?.wordInput || '');
+    setFipiMatchingDigits(savedAnswerState?.matchingDigits || [0, 0, 0, 0, 0]);
     setActiveMatchSlot(0);
-    setFipiSubmitted(false);
-    setFipiResultOk(null);
+    setFipiSubmitted(Boolean(savedAnswerState?.isSubmitted));
+    setFipiResultOk(
+      savedAnswerState?.isSubmitted ? Boolean(savedAnswerState.resultOk) : null
+    );
 
     return () => clearTimers();
-  }, [question.instanceId || question.id]);
+  }, [question.instanceId || question.id, savedAnswerState]);
 
   if (question.kind === 'sprint') {
     const isAnswered = selectedChoice !== null;
@@ -111,8 +159,20 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     const commitAnswer = (ok: boolean, opt: string) => {
       clearTimers();
       setIsExiting(true);
+      if (onCheckAnswer) {
+        onCheckAnswer(ok, opt, {
+          isSubmitted: true,
+          resultOk: ok,
+          userAnswerStr: opt,
+          selectedChoice: opt as any,
+        });
+      }
       setTimeout(() => {
-        onAnswer(ok, opt);
+        if (onProceedNext) {
+          onProceedNext();
+        } else if (onAnswer) {
+          onAnswer(ok, opt);
+        }
       }, 160);
     };
 
@@ -120,6 +180,15 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       if (isAnswered) return;
       setSelectedChoice(opt);
       const ok = opt === question.answer;
+
+      if (onCheckAnswer) {
+        onCheckAnswer(ok, opt, {
+          isSubmitted: true,
+          resultOk: ok,
+          userAnswerStr: opt,
+          selectedChoice: opt as any,
+        });
+      }
 
       const exitTime = ok ? 360 : 840;
       const advanceTime = ok ? 480 : 980;
@@ -129,7 +198,11 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       }, exitTime);
 
       answerTimerRef.current = setTimeout(() => {
-        onAnswer(ok, opt);
+        if (onProceedNext) {
+          onProceedNext();
+        } else if (onAnswer) {
+          onAnswer(ok, opt);
+        }
       }, advanceTime);
     };
 
@@ -473,11 +546,13 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
   const toggleRow = (rowIdx1Based: number) => {
     if (fipiSubmitted) return;
-    setFipiSelectedRows((prev) =>
-      prev.includes(rowIdx1Based)
+    setFipiSelectedRows((prev) => {
+      const next = prev.includes(rowIdx1Based)
         ? prev.filter((r) => r !== rowIdx1Based)
-        : [...prev, rowIdx1Based].sort((a, b) => a - b)
-    );
+        : [...prev, rowIdx1Based].sort((a, b) => a - b);
+      notifyDraft(next, fipiWordInput, fipiMatchingDigits, selectedChoice);
+      return next;
+    });
   };
 
   const assignMatchingDigit = (digit: number) => {
@@ -498,6 +573,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
         next[activeMatchSlot] = digit;
       }
       nextDigits = next;
+      notifyDraft(fipiSelectedRows, fipiWordInput, next, selectedChoice);
       return next;
     });
     // Advance active slot only when digit is assigned, staying if deselected
@@ -559,15 +635,35 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
   const handleCheckFipi = () => {
     if (!canSubmitFipi()) return;
+    const ok = Boolean(checkResult.isCorrect);
+    const uStr = userStr || '—';
     setFipiSubmitted(true);
-    setFipiResultOk(checkResult.isCorrect);
+    setFipiResultOk(ok);
+
+    const snapshot: SavedQuestionAnswerState = {
+      isSubmitted: true,
+      resultOk: ok,
+      userAnswerStr: uStr,
+      selectedRows: [...fipiSelectedRows],
+      wordInput: fipiWordInput,
+      matchingDigits: [...fipiMatchingDigits],
+      selectedChoice: selectedChoice as any,
+    };
+
+    if (onCheckAnswer) {
+      onCheckAnswer(ok, uStr, snapshot);
+    }
   };
 
   const handleProceedFipi = () => {
-    const ok = checkResult.isCorrect;
+    const ok = Boolean(checkResult.isCorrect);
     setIsExiting(true);
     setTimeout(() => {
-      onAnswer(ok, userStr || '—');
+      if (onProceedNext) {
+        onProceedNext();
+      } else if (onAnswer) {
+        onAnswer(ok, userStr || '—');
+      }
     }, 180);
   };
 
@@ -934,7 +1030,10 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                     <button
                       key={`pill-${idx}-${pill}`}
                       type="button"
-                      onClick={() => setFipiWordInput(pill)}
+                      onClick={() => {
+                        setFipiWordInput(pill);
+                        notifyDraft(fipiSelectedRows, pill, fipiMatchingDigits, selectedChoice);
+                      }}
                       className="px-3 py-1.5 rounded-xl text-[12.5px] font-extrabold transition-all cursor-pointer active:scale-95"
                       style={{
                         background: isPicked ? 'var(--ios-blue)' : 'var(--ios-bg-secondary)',
@@ -958,7 +1057,11 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               type="text"
               disabled={fipiSubmitted}
               value={fipiWordInput}
-              onChange={(e) => setFipiWordInput(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFipiWordInput(val);
+                notifyDraft(fipiSelectedRows, val, fipiMatchingDigits, selectedChoice);
+              }}
               onBlur={() => {
                 window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
                 if (document.body) document.body.scrollTop = 0;

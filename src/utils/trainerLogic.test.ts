@@ -39,6 +39,11 @@ import {
   getSyncApiUrl,
   cloudSyncManager,
   normalizePin,
+  saveActiveSession,
+  loadActiveSession,
+  clearActiveSession,
+  PersistedActiveSession,
+  SavedQuestionAnswerState,
 } from './storageSync.ts';
 
 test('FIPI bank generates sprint questions + FIPI sets + KIM variants + flashcards & homophones', () => {
@@ -2243,5 +2248,151 @@ test('Primary-source synchronization: Tasks 4, 5, 7, 10, 11, 13, 14, 15, 18, and
   assert.ok(q21_28346);
   assert.deepEqual(q21_28346.correctIndices, [1, 2, 5, 6]);
 });
+
+test('Active workout persistence and immediate question crediting across tab switches and reloads', () => {
+  const store = new Map<string, string>();
+  const mockLocalStorage = {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => store.set(k, String(v)),
+    removeItem: (k: string) => store.delete(k),
+    clear: () => store.clear(),
+  };
+  const originalLocalStorage = globalThis.localStorage;
+  (globalThis as any).localStorage = mockLocalStorage;
+
+  try {
+    const bank = getTrainerBank();
+    const q17 = bank.fipiQuestions.find((q) => q.task === '17');
+    assert.ok(q17, 'Task 17 question must be available');
+
+    // 1. Initial State
+    let state = createInitialState();
+    assert.equal(state.totalSolved, 0);
+    assert.equal(state.totalCorrect, 0);
+    assert.equal(state.taskStats['17'].solved, 0);
+
+    // 2. Start Session
+    const queue = [q17];
+    saveActiveSession({
+      queue,
+      index: 0,
+      correct: 0,
+      wrong: 0,
+      taskTallies: { '17': { solved: 0, correct: 0 } } as any,
+      mistakes: [],
+      startedAt: Date.now(),
+    });
+
+    // 3. User answers and checks question 17
+    const checkRes = checkFipiQuestionAnswer(q17, q17.correctIndices);
+    assert.equal(checkRes.isCorrect, true);
+
+    // Immediate crediting to persistent state
+    state = applyAnswerToState(state, q17, true, checkRes.correctAnswerDisplay, false);
+    assert.equal(state.totalSolved, 1, 'totalSolved must increment immediately upon check');
+    assert.equal(state.totalCorrect, 1, 'totalCorrect must increment immediately upon check');
+    assert.equal(state.taskStats['17'].solved, 1, 'task 17 solved must increment immediately upon check');
+    assert.equal(state.taskStats['17'].correct, 1, 'task 17 correct must increment immediately upon check');
+
+    // Save active session with currentQuestionState
+    const answerSnapshot: SavedQuestionAnswerState = {
+      isSubmitted: true,
+      resultOk: true,
+      userAnswerStr: checkRes.correctAnswerDisplay,
+      selectedRows: q17.correctIndices,
+    };
+
+    saveActiveSession({
+      queue,
+      index: 0,
+      correct: 1,
+      wrong: 0,
+      taskTallies: { '17': { solved: 1, correct: 1 } } as any,
+      mistakes: [],
+      currentQuestionState: answerSnapshot,
+      startedAt: Date.now(),
+    });
+
+    // 4. User switches tabs (workout unmounts) or exits/reloads app
+    const restoredSession = loadActiveSession();
+    assert.ok(restoredSession, 'Active session must be restored from storage');
+    assert.equal(restoredSession.index, 0);
+    assert.equal(restoredSession.correct, 1);
+    assert.ok(restoredSession.currentQuestionState);
+    assert.equal(restoredSession.currentQuestionState.isSubmitted, true);
+    assert.equal(restoredSession.currentQuestionState.resultOk, true);
+    assert.deepEqual(restoredSession.currentQuestionState.selectedRows, q17.correctIndices);
+
+    // 5. Finishing session clears storage
+    clearActiveSession();
+    assert.equal(loadActiveSession(), null, 'Active session cleared after workout completion');
+  } finally {
+    (globalThis as any).localStorage = originalLocalStorage;
+  }
+});
+
+test('Task 16 exhaustive audit: 517 prototypes, sentence integrity, canonical instructions, answer keys and explanations', () => {
+  const bank = getTrainerBank();
+  const q16List = bank.fipiQuestions.filter((q) => q.task === '16');
+  assert.ok(q16List.length >= 517, `Expected at least 517 Task 16 prototypes, got ${q16List.length}`);
+
+  for (const q of q16List) {
+    // 1. Instruction & Target
+    assert.equal(
+      q.instruction,
+      'Расставьте знаки препинания. Укажите предложения, в которых нужно поставить ОДНУ запятую. Запишите номера этих предложений.',
+      `[${q.id}] canonical instruction mismatch`
+    );
+    assert.equal(q.target, 'ОДНУ', `[${q.id}] target must be ОДНУ`);
+
+    // 2. Sentences (rows)
+    assert.ok(Array.isArray(q.rows) && q.rows.length === 5, `[${q.id}] rows length must be 5`);
+
+    // 3. Answer keys
+    assert.ok(q.correctIndices.length >= 1 && q.correctIndices.length <= 4, `[${q.id}] correctIndices must have 1-4 items: [${q.correctIndices}]`);
+    for (const idx of q.correctIndices) {
+      assert.ok(idx >= 1 && idx <= 5, `[${q.id}] index ${idx} out of range 1..5`);
+    }
+    const sorted = [...q.correctIndices].sort((a, b) => a - b);
+    assert.deepEqual(q.correctIndices, sorted, `[${q.id}] correctIndices must be sorted`);
+
+    // 4. Sentences content & explanations checks
+    for (let r = 0; r < 5; r++) {
+      const row = q.rows[r];
+      assert.ok(row, `[${q.id}] row ${r + 1} is missing`);
+      const w = Array.isArray(row.words) ? row.words[0] : (row as any).sentence || '';
+      const sw = Array.isArray(row.solvedWords) ? row.solvedWords[0] : '';
+      assert.ok(w && w.trim().length > 10, `[${q.id}] row ${r + 1} words too short: ${w}`);
+      assert.ok(sw && sw.trim().length > 10, `[${q.id}] row ${r + 1} solvedWords too short: ${sw}`);
+
+      // Terminal punctuation
+      assert.ok(/[.!?…»”"]$/.test(w.trim()), `[${q.id}] row ${r + 1} words missing terminal punctuation: "${w}"`);
+      assert.ok(/[.!?…»”"]$/.test(sw.trim()), `[${q.id}] row ${r + 1} solvedWords missing terminal punctuation: "${sw}"`);
+
+      // No leaked scraper artifacts
+      assert.ok(!/\b(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Школково|Неофэмили)\b/i.test(w), `[${q.id}] row ${r + 1} words has scraper annotation`);
+      assert.ok(!/\b(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Школково|Неофэмили)\b/i.test(sw), `[${q.id}] row ${r + 1} solvedWords has scraper annotation`);
+
+      // No leaked explanation in solvedWords
+      assert.ok(!/(?:\s+|\.)[—–-]\s*(?:нужн|ставится|не\s*ставится|запят|две|три|одна|нет\b|ссп|очп|так\s+как|союз|в\s+предложении|общ|однородн|простое)/i.test(sw), `[${q.id}] row ${r + 1} solvedWords leaked explanation: "${sw}"`);
+
+      // Row-level isCorrectRow alignment
+      const isCorrect = q.correctIndices.includes(r + 1);
+      assert.equal(row.isCorrectRow, isCorrect, `[${q.id}] row ${r + 1} isCorrectRow mismatch`);
+
+      // Row-level explanation
+      assert.ok(row.explanation && row.explanation.length > 5, `[${q.id}] row ${r + 1} explanation missing or too short: ${row.explanation}`);
+      assert.ok(!row.explanation.includes('скоро появится'), `[${q.id}] row ${r + 1} explanation placeholder detected`);
+    }
+
+    // 5. Global explanation
+    assert.ok(q.explanation && q.explanation.length > 20, `[${q.id}] explanation too short`);
+    assert.ok(!q.explanation.includes('скоро появится'), `[${q.id}] explanation placeholder detected`);
+  }
+});
+
+
+
+
 
 

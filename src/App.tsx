@@ -46,6 +46,10 @@ import {
   mergeTrainerStates,
   cloudSyncManager,
   SyncStatus,
+  saveActiveSession,
+  loadActiveSession,
+  clearActiveSession,
+  SavedQuestionAnswerState,
 } from './utils/storageSync';
 import { CheatsheetModal } from './components/CheatsheetModal';
 import { SyncModal } from './components/SyncModal';
@@ -236,7 +240,16 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ state: 'idle' });
   const [isSyncActive, setIsSyncActive] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('workout');
-  const [workoutView, setWorkoutView] = useState<WorkoutSubView>('builder');
+
+  // Load any previously active workout session from persistent storage
+  const savedActive = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return loadActiveSession();
+  }, []);
+
+  const [workoutView, setWorkoutView] = useState<WorkoutSubView>(
+    () => (savedActive?.queue && savedActive.queue.length > 0 ? 'active' : 'builder')
+  );
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<TaskBlockId, boolean>>({
     speech: false,
     ortho: false,
@@ -249,14 +262,27 @@ export default function App() {
   const [specularEnabled, setSpecularEnabled] = useState(true);
 
   // Active workout session state
-  const [sessionQueue, setSessionQueue] = useState<TrainerQuestion[]>([]);
-  const [sessionIndex, setSessionIndex] = useState(0);
-  const [sessionCorrect, setSessionCorrect] = useState(0);
-  const [sessionWrong, setSessionWrong] = useState(0);
+  const [sessionQueue, setSessionQueue] = useState<TrainerQuestion[]>(
+    () => savedActive?.queue || []
+  );
+  const [sessionIndex, setSessionIndex] = useState<number>(
+    () => savedActive?.index || 0
+  );
+  const [sessionCorrect, setSessionCorrect] = useState<number>(
+    () => savedActive?.correct || 0
+  );
+  const [sessionWrong, setSessionWrong] = useState<number>(
+    () => savedActive?.wrong || 0
+  );
   const [sessionTaskTallies, setSessionTaskTallies] = useState<
     Record<TaskId, { solved: number; correct: number }>
-  >(createEmptyTaskTallies);
-  const [sessionMistakes, setSessionMistakes] = useState<SessionMistakeItem[]>([]);
+  >(() => savedActive?.taskTallies || createEmptyTaskTallies());
+  const [sessionMistakes, setSessionMistakes] = useState<SessionMistakeItem[]>(
+    () => (savedActive?.mistakes as any) || []
+  );
+  const [currentQuestionAnswerState, setCurrentQuestionAnswerState] = useState<
+    SavedQuestionAnswerState | null
+  >(() => savedActive?.currentQuestionState || null);
   const [showSessionErrorsDrawer, setShowSessionErrorsDrawer] = useState(false);
 
   // Quick Sprint & Arcade Modes state
@@ -722,15 +748,28 @@ export default function App() {
 
   const startSessionWithQueue = (queue: TrainerQuestion[]) => {
     if (queue.length === 0) return;
+    const initialTallies = createEmptyTaskTallies();
     setSessionQueue(queue);
     setSessionIndex(0);
     setSessionCorrect(0);
     setSessionWrong(0);
     setSessionMistakes([]);
+    setCurrentQuestionAnswerState(null);
     setShowSessionErrorsDrawer(false);
-    setSessionTaskTallies(createEmptyTaskTallies());
+    setSessionTaskTallies(initialTallies);
     setActiveTab('workout');
     setWorkoutView('active');
+
+    saveActiveSession({
+      queue,
+      index: 0,
+      correct: 0,
+      wrong: 0,
+      taskTallies: initialTallies,
+      mistakes: [],
+      currentQuestionState: undefined,
+      startedAt: Date.now(),
+    });
   };
 
   const handleStartPlannedWorkout = () => {
@@ -848,47 +887,114 @@ export default function App() {
     }));
   }, []);
 
-  const handleSessionAnswer = useCallback((isCorrect: boolean, userChoiceLabel: string) => {
-    const currentQ = sessionQueue[sessionIndex];
-    if (!currentQ) return;
+  const handleSessionQuestionCheck = useCallback(
+    (isCorrect: boolean, userChoiceLabel: string, answerSnapshot: SavedQuestionAnswerState) => {
+      const currentQ = sessionQueue[sessionIndex];
+      if (!currentQ) return;
 
-    setState((prev) => applyAnswerToState(prev, currentQ, isCorrect, userChoiceLabel, false));
+      // Immediately credit answer to persistent TrainerState
+      setState((prev) => applyAnswerToState(prev, currentQ, isCorrect, userChoiceLabel, false));
 
-    setSessionTaskTallies((prev) => {
-      const t = currentQ.task;
-      return {
-        ...prev,
-        [t]: {
-          solved: (prev[t]?.solved || 0) + 1,
-          correct: (prev[t]?.correct || 0) + (isCorrect ? 1 : 0),
+      const nextTallies = {
+        ...sessionTaskTallies,
+        [currentQ.task]: {
+          solved: (sessionTaskTallies[currentQ.task]?.solved || 0) + 1,
+          correct: (sessionTaskTallies[currentQ.task]?.correct || 0) + (isCorrect ? 1 : 0),
         },
       };
-    });
+      setSessionTaskTallies(nextTallies);
 
-    const nextCorrect = sessionCorrect + (isCorrect ? 1 : 0);
-    const nextWrong = sessionWrong + (isCorrect ? 0 : 1);
+      const nextCorrect = sessionCorrect + (isCorrect ? 1 : 0);
+      const nextWrong = sessionWrong + (isCorrect ? 0 : 1);
+      if (isCorrect) {
+        setSessionCorrect(nextCorrect);
+      } else {
+        setSessionWrong(nextWrong);
+      }
 
-    if (isCorrect) {
-      setSessionCorrect(nextCorrect);
-    } else {
-      setSessionWrong(nextWrong);
-      setSessionMistakes((prev) => [
-        ...prev,
-        { question: currentQ, userChoice: userChoiceLabel },
-      ]);
-    }
+      const nextMistakes = isCorrect
+        ? sessionMistakes
+        : [...sessionMistakes, { question: currentQ, userChoice: userChoiceLabel }];
+      if (!isCorrect) {
+        setSessionMistakes(nextMistakes);
+      }
 
+      setCurrentQuestionAnswerState(answerSnapshot);
+
+      saveActiveSession({
+        queue: sessionQueue,
+        index: sessionIndex,
+        correct: nextCorrect,
+        wrong: nextWrong,
+        taskTallies: nextTallies,
+        mistakes: nextMistakes,
+        currentQuestionState: answerSnapshot,
+        startedAt: Date.now(),
+      });
+    },
+    [sessionQueue, sessionIndex, sessionCorrect, sessionWrong, sessionTaskTallies, sessionMistakes]
+  );
+
+  const handleSessionProceedNext = useCallback(() => {
     if (sessionIndex + 1 < sessionQueue.length) {
-      setSessionIndex((idx) => idx + 1);
+      const nextIdx = sessionIndex + 1;
+      setSessionIndex(nextIdx);
+      setCurrentQuestionAnswerState(null);
+
+      saveActiveSession({
+        queue: sessionQueue,
+        index: nextIdx,
+        correct: sessionCorrect,
+        wrong: sessionWrong,
+        taskTallies: sessionTaskTallies,
+        mistakes: sessionMistakes,
+        currentQuestionState: undefined,
+        startedAt: Date.now(),
+      });
     } else {
+      const total = sessionCorrect + sessionWrong;
       recordJournalEntry(
         `Занятие (${sessionQueue.length} зад.)`,
-        nextCorrect + nextWrong,
-        nextCorrect
+        total,
+        sessionCorrect
       );
       setWorkoutView('summary');
+      clearActiveSession();
+      setCurrentQuestionAnswerState(null);
     }
-  }, [sessionQueue, sessionIndex, sessionCorrect, sessionWrong, recordJournalEntry]);
+  }, [sessionQueue, sessionIndex, sessionCorrect, sessionWrong, sessionTaskTallies, sessionMistakes, recordJournalEntry]);
+
+  const handleSessionDraftChange = useCallback(
+    (draftSnapshot: SavedQuestionAnswerState) => {
+      setCurrentQuestionAnswerState(draftSnapshot);
+      if (sessionQueue.length > 0 && sessionIndex < sessionQueue.length) {
+        saveActiveSession({
+          queue: sessionQueue,
+          index: sessionIndex,
+          correct: sessionCorrect,
+          wrong: sessionWrong,
+          taskTallies: sessionTaskTallies,
+          mistakes: sessionMistakes,
+          currentQuestionState: draftSnapshot,
+          startedAt: Date.now(),
+        });
+      }
+    },
+    [sessionQueue, sessionIndex, sessionCorrect, sessionWrong, sessionTaskTallies, sessionMistakes]
+  );
+
+  // Fallback for legacy onAnswer prop
+  const handleSessionAnswer = useCallback(
+    (isCorrect: boolean, userChoiceLabel: string) => {
+      handleSessionQuestionCheck(isCorrect, userChoiceLabel, {
+        isSubmitted: true,
+        resultOk: isCorrect,
+        userAnswerStr: userChoiceLabel,
+      });
+      handleSessionProceedNext();
+    },
+    [handleSessionQuestionCheck, handleSessionProceedNext]
+  );
 
   const handleAbortWorkout = () => {
     const totalDone = sessionCorrect + sessionWrong;
@@ -898,6 +1004,8 @@ export default function App() {
     } else {
       setWorkoutView('builder');
     }
+    clearActiveSession();
+    setCurrentQuestionAnswerState(null);
   };
 
   const handleSelectSprintMode = (mode: SprintGameMode) => {
@@ -1915,6 +2023,10 @@ export default function App() {
                         `${sessionIndex}-${sessionQueue[sessionIndex]?.id}`
                       }
                       question={sessionQueue[sessionIndex]}
+                      savedAnswerState={currentQuestionAnswerState}
+                      onCheckAnswer={handleSessionQuestionCheck}
+                      onProceedNext={handleSessionProceedNext}
+                      onDraftChange={handleSessionDraftChange}
                       onAnswer={handleSessionAnswer}
                     />
                   </div>
@@ -2190,7 +2302,11 @@ export default function App() {
                     <button
                       type="button"
                       id="back-to-builder-btn"
-                      onClick={() => setWorkoutView('builder')}
+                      onClick={() => {
+                        clearActiveSession();
+                        setCurrentQuestionAnswerState(null);
+                        setWorkoutView('builder');
+                      }}
                       className="ios-btn-glass-secondary"
                     >
                       <span>Настроить конструктор</span>

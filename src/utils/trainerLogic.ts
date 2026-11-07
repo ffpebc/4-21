@@ -79,6 +79,7 @@ export interface FipiQuestion {
   textAnswers?: string[]; // valid word answers for tasks 5, 6, 7 or 5-digit string for 8 & 22
   choiceOptions?: string[]; // interactive pill choices for tasks 5, 6, 7
   matchingLetters?: MatchingLetterItem[]; // А, Б, В, Г, Д items for tasks 8 & 22
+  explanation?: string;
 }
 
 export type TrainerQuestion = SprintQuestion | FipiQuestion;
@@ -3029,7 +3030,10 @@ export function cleanScraperArtifacts(text: string | undefined): string {
   res = res
     .replace(/&#[хx]2013;\s*\"?>\s*—?/gi, '—')
     .replace(/\s*Изобразительно-выразительные средства языка\s*$/i, '')
-    .replace(/\s*\(?(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
+    .replace(/\s*\((?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили)[^)]*\)\.?$/i, '')
+    .replace(/\s+(?:Взято из\b|ЕГКР\b|вариант\s*\d+|вар\.\s*\d+|из\s+сборника\b|сборник\s+(?:ФИПИ|Цыбулько|Дощинск|Сенин|ЕГЭ|Школково)).*$/i, '')
+    .replace(/\s*Ответ:\s*[\d\s,]+(?:Источник\s*:.*)?$/i, '')
+    .replace(/\s*Источник\s*:.*$/i, '')
     .trim();
 
   return res.trim();
@@ -3053,7 +3057,8 @@ export function cleanWord(str: string | undefined): string {
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
     .replace(/\u00cb/g, 'Ё')
     .replace(/\u00eb/g, 'ё')
-    .replace(/\s*\(?(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
+    .replace(/\s*\((?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили)[^)]*\)\.?$/i, '')
+    .replace(/\s+(?:Взято из\b|ЕГКР\b|вариант\s*\d+|вар\.\s*\d+|из\s+сборника\b|сборник\s+(?:ФИПИ|Цыбулько|Дощинск|Сенин|ЕГЭ|Школково)).*$/i, '')
     .trim();
 
   res = res.replace(/\(\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\(([^()]+)\)\s*\)/g, '($1 $2 $3)');
@@ -3089,8 +3094,13 @@ export function cleanExplanation(str: string | undefined): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/\s*Изобразительно-выразительные средства языка\s*$/i, '')
-    .replace(/\s*\(?(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили).*$/i, '')
+    .replace(/\s*\((?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Сборник|Дощинск|Цыбулько|Сенина|Школково|Неофэмили)[^)]*\)\.?$/i, '')
+    .replace(/\s+(?:Взято из\b|ЕГКР\b|вариант\s*\d+|вар\.\s*\d+|из\s+сборника\b|сборник\s+(?:ФИПИ|Цыбулько|Дощинск|Сенин|ЕГЭ|Школково)).*$/i, '')
+    .replace(/\s*Ответ:\s*[\d\s,]+(?:Источник\s*:.*)?$/i, '')
+    .replace(/\s*Источник\s*:.*$/i, '')
     .trim();
+
+  res = res.replace(/\({2,}/g, '(').replace(/\){2,}/g, ')');
 
   // Normalize digit 3 inside Russian words
   res = res.replace(/([А-Яа-яЁё])3([А-Яа-яЁё])/g, '$1З$2');
@@ -3598,6 +3608,11 @@ export function getTrainerBank() {
         matchingLetters: matchingLetters as any,
         choiceOptions,
         textAnswers,
+        explanation: (rawFq as any).explanation
+          ? cleanScraperArtifacts(cleanExplanation((rawFq as any).explanation))
+          : rows.some((r) => r.explanation)
+          ? rows.map((r, i) => `${i + 1}) ${r.explanation}`).filter((s) => !s.endsWith(') ')).join('\n')
+          : undefined,
       };
 
       const sig = `${fq.task}:${(fq.sentence || '').slice(0, 80)}:` + fq.rows.map((r) => r.words.join('|')).join('||');

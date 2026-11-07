@@ -1,6 +1,7 @@
 import {
   TaskId,
   TrainerState,
+  TrainerQuestion,
   TaskMasteryStat,
   ErrorBankEntry,
   SessionJournalEntry,
@@ -634,3 +635,74 @@ class CloudSyncManagerImpl {
 }
 
 export const cloudSyncManager = new CloudSyncManagerImpl();
+
+export interface SavedQuestionAnswerState {
+  isSubmitted: boolean;
+  resultOk: boolean;
+  userAnswerStr: string;
+  selectedRows?: number[];
+  wordInput?: string;
+  matchingDigits?: number[];
+  selectedChoice?: number | null;
+}
+
+export interface SessionMistakeItem {
+  question: TrainerQuestion;
+  userChoice: string;
+  userAnswer?: string;
+  correctAnswer?: string;
+  task?: TaskId;
+}
+
+export interface PersistedActiveSession {
+  queue: TrainerQuestion[];
+  index: number;
+  correct: number;
+  wrong: number;
+  taskTallies: Record<TaskId, { solved: number; correct: number }>;
+  mistakes: SessionMistakeItem[];
+  currentQuestionState?: SavedQuestionAnswerState;
+  startedAt: number;
+}
+
+const ACTIVE_SESSION_STORAGE_KEY = 'ege_active_session_ios27_v1';
+
+export function saveActiveSession(session: PersistedActiveSession): void {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    // Ignore storage errors or quota limits
+  }
+}
+
+export function loadActiveSession(): PersistedActiveSession | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      Array.isArray(parsed.queue) &&
+      parsed.queue.length > 0 &&
+      typeof parsed.index === 'number' &&
+      parsed.index < parsed.queue.length
+    ) {
+      return parsed as PersistedActiveSession;
+    }
+  } catch {
+    // Ignore corrupt data
+  }
+  return null;
+}
+
+export function clearActiveSession(): void {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
