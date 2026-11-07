@@ -2331,6 +2331,67 @@ test('Active workout persistence and immediate question crediting across tab swi
   }
 });
 
+test('Task 16 exhaustive audit: 517 prototypes, sentence integrity, canonical instructions, answer keys and explanations', () => {
+  const bank = getTrainerBank();
+  const q16List = bank.fipiQuestions.filter((q) => q.task === '16');
+  assert.ok(q16List.length >= 517, `Expected at least 517 Task 16 prototypes, got ${q16List.length}`);
+
+  for (const q of q16List) {
+    // 1. Instruction & Target
+    assert.equal(
+      q.instruction,
+      'Расставьте знаки препинания. Укажите предложения, в которых нужно поставить ОДНУ запятую. Запишите номера этих предложений.',
+      `[${q.id}] canonical instruction mismatch`
+    );
+    assert.equal(q.target, 'ОДНУ', `[${q.id}] target must be ОДНУ`);
+
+    // 2. Sentences (rows)
+    assert.ok(Array.isArray(q.rows) && q.rows.length === 5, `[${q.id}] rows length must be 5`);
+
+    // 3. Answer keys
+    assert.ok(q.correctIndices.length >= 1 && q.correctIndices.length <= 4, `[${q.id}] correctIndices must have 1-4 items: [${q.correctIndices}]`);
+    for (const idx of q.correctIndices) {
+      assert.ok(idx >= 1 && idx <= 5, `[${q.id}] index ${idx} out of range 1..5`);
+    }
+    const sorted = [...q.correctIndices].sort((a, b) => a - b);
+    assert.deepEqual(q.correctIndices, sorted, `[${q.id}] correctIndices must be sorted`);
+
+    // 4. Sentences content & explanations checks
+    for (let r = 0; r < 5; r++) {
+      const row = q.rows[r];
+      assert.ok(row, `[${q.id}] row ${r + 1} is missing`);
+      const w = Array.isArray(row.words) ? row.words[0] : (row as any).sentence || '';
+      const sw = Array.isArray(row.solvedWords) ? row.solvedWords[0] : '';
+      assert.ok(w && w.trim().length > 10, `[${q.id}] row ${r + 1} words too short: ${w}`);
+      assert.ok(sw && sw.trim().length > 10, `[${q.id}] row ${r + 1} solvedWords too short: ${sw}`);
+
+      // Terminal punctuation
+      assert.ok(/[.!?…»”"]$/.test(w.trim()), `[${q.id}] row ${r + 1} words missing terminal punctuation: "${w}"`);
+      assert.ok(/[.!?…»”"]$/.test(sw.trim()), `[${q.id}] row ${r + 1} solvedWords missing terminal punctuation: "${sw}"`);
+
+      // No leaked scraper artifacts
+      assert.ok(!/\b(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Школково|Неофэмили)\b/i.test(w), `[${q.id}] row ${r + 1} words has scraper annotation`);
+      assert.ok(!/\b(?:Взято из|ЕГКР|вар\.\s*\d+|вариант\s*\d+|Школково|Неофэмили)\b/i.test(sw), `[${q.id}] row ${r + 1} solvedWords has scraper annotation`);
+
+      // No leaked explanation in solvedWords
+      assert.ok(!/(?:\s+|\.)[—–-]\s*(?:нужн|ставится|не\s*ставится|запят|две|три|одна|нет\b|ссп|очп|так\s+как|союз|в\s+предложении|общ|однородн|простое)/i.test(sw), `[${q.id}] row ${r + 1} solvedWords leaked explanation: "${sw}"`);
+
+      // Row-level isCorrectRow alignment
+      const isCorrect = q.correctIndices.includes(r + 1);
+      assert.equal(row.isCorrectRow, isCorrect, `[${q.id}] row ${r + 1} isCorrectRow mismatch`);
+
+      // Row-level explanation
+      assert.ok(row.explanation && row.explanation.length > 5, `[${q.id}] row ${r + 1} explanation missing or too short: ${row.explanation}`);
+      assert.ok(!row.explanation.includes('скоро появится'), `[${q.id}] row ${r + 1} explanation placeholder detected`);
+    }
+
+    // 5. Global explanation or composite
+    const fullExp = q.explanation || q.rows.map((r) => r.explanation).join('\n');
+    assert.ok(fullExp && fullExp.length > 20, `[${q.id}] explanation too short`);
+    assert.ok(!fullExp.includes('скоро появится'), `[${q.id}] explanation placeholder detected`);
+  }
+});
+
 
 
 
