@@ -1437,6 +1437,38 @@ export default function App() {
                     <div className="flex items-center justify-between gap-1.5 mt-0.5 mb-2.5 min-w-0">
                       <h1 className="ios-large-title !m-0">Новое занятие</h1>
                       <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Desktop Quick 1-Click Presets */}
+                        <div className="hidden md:flex items-center gap-1 mr-1">
+                          <button
+                            type="button"
+                            onClick={handleApplyBalanced30}
+                            className="liquid-pill-btn px-2.5 py-1 min-h-[32px] rounded-full text-[11px] font-bold cursor-pointer"
+                          >
+                            Баланс 30
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyPreset(30)}
+                            className="liquid-pill-btn px-2.5 py-1 min-h-[32px] rounded-full text-[11px] font-bold cursor-pointer"
+                          >
+                            Все по 30
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyPreset(10)}
+                            className="liquid-pill-btn px-2.5 py-1 min-h-[32px] rounded-full text-[11px] font-bold cursor-pointer"
+                          >
+                            Мини 10
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyPreset(0)}
+                            className="liquid-pill-btn px-2 py-1 min-h-[32px] rounded-full text-[11px] font-bold cursor-pointer opacity-80 hover:opacity-100"
+                            title="Сбросить все в 0"
+                          >
+                            Сброс
+                          </button>
+                        </div>
                         <button
                           type="button"
                           id="open-presets-modal-btn"
@@ -1521,6 +1553,7 @@ export default function App() {
                     </div>
 
                     {/* Tasks 4–22 Grouped by Official FIPI Blocks + iOS Switches */}
+                    <div className="desktop-blocks-grid w-full">
                     {TASK_BLOCKS.map((block) => {
                       const isBlockEnabled = block.tasks.every((t) => enabledMap[t] !== false);
                       const isBlockCollapsed = collapsedBlocks[block.id];
@@ -1695,10 +1728,11 @@ export default function App() {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
 
                   {/* Ergonomic Action Bar: Primary Start CTA Positioned Comfortably Above TabBar */}
-                  <div className="mt-auto pt-2 pb-0">
+                  <div className="mt-auto pt-2 pb-0 desktop-action-bar w-full">
                     <button
                       type="button"
                       id="start-workout-btn"
@@ -2724,7 +2758,7 @@ export default function App() {
                       </div>
 
                       {/* 19 Task Tabs (4–22) */}
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 mb-2 no-scrollbar">
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 mb-2 no-scrollbar md:flex-wrap md:overflow-visible">
                         {TASK_IDS.map((tId) => {
                           const fq = currentKimVariant?.tasks?.[tId];
                           const userAns = (kimAnswers[tId] || '').trim();
@@ -3261,7 +3295,7 @@ export default function App() {
                         </p>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-2.5">
+                      <div className="flex flex-col gap-2.5 desktop-errors-grid">
                         {state.errorBank.map((err: ErrorBankEntry, idx: number) => {
                           const linkedQuestion = bank.byId.get(err.questionId);
                           const targetQuestion: TrainerQuestion = linkedQuestion || {
@@ -3490,7 +3524,7 @@ export default function App() {
                       </div>
 
                       <div className="ios-section-header">Освоение тем (Задания 4–22)</div>
-                      <div id="global-task-bars" className="ios-inset-group !mb-0">
+                      <div id="global-task-bars" className="ios-inset-group !mb-0 desktop-task-grid">
                         {TASK_IDS.map((taskId) => {
                           const meta = TASK_META[taskId];
                           const st = state.taskStats[taskId] || { solved: 0, correct: 0 };

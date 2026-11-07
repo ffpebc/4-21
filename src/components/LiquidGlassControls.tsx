@@ -718,6 +718,37 @@ export const QuizletFlashcardDeck: React.FC<QuizletFlashcardDeckProps> = ({
     setIndex(prevIdx);
   };
 
+  // Ergonomic Desktop Keyboard Listener (Space = flip, Left = repeat, Right = know, Z = undo)
+  useEffect(() => {
+    if (deckMode !== 'stack') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        setIsFlipped((f) => !f);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        triggerSwipeComplete('right');
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        triggerSwipeComplete('left');
+      } else if (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я') {
+        e.preventDefault();
+        handleUndoLastCard();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deckMode, currentCard, flyOutDir, history]);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (flyOutDir) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -1125,6 +1156,27 @@ export const QuizletFlashcardDeck: React.FC<QuizletFlashcardDeckProps> = ({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Desktop Keyboard Hints */}
+          <div className="hidden md:flex items-center justify-center gap-3 pt-3 text-[12px] font-semibold opacity-60 select-none">
+            <span><kbd className="px-1.5 py-0.5 rounded bg-[var(--ios-bg-secondary)] border border-[var(--ios-separator)]">Пробел</kbd> перевернуть</span>
+            <span>•</span>
+            <span><kbd className="px-1.5 py-0.5 rounded bg-[var(--ios-bg-secondary)] border border-[var(--ios-separator)]">←</kbd> повторить</span>
+            <span>•</span>
+            <span><kbd className="px-1.5 py-0.5 rounded bg-[var(--ios-bg-secondary)] border border-[var(--ios-separator)]">→</kbd> знаю</span>
+            {history.length > 0 && (
+              <>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={handleUndoLastCard}
+                  className="hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <kbd className="px-1.5 py-0.5 rounded bg-[var(--ios-bg-secondary)] border border-[var(--ios-separator)]">Z</kbd> вернуть
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -571,6 +571,58 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     }, 180);
   };
 
+  // Ergonomic Desktop Keyboard Shortcuts (Enter = check/advance, 1..9 = toggle/assign)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        if (!fipiSubmitted && canSubmitFipi()) {
+          e.preventDefault();
+          handleCheckFipi();
+        } else if (fipiSubmitted) {
+          e.preventDefault();
+          handleProceedFipi();
+        }
+        return;
+      }
+
+      if (!fipiSubmitted && e.key >= '1' && e.key <= '9') {
+        const digit = Number(e.key);
+        if (effectiveKind === 'matching_grid') {
+          if (digit >= 1 && digit <= fipiQ.rows.length) {
+            e.preventDefault();
+            assignMatchingDigit(digit);
+          }
+        } else if (effectiveKind === 'rows' || effectiveKind === 'numbered_gaps') {
+          if (digit >= 1 && digit <= fipiQ.rows.length) {
+            e.preventDefault();
+            toggleRow(digit);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    fipiSubmitted,
+    canSubmitFipi,
+    handleCheckFipi,
+    handleProceedFipi,
+    effectiveKind,
+    fipiQ.rows.length,
+    activeMatchSlot,
+  ]);
+
   const fipiHasExceptions = fipiQ.rows.some((r) =>
     /исключен|искл\./i.test(r.explanation || '')
   );
@@ -1048,98 +1100,101 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
             </div>
           </div>
 
-          {/* Letters А–Д Descriptions */}
-          {fipiQ.matchingLetters && fipiQ.matchingLetters.length > 0 && (
-            <div className="flex flex-col gap-1 max-h-[165px] overflow-y-auto pr-0.5">
-              {fipiQ.matchingLetters.map((item, idx) => {
-                const isCurrent = !fipiSubmitted && activeMatchSlot === idx;
-                const assignedDigit = fipiMatchingDigits[idx];
-                const rawItemText = typeof item === 'string' ? item : item.text || '';
+          {/* Desktop 2-Column Split: Grammar Definitions (Left) + Sentences 1-9 (Right) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3.5 items-start">
+            {/* Letters А–Д Descriptions */}
+            {fipiQ.matchingLetters && fipiQ.matchingLetters.length > 0 && (
+              <div className="flex flex-col gap-1 max-h-[165px] md:max-h-[460px] overflow-y-auto pr-0.5">
+                {fipiQ.matchingLetters.map((item, idx) => {
+                  const isCurrent = !fipiSubmitted && activeMatchSlot === idx;
+                  const assignedDigit = fipiMatchingDigits[idx];
+                  const rawItemText = typeof item === 'string' ? item : item.text || '';
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      disabled={fipiSubmitted}
+                      onClick={() => setActiveMatchSlot(idx)}
+                      className="px-2.5 py-1.5 rounded-xl text-left text-[11.5px] sm:text-[12.5px] font-semibold leading-snug flex items-start gap-2 transition-all cursor-pointer"
+                      style={{
+                        background: isCurrent ? 'var(--ios-blue-soft)' : 'var(--ios-bg-secondary)',
+                        border: isCurrent
+                          ? '1.5px solid var(--ios-blue)'
+                          : '1px solid var(--ios-separator)',
+                        color: 'var(--ios-label)',
+                      }}
+                    >
+                      <span
+                        className="px-1.5 py-0.5 rounded-md text-[10.5px] font-black shrink-0"
+                        style={{
+                          background: assignedDigit > 0 ? 'var(--ios-blue)' : 'var(--ios-bg-tertiary)',
+                          color: assignedDigit > 0 ? '#FFFFFF' : 'var(--ios-label)',
+                        }}
+                      >
+                        {['А', 'Б', 'В', 'Г', 'Д'][idx]}
+                        {assignedDigit > 0 ? ` → ${assignedDigit}` : ''}
+                      </span>
+                      <span className="flex-1">{rawItemText.replace(/^[А-ДA-E]\)\s*/i, '')}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Numbered Candidates 1–9 */}
+            <div className="flex flex-col gap-1 max-h-[210px] md:max-h-[460px] overflow-y-auto pr-0.5">
+              {fipiQ.rows.map((row, idx) => {
+                const digit = idx + 1;
+                const assignedSlotIdx = fipiMatchingDigits.indexOf(digit);
+                const assignedLetter =
+                  assignedSlotIdx !== -1 ? ['А', 'Б', 'В', 'Г', 'Д'][assignedSlotIdx] : null;
                 return (
                   <button
-                    key={idx}
+                    key={digit}
                     type="button"
                     disabled={fipiSubmitted}
-                    onClick={() => setActiveMatchSlot(idx)}
-                    className="px-2.5 py-1.5 rounded-xl text-left text-[11.5px] sm:text-[12.5px] font-semibold leading-snug flex items-start gap-2 transition-all cursor-pointer"
+                    onClick={() => assignMatchingDigit(digit)}
+                    className="px-2.5 py-1.5 rounded-xl text-left text-[11.5px] sm:text-[12.5px] font-medium leading-snug flex items-start gap-2 transition-all cursor-pointer"
                     style={{
-                      background: isCurrent ? 'var(--ios-blue-soft)' : 'var(--ios-bg-secondary)',
-                      border: isCurrent
+                      background: assignedLetter ? 'var(--ios-blue-soft)' : 'var(--ios-bg-secondary)',
+                      border: assignedLetter
                         ? '1.5px solid var(--ios-blue)'
                         : '1px solid var(--ios-separator)',
                       color: 'var(--ios-label)',
                     }}
                   >
                     <span
-                      className="px-1.5 py-0.5 rounded-md text-[10.5px] font-black shrink-0"
+                      className="w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5"
                       style={{
-                        background: assignedDigit > 0 ? 'var(--ios-blue)' : 'var(--ios-bg-tertiary)',
-                        color: assignedDigit > 0 ? '#FFFFFF' : 'var(--ios-label)',
+                        background: assignedLetter ? 'var(--ios-blue)' : 'var(--ios-bg-tertiary)',
+                        color: assignedLetter ? '#FFFFFF' : 'var(--ios-label)',
                       }}
                     >
-                      {['А', 'Б', 'В', 'Г', 'Д'][idx]}
-                      {assignedDigit > 0 ? ` → ${assignedDigit}` : ''}
+                      {digit}
                     </span>
-                    <span className="flex-1">{rawItemText.replace(/^[А-ДA-E]\)\s*/i, '')}</span>
+                    <div className="flex-1 min-w-0">
+                      <div>{cleanScraperArtifacts(row.words.join(' ').replace(/^\d+\)\s*/, ''))}</div>
+                      {fipiSubmitted && row.explanation && (
+                        <div
+                          className="text-[10px] mt-0.5 opacity-90 leading-tight font-semibold"
+                          style={{ color: row.isCorrectRow ? 'var(--ios-blue)' : 'var(--ios-label-sec)' }}
+                        >
+                          {cleanExplanation(row.explanation)}
+                        </div>
+                      )}
+                    </div>
+                    {assignedLetter && (
+                      <span
+                        className="px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0"
+                        style={{ background: 'var(--ios-blue)', color: '#FFFFFF' }}
+                      >
+                        {assignedLetter}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
-          )}
-
-          {/* Numbered Candidates 1–9 */}
-          <div className="flex flex-col gap-1 max-h-[210px] overflow-y-auto pr-0.5">
-            {fipiQ.rows.map((row, idx) => {
-              const digit = idx + 1;
-              const assignedSlotIdx = fipiMatchingDigits.indexOf(digit);
-              const assignedLetter =
-                assignedSlotIdx !== -1 ? ['А', 'Б', 'В', 'Г', 'Д'][assignedSlotIdx] : null;
-              return (
-                <button
-                  key={digit}
-                  type="button"
-                  disabled={fipiSubmitted}
-                  onClick={() => assignMatchingDigit(digit)}
-                  className="px-2.5 py-1.5 rounded-xl text-left text-[11.5px] sm:text-[12.5px] font-medium leading-snug flex items-start gap-2 transition-all cursor-pointer"
-                  style={{
-                    background: assignedLetter ? 'var(--ios-blue-soft)' : 'var(--ios-bg-secondary)',
-                    border: assignedLetter
-                      ? '1.5px solid var(--ios-blue)'
-                      : '1px solid var(--ios-separator)',
-                    color: 'var(--ios-label)',
-                  }}
-                >
-                  <span
-                    className="w-5 h-5 rounded-full text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5"
-                    style={{
-                      background: assignedLetter ? 'var(--ios-blue)' : 'var(--ios-bg-tertiary)',
-                      color: assignedLetter ? '#FFFFFF' : 'var(--ios-label)',
-                    }}
-                  >
-                    {digit}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div>{cleanScraperArtifacts(row.words.join(' ').replace(/^\d+\)\s*/, ''))}</div>
-                    {fipiSubmitted && row.explanation && (
-                      <div
-                        className="text-[10px] mt-0.5 opacity-90 leading-tight font-semibold"
-                        style={{ color: row.isCorrectRow ? 'var(--ios-blue)' : 'var(--ios-label-sec)' }}
-                      >
-                        {cleanExplanation(row.explanation)}
-                      </div>
-                    )}
-                  </div>
-                  {assignedLetter && (
-                    <span
-                      className="px-1.5 py-0.5 rounded-md text-[10px] font-black shrink-0"
-                      style={{ background: 'var(--ios-blue)', color: '#FFFFFF' }}
-                    >
-                      {assignedLetter}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
       )}
@@ -1268,6 +1323,12 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
             </span>
           </button>
         )}
+
+        {/* Desktop Keyboard Helper Hint */}
+        <div className="hidden md:flex items-center justify-between text-[11px] font-semibold opacity-60 px-1 pt-1 select-none">
+          <span>[ Enter ] {fipiSubmitted ? 'следующее' : 'проверить'}</span>
+          <span>[ 1–{fipiQ.rows.length} ] выбор строки</span>
+        </div>
       </div>
     </div>
   );
