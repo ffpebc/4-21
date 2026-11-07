@@ -30,13 +30,14 @@ import {
   type TaskId,
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
-import { sprintToWordEntry, PARSED_WORDS } from '../data/tasksBankData.ts';
+import { sprintToWordEntry, PARSED_WORDS, PARSED_FIPI_QUESTIONS } from '../data/tasksBankData.ts';
 import { classifyWordSubtopicAndException } from './wordClassifier.ts';
 import {
   sanitizeLoadedState,
   mergeTrainerStates,
   getSyncApiUrl,
   cloudSyncManager,
+  normalizePin,
 } from './storageSync.ts';
 
 test('FIPI bank generates sprint questions + FIPI sets + KIM variants + flashcards & homophones', () => {
@@ -1977,6 +1978,10 @@ test('Real-time cross-device cloud sync and monotonic state merging (PC <-> Phon
   assert.ok(urlWithQuery.includes('since=12345'), 'URL must support since query param');
 
   // 4. CloudSyncManager PIN normalization & registration
+  assert.equal(normalizePin('ффпебк'), 'FFPEBC', 'normalizePin must map Cyrillic ффпебк to FFPEBC');
+  assert.equal(normalizePin('FFPEBC'), 'FFPEBC', 'normalizePin must keep Latin FFPEBC');
+  cloudSyncManager.setPin('  ффпебк  ');
+  assert.equal(cloudSyncManager.getPin(), 'FFPEBC', 'cloudSyncManager must normalize Cyrillic ффпебк to FFPEBC');
   cloudSyncManager.setPin('  ffpebc_01  ');
   assert.equal(cloudSyncManager.getPin(), 'FFPEBC_01', 'cloudSyncManager must normalize pin to uppercase without whitespace');
 
@@ -1997,10 +2002,92 @@ test('Real-time cross-device cloud sync and monotonic state merging (PC <-> Phon
   assert.ok(viteConfigTs.includes('apiSyncPlugin'), 'vite.config.ts must provide apiSyncPlugin for dev/preview in AI Studio');
 });
 
+test('Primary-source synchronization: Tasks 4, 5, 7, 10, 11, 13, 14, 15, 18, and 21 edge cases', () => {
+  const bank = getTrainerBank();
 
+  // 1. Task 4: every wrong row (!isCorrectRow) has solvedWords[0] !== words[0]
+  for (const q of bank.fipiQuestions.filter((item) => item.task === '4')) {
+    for (const r of q.rows) {
+      if (!r.isCorrectRow) {
+        assert.notEqual(
+          r.solvedWords[0],
+          r.words[0],
+          `[${q.id}] Task 4 wrong row "${r.words[0]}" must have distinct orthoepic norm in solvedWords[0]`
+        );
+      }
+    }
+  }
 
+  // 2. Task 5: zero single-character answers ("ж" from "жилищные") and zero fake "+ный" Sprint options
+  const fakeNyiRe = /(?:тьный|сяный|ыеный|иеный|аяный|яяный|оеный|ееный|ыйный|ойный|льнаный|мяный|стьный)$/i;
+  for (const q of bank.fipiQuestions.filter((item) => item.task === '5')) {
+    for (const ans of q.textAnswers || []) {
+      assert.ok(ans.length >= 2, `[${q.id}] Task 5 textAnswer "${ans}" must not be truncated`);
+    }
+  }
+  for (const s of bank.sprintQuestions.filter((item) => item.task === '5')) {
+    for (const opt of s.options) {
+      assert.equal(fakeNyiRe.test(opt), false, `[${s.id}] Task 5 Sprint option "${opt}" must not be a fake +ный word`);
+    }
+  }
 
+  // 3. Task 7: error row solvedWords[0] differs from words[0]
+  for (const q of bank.fipiQuestions.filter((item) => item.task === '7')) {
+    const errRow = q.rows.find((r) => r.isCorrectRow);
+    assert.ok(errRow, `[${q.id}] Task 7 must have an error row`);
+    assert.notEqual(
+      errRow.solvedWords[0].toLowerCase(),
+      errRow.words[0].toLowerCase(),
+      `[${q.id}] Task 7 error row "${errRow.words[0]}" must differ from solvedWords[0] "${errRow.solvedWords[0]}"`
+    );
+  }
 
+  // 4. Specific Tasks 10, 13, 18, 21 primary-source checks
+  const q10_142438 = bank.fipiQuestions.find((q) => q.id === 'fipi-10-shkolkovo-10-142438');
+  assert.ok(q10_142438);
+  assert.deepEqual(q10_142438.correctIndices, [2, 3]);
 
+  const q10_54718 = bank.fipiQuestions.find((q) => q.id === 'fipi-10-neofamily-10-54718');
+  assert.ok(q10_54718);
+  assert.deepEqual(q10_54718.correctIndices, [1, 2]);
 
+  const q13_54453 = bank.fipiQuestions.find((q) => q.id === 'fipi-13-neofamily-13-54453');
+  assert.ok(q13_54453);
+  assert.deepEqual(q13_54453.correctIndices, [1, 3, 5]);
+  assert.equal(q13_54453.rows[4].letter, 'РАЗДЕЛЬНО');
+
+  // 5. Multi-digit markers (10..13) in Task 18 & Task 21
+  const q18_47794 = bank.fipiQuestions.find((q) => q.id === 'nf-18-47794');
+  assert.ok(q18_47794);
+  assert.deepEqual(q18_47794.correctIndices, [2, 3, 4, 5, 10, 11]);
+  assert.equal(checkFipiQuestionAnswer(q18_47794, [2, 3, 4, 5, 10, 11]).isCorrect, true);
+  assert.equal(checkFipiQuestionAnswer(q18_47794, '23451011').isCorrect, true);
+
+  const q21_27747 = PARSED_FIPI_QUESTIONS.find((q) => q.id === 'nf-21-27747');
+  assert.ok(q21_27747);
+  assert.deepEqual(q21_27747.correctIndices, [3, 10]);
+  assert.equal(checkFipiQuestionAnswer(q21_27747, [3, 10]).isCorrect, true);
+  assert.equal(checkFipiQuestionAnswer(q21_27747, '310').isCorrect, true);
+
+  // 6. Alternative valid answer groups in Task 21 & shk-18-29059
+  const q18_29059 = bank.fipiQuestions.find((q) => q.id === 'shk-18-29059');
+  assert.ok(q18_29059);
+  assert.equal(checkFipiQuestionAnswer(q18_29059, [1]).isCorrect, true);
+  assert.equal(checkFipiQuestionAnswer(q18_29059, [2]).isCorrect, true);
+  assert.equal(checkFipiQuestionAnswer(q18_29059, '2').isCorrect, true);
+
+  const multiGroup21 = bank.fipiQuestions.filter(
+    (q) => q.task === '21' && Array.isArray(q.textAnswers) && q.textAnswers.length > 1
+  );
+  assert.ok(multiGroup21.length >= 80, 'Task 21 must preserve all multi-group answer variants in textAnswers');
+  for (const q of multiGroup21) {
+    for (const altGroup of q.textAnswers || []) {
+      assert.equal(
+        checkFipiQuestionAnswer(q, altGroup).isCorrect,
+        true,
+        `[${q.id}] Alternative Task 21 answer group "${altGroup}" must evaluate to true`
+      );
+    }
+  }
+});
 

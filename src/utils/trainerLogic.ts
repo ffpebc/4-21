@@ -3514,21 +3514,29 @@ export function getTrainerBank() {
 
         if (rawFq.task === '4') {
           if (!r.isCorrectRow) {
-            const expl = r.explanation || '';
-            const m =
-              expl.match(/(?:правильный вариант|правильно|вариант)\s*[-–—:]*\s*«?(?:\([^()]+\)\s*)?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?/) ||
-              expl.match(/неверно\s*\(\s*«?(?:\([^()]+\)\s*)?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?\s*\)/) ||
-              expl.match(/\(\s*«?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?\s*\)/);
-            if (m && m[1]) {
-              const candidate = m[1].replace(/[«»]/g, '').trim();
-              const stressedVowel = candidate.match(/[АЕЁИОУЫЭЮЯ]/)?.[0];
-              if (stressedVowel) {
-                solvedWords = [candidate];
-                letter = stressedVowel;
+            const rawWord = (r.words[0] || '').trim();
+            const alreadySolved =
+              solvedWords[0] &&
+              solvedWords[0] !== rawWord &&
+              /[АЕЁИОУЫЭЮЯ]/.test(solvedWords[0]);
+            if (!alreadySolved) {
+              const expl = r.explanation || '';
+              const m =
+                expl.match(/орфоэпическая норма[^:]*:\s*«([^»]+)»/i) ||
+                expl.match(/(?:правильный вариант|правильно|вариант)\s*[-–—:]*\s*«?(?:\([^()]+\)\s*)?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?/) ||
+                expl.match(/неверно\s*\(\s*«?(?:\([^()]+\)\s*)?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?\s*\)/) ||
+                expl.match(/\(\s*«?([а-яё]*[АЕЁИОУЫЭЮЯ][а-яё]*)»?\s*\)/);
+              if (m && m[1]) {
+                const candidate = m[1].replace(/[«»]/g, '').trim();
+                const stressedVowel = candidate.match(/[АЕЁИОУЫЭЮЯ]/)?.[0];
+                if (stressedVowel) {
+                  solvedWords = [candidate];
+                  letter = stressedVowel;
+                }
+              } else if (rawWord && rawWord.toLowerCase().includes('бралась')) {
+                solvedWords = [rawWord.toLowerCase().replace('бралась', 'бралАсь')];
+                letter = 'А';
               }
-            } else if (r.words[0] && r.words[0].toLowerCase().includes('бралась')) {
-              solvedWords = ['бралАсь'];
-              letter = 'А';
             }
             const sVowel = solvedWords[0]?.match(/[АЕЁИОУЫЭЮЯ]/)?.[0];
             if (sVowel) {
@@ -4086,16 +4094,68 @@ export function checkFipiQuestionAnswer(
   }
 
   // Standard multi-digit sorted answer (4, 9–21)
-  const correctStr = q.correctIndices.slice().sort((a, b) => a - b).join('');
-  const userStr = Array.isArray(userRawInput)
-    ? userRawInput.slice().sort((a, b) => a - b).join('')
-    : normalizeKimDigits(String(userRawInput || ''), 9);
-  const isCorrect = userStr.length > 0 && userStr === correctStr;
+  const correctIndicesSorted = q.correctIndices.slice().sort((a, b) => a - b);
+  const correctStr = correctIndicesSorted.join('');
+  const validJoinedSet = new Set<string>([correctStr]);
+  if (Array.isArray(q.textAnswers)) {
+    for (const alt of q.textAnswers) {
+      const altTrim = String(alt || '').trim();
+      if (!altTrim) continue;
+      const digitsOnly = altTrim.replace(/\D/g, '');
+      if (digitsOnly) {
+        validJoinedSet.add(digitsOnly);
+        if (/^[1-9]+$/.test(digitsOnly) && digitsOnly.length <= 9) {
+          validJoinedSet.add(normalizeKimDigits(digitsOnly, 9));
+        }
+      }
+      const tokenNums = (altTrim.match(/\d+/g) || [])
+        .map(Number)
+        .filter((n) => Number.isFinite(n) && n > 0);
+      if (tokenNums.length > 0) {
+        const sortedJoined = Array.from(new Set(tokenNums))
+          .sort((a, b) => a - b)
+          .join('');
+        if (sortedJoined) validJoinedSet.add(sortedJoined);
+      }
+    }
+  }
+
+  let userStr = '';
+  if (Array.isArray(userRawInput)) {
+    userStr = Array.from(
+      new Set(userRawInput.filter((n) => Number.isFinite(n) && n > 0))
+    )
+      .sort((a, b) => a - b)
+      .join('');
+  } else {
+    const rawTrim = String(userRawInput || '').trim();
+    const digitsOnly = rawTrim.replace(/\D/g, '');
+    const tokenNums = (rawTrim.match(/\d+/g) || [])
+      .map(Number)
+      .filter((n) => Number.isFinite(n) && n > 0);
+    const tokenJoined = Array.from(new Set(tokenNums))
+      .sort((a, b) => a - b)
+      .join('');
+    const kimNorm = normalizeKimDigits(rawTrim, 9);
+    if (digitsOnly.length > 0 && validJoinedSet.has(digitsOnly)) {
+      userStr = digitsOnly;
+    } else if (tokenNums.length > 1 && validJoinedSet.has(tokenJoined)) {
+      userStr = tokenJoined;
+    } else {
+      userStr = kimNorm || digitsOnly;
+    }
+  }
+
+  const isCorrect = userStr.length > 0 && validJoinedSet.has(userStr);
+  const displayAltAnswers =
+    Array.isArray(q.textAnswers) && q.textAnswers.length > 1
+      ? q.textAnswers.join(' или ')
+      : correctStr;
   return {
     isCorrect,
     pointsEarned: isCorrect ? 1 : 0,
     maxPoints: 1,
-    correctAnswerDisplay: correctStr,
+    correctAnswerDisplay: displayAltAnswers,
     userAnswerDisplay: userStr || '—',
   };
 }

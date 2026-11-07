@@ -535,9 +535,24 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     return fipiSelectedRows.length > 0;
   };
 
-  const checkResult = checkFipiQuestionAnswer(fipiQ, getUserAnswerPayload());
+  const checkResult = checkFipiQuestionAnswer(
+    fipiQ,
+    effectiveKind === 'rows' || effectiveKind === 'numbered_gaps'
+      ? fipiSelectedRows
+      : getUserAnswerPayload()
+  );
   const correctStr = checkResult.correctAnswerDisplay;
   const userStr = getUserAnswerPayload();
+
+  const isRowEffectivelyCorrect = (
+    rowNum: number,
+    row: FipiQuestion['rows'][number]
+  ): boolean => {
+    if (fipiSubmitted && fipiResultOk) {
+      return fipiSelectedRows.includes(rowNum);
+    }
+    return Boolean(row.isCorrectRow);
+  };
 
   const handleCheckFipi = () => {
     if (!canSubmitFipi()) return;
@@ -565,9 +580,12 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     return 'Укажите номера ответов';
   };
 
-  const getRowFeedbackLabel = (row: FipiQuestion['rows'][number]): string => {
+  const getRowFeedbackLabel = (
+    row: FipiQuestion['rows'][number],
+    rowIsCorrect: boolean = Boolean(row.isCorrectRow)
+  ): string => {
     if (fipiQ.task === '4') {
-      return row.isCorrectRow
+      return rowIsCorrect
         ? 'Верное ударение'
         : `Неверно (норма: ${row.solvedWords[0] || row.letter})`;
     }
@@ -575,15 +593,15 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       return `Пишется ${row.letter || '—'}`;
     }
     if (fipiQ.task === '16') {
-      return row.isCorrectRow ? 'Подходит: одна запятая' : `Не подходит (${row.letter})`;
+      return rowIsCorrect ? 'Подходит: одна запятая' : `Не подходит (${row.letter})`;
     }
     if (fipiQ.task === '21') {
-      return row.isCorrectRow ? `Входит в ответ (${row.letter})` : row.letter || 'Не входит в ответ';
+      return rowIsCorrect ? `Входит в ответ (${row.letter})` : row.letter || 'Не входит в ответ';
     }
     if (fipiQ.task === '13' || fipiQ.task === '14') {
-      return row.isCorrectRow ? `Подходит: ${row.letter}` : `Не подходит: ${row.letter}`;
+      return rowIsCorrect ? `Подходит: ${row.letter}` : `Не подходит: ${row.letter}`;
     }
-    return row.isCorrectRow
+    return rowIsCorrect
       ? `Подходит: одна и та же буква «${row.letter}»`
       : 'Разные буквы в ряду';
   };
@@ -668,6 +686,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               {fipiQ.rows.map((row, idx) => {
                 const digit = idx + 1;
                 const isSelected = fipiSelectedRows.includes(digit);
+                const rowIsCorrect = isRowEffectivelyCorrect(digit, row);
                 let circleClass =
                   'w-9 h-9 sm:w-10 sm:h-10 rounded-full text-[15px] sm:text-[17px] font-black flex items-center justify-center transition-all select-none shadow-xs active:scale-95 cursor-pointer';
                 let circleStyle: React.CSSProperties = {
@@ -677,19 +696,19 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                 };
 
                 if (fipiSubmitted) {
-                  if (row.isCorrectRow && isSelected) {
+                  if (rowIsCorrect && isSelected) {
                     circleStyle = {
                       background: 'var(--ios-green-soft)',
                       color: 'var(--ios-green)',
                       border: '2px solid var(--ios-green)',
                     };
-                  } else if (row.isCorrectRow && !isSelected) {
+                  } else if (rowIsCorrect && !isSelected) {
                     circleStyle = {
                       background: 'var(--ios-orange-soft)',
                       color: 'var(--ios-orange)',
                       border: '1.5px solid var(--ios-orange)',
                     };
-                  } else if (!row.isCorrectRow && isSelected) {
+                  } else if (!rowIsCorrect && isSelected) {
                     circleStyle = {
                       background: 'var(--ios-red-soft)',
                       color: 'var(--ios-red)',
@@ -1121,11 +1140,12 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
           {fipiQ.rows.map((row, idx) => {
             const rowNum = idx + 1;
             const isSelected = fipiSelectedRows.includes(rowNum);
+            const rowIsCorrect = isRowEffectivelyCorrect(rowNum, row);
             let rowState = isSelected ? 'selected' : '';
             if (fipiSubmitted) {
-              if (row.isCorrectRow && isSelected) rowState = 'ok';
-              else if (row.isCorrectRow && !isSelected) rowState = 'missed';
-              else if (!row.isCorrectRow && isSelected) rowState = 'bad';
+              if (rowIsCorrect && isSelected) rowState = 'ok';
+              else if (rowIsCorrect && !isSelected) rowState = 'missed';
+              else if (!rowIsCorrect && isSelected) rowState = 'bad';
             }
             return (
               <button
@@ -1155,12 +1175,12 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                     <div
                       className="text-[10.5px] mt-0.5 truncate font-semibold"
                       style={{
-                        color: row.isCorrectRow
+                        color: rowIsCorrect
                           ? 'var(--ios-green)'
                           : 'var(--ios-label-sec)',
                       }}
                     >
-                      {getRowFeedbackLabel(row)}
+                      {getRowFeedbackLabel(row, rowIsCorrect)}
                     </div>
                   )}
                   {fipiSubmitted && row.explanation && (

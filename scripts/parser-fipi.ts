@@ -309,7 +309,7 @@ export const OFFICIAL_FIPI_DATA: RawParsedQuestion[] = [
     topic: 'Правописание корней',
     instruction:
       'Укажите варианты ответов, в которых во всех словах одного ряда пропущена одна и та же буква. Запишите номера ответов.',
-    correctIndices: [2, 3, 4],
+    correctIndices: [2, 5],
     rows: [
       {
         rawText: 'приск..кал (заяц), успок..ительное (средство), погл..щать',
@@ -401,7 +401,7 @@ export const OFFICIAL_FIPI_DATA: RawParsedQuestion[] = [
     topic: 'Правописание суффиксов',
     instruction:
       'Укажите варианты ответов, в которых в обоих словах одного ряда пропущена одна и та же буква. Запишите номера ответов.',
-    correctIndices: [1, 2, 4],
+    correctIndices: [1, 2, 3],
     rows: [
       {
         rawText: 'ма..лся, отча..ться',
@@ -447,7 +447,7 @@ export const OFFICIAL_FIPI_DATA: RawParsedQuestion[] = [
     topic: 'Личные окончания глаголов и суффиксы причастий',
     instruction:
       'Укажите варианты ответов, в которых в обоих словах одного ряда пропущена одна и та же буква. Запишите номера ответов.',
-    correctIndices: [2, 3, 5],
+    correctIndices: [3, 5],
     rows: [
       {
         rawText: 'слыш..мый, омыва..мый',

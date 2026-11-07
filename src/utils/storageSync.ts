@@ -194,11 +194,21 @@ export function persistStateMultiLayer(state: TrainerState): string {
   return code;
 }
 
+export function normalizePin(rawPin: string): string {
+  let pin = String(rawPin || '')
+    .trim()
+    .toUpperCase();
+  if (pin === 'ФФПЕБК') pin = 'FFPEBC';
+  return pin
+    .replace(/[^A-ZА-ЯЁ0-9_-]/g, '')
+    .slice(0, 32);
+}
+
 export function getSyncApiUrl(
   pin: string,
   queryParams?: Record<string, string | number>
 ): string {
-  const targetPin = encodeURIComponent((pin || DEFAULT_HOSTED_PIN).trim().toUpperCase());
+  const targetPin = encodeURIComponent(normalizePin(pin || DEFAULT_HOSTED_PIN));
   let base = '';
   if (typeof window !== 'undefined') {
     const pathName = window.location.pathname;
@@ -330,7 +340,7 @@ export async function pushStateToCloudPin(
   pin: string,
   state: TrainerState
 ): Promise<{ ok: boolean; updatedAt?: number; error?: string }> {
-  const targetPin = (pin || DEFAULT_HOSTED_PIN).trim().toUpperCase();
+  const targetPin = normalizePin(pin || DEFAULT_HOSTED_PIN);
   if (targetPin.length < 2) {
     return { ok: false, error: 'Введите минимум 2 символа для кода профиля' };
   }
@@ -364,7 +374,7 @@ export async function pullStateFromCloudPin(
   state?: TrainerState;
   updatedAt?: number;
 }> {
-  const targetPin = (pin || DEFAULT_HOSTED_PIN).trim().toUpperCase();
+  const targetPin = normalizePin(pin || DEFAULT_HOSTED_PIN);
   if (targetPin.length < 2) return { found: false };
   try {
     const queryParams: Record<string, string | number> = {
@@ -481,7 +491,7 @@ class CloudSyncManagerImpl {
   }
 
   public setPin(rawPin: string, immediateState?: TrainerState): void {
-    const clean = (rawPin || '').trim().toUpperCase().replace(/[^A-ZА-ЯЁ0-9_-]/g, '').slice(0, 32);
+    const clean = normalizePin(rawPin || '');
     if (clean === this.pin && this.pin.length >= 2) return;
     this.pin = clean;
     this.lastKnownServerUpdatedAt = 0;
@@ -500,7 +510,7 @@ class CloudSyncManagerImpl {
   }
 
   public notifyStateChanged(state: TrainerState, immediate = false): void {
-    const pin = (state.profilePin || this.pin || '').trim().toUpperCase();
+    const pin = normalizePin(state.profilePin || this.pin || '');
     if (pin.length < 2) return;
     this.pin = pin;
 

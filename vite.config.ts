@@ -33,9 +33,11 @@ function writeProfiles(profiles: Record<string, any>): void {
 }
 
 function normalizePin(rawPin: string): string {
-  return String(rawPin || '')
+  let pin = String(rawPin || '')
     .trim()
-    .toUpperCase()
+    .toUpperCase();
+  if (pin === 'ФФПЕБК') pin = 'FFPEBC';
+  return pin
     .replace(/[^A-ZА-ЯЁ0-9_-]/g, '')
     .slice(0, 32);
 }
