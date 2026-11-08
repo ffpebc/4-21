@@ -1985,10 +1985,10 @@ button,
     bottom: 16px;
   }
 
-  /* 2. Desktop Viewport Clearance & Compact Fitting without Scrolling */
+  /* 2. Desktop Viewport Clearance & Clean Floating Header Margin */
   .ios-viewport-scroll {
-    padding-top: clamp(52px, 4.2vh, 66px);
-    padding-bottom: clamp(72px, 6vh, 88px);
+    padding-top: clamp(74px, 5.5vh, 84px);
+    padding-bottom: clamp(84px, 6.5vh, 96px);
   }
 
   .desktop-container {

@@ -1826,106 +1826,508 @@ const CHEAT_SECTIONS: CheatSectionData[] = [
   },
   {
     task: '16',
-    title: '16 · ЗНАКИ ПРЕПИНАНИЯ В ССП И ПРИ ОДНОРОДНЫХ ЧЛЕНАХ',
-    pages: 'Пунктуация',
+    title: '16 · ПУНКТУАЦИЯ ПРИ ОДНОРОДНЫХ ЧЛЕНАХ И В ССП',
+    pages: 'стр. 1–4',
     accentVar: 'var(--ios-green)',
     softVar: 'var(--ios-green-soft)',
-    keywords: 'ссп однородные члены общий второстепенный член попарное соединение двойные союзы не только но и',
+    keywords:
+      'синтаксические роли подлежащее сказуемое определение дополнение обстоятельство ссп однородные члены запятая ставится не ставится одиночный союз фразеологизмы ни рыба ни мясо ни шатко ни валко и так и сяк два ряда однородных членов двойные союзы как так и не только но и если не то противительный союз а но да однако зато повторяющиеся союзы и и попарное соединение неоднородные определения причастный оборот великолепную сияющую сияющую великолепную общий второстепенный член общее придаточное общее вводное вопросительные восклицательные кто виноват что делать',
     content: (
-      <div className="cheat-subbox text-[12px] leading-snug">
-        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
-          Алгоритм поиска одной запятой в задании № 16
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
-            <strong>• Когда запятая перед И в ССП НЕ ставится:</strong><br />
-            Есть общий второстепенный член в начале предложения (<em>«В лесу было тихо и пахло хвоей»</em>), общее придаточное, общее вводное слово или обе части вопросительные/восклицательные.
+      <>
+        {/* 1. СИНТАКСИЧЕСКИЕ РОЛИ В ПРЕДЛОЖЕНИИ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              1. Синтаксические роли членов предложения (стр. 1)
+            </div>
+            <BadgeTag label="БАЗА № 16" tone="green" />
           </div>
-          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
-            <strong>• Однородные члены:</strong><br />
-            • Разные ряды однородных членов (определения + сказуемые) не разделяются запятой.<br />
-            • При попарном соединении (<em>А и Б, В и Г</em>) ставится 1 запятая между парами.<br />
-            • При двойных союзах (<em>как..., так и...; не только..., но и...</em>) запятая ставится только перед второй частью.
+          <div
+            className="p-2.5 rounded-xl text-[12px] leading-snug"
+            style={{ background: 'var(--ios-bg-cell-hover)' }}
+          >
+            <div className="font-semibold mb-1">
+              <em>«Сильный (3) ветер (1) гуляет (2) и корабль (4) яростно (5) подгоняет (2).»</em>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-[11px] font-bold mt-2">
+              <span className="p-1 rounded bg-[var(--ios-bg-tertiary)] text-center">
+                1 Подлежащее: <em>ветер</em>
+              </span>
+              <span className="p-1 rounded bg-[var(--ios-bg-tertiary)] text-center">
+                2 Сказуемое: <em>гуляет, подгоняет</em>
+              </span>
+              <span className="p-1 rounded bg-[var(--ios-bg-tertiary)] text-center">
+                3 Определение: <em>сильный</em>
+              </span>
+              <span className="p-1 rounded bg-[var(--ios-bg-tertiary)] text-center">
+                4 Дополнение: <em>корабль</em>
+              </span>
+              <span className="p-1 rounded bg-[var(--ios-bg-tertiary)] text-center">
+                5 Обстоятельство: <em>яростно</em>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* 2. ЗАПЯТАЯ ПРИ ОДНОРОДНЫХ ЧЛЕНАХ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              2. Запятая при однородных членах (Пункты 1–5, стр. 2–3)
+            </div>
+            <div className="flex items-center gap-1">
+              <BadgeTag label="СТАВИТСЯ" tone="green" />
+              <BadgeTag label="НЕ СТАВИТСЯ" tone="red" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px] leading-snug">
+            {/* СТАВИТСЯ */}
+            <div
+              className="p-2.5 rounded-xl flex flex-col gap-2"
+              style={{ background: 'var(--ios-green-soft)' }}
+            >
+              <div className="font-extrabold text-[12.5px]" style={{ color: 'var(--ios-green)' }}>
+                ✓ ЗАПЯТАЯ СТАВИТСЯ:
+              </div>
+
+              <div>
+                <strong>1. Без союза (О, О, О):</strong><br />
+                <em>«На улице стояла страшная жара, духота, нестерпимая вонь.»</em>
+              </div>
+
+              <div>
+                <strong>2. Перед 2-й частью двойного союза</strong> (<em>как..., так и; не только..., но и; если не..., то</em>):<br />
+                <em>«Дожди идут если не каждый день, то через день.»</em>
+              </div>
+
+              <div>
+                <strong>3. Перед противительным союзом</strong> (<em>а, но, да=но, однако, зато</em>):<br />
+                <em>«День был солнечным, но прохладным.»</em>
+              </div>
+
+              <div>
+                <strong>4. При повторяющихся союзах</strong> (<em>и О, и О, и О</em>):<br />
+                <em>«Мать Родиона и мысли, и желания, и эмоции угадывала.»</em>
+                <TrapBox title="! ТИПИЧНАЯ ОШИБКА (ПРАВИЛО N − 1)">
+                  <em>«Мать мысли, и желания, и эмоции угадывала.»</em> — перед первым членом союза нет, но между всеми последующими ставится запятая!
+                </TrapBox>
+              </div>
+
+              <div>
+                <strong>5. Попарное соединение (О и О, О и О):</strong><br />
+                <em>«плач и рыдание, хохот и крики.»</em>
+              </div>
+            </div>
+
+            {/* НЕ СТАВИТСЯ */}
+            <div
+              className="p-2.5 rounded-xl flex flex-col gap-2"
+              style={{ background: 'var(--ios-red-soft)' }}
+            >
+              <div className="font-extrabold text-[12.5px]" style={{ color: 'var(--ios-red)' }}>
+                ✗ ЗАПЯТАЯ НЕ СТАВИТСЯ:
+              </div>
+
+              <div>
+                <strong>1. Одиночный союз (и, да=и, или, либо — О и О):</strong><br />
+                <em>«Сходи к соседям да не забудь передать приглашение.»</em>
+              </div>
+
+              <div>
+                <strong>2. В устойчивых фразеологизмах:</strong><br />
+                (<em>ни рыба ни мясо, ни шатко ни валко, и так и сяк</em>):<br />
+                <em>«Проблемам не видно ни конца ни края.»</em>
+              </div>
+
+              <div>
+                <strong>3. Два ряда однородных членов (О₁ и О₁ и О₂):</strong><br />
+                <em>«...подошёл надзиратель с крестами и медалями (ряд 1) и передал записку (ряд 2).»</em>
+              </div>
+
+              <div>
+                <strong>4. Неоднородные определения (БЕЗ запятой):</strong><br />
+                Характеризуют предмет с разных сторон:<br />
+                <em>«Праздничное солнечное утро.»</em>
+              </div>
+            </div>
+          </div>
+
+          <TrapBox title="❗ ОДИНОЧНОЕ ПРИЛАГАТЕЛЬНОЕ И ПРИЧАСТНЫЙ ОБОРОТ (ПО, СТР. 3)">
+            • <strong>1. ~, ПО (ЗАПЯТАЯ СТАВИТСЯ):</strong> <em>«на великолепную, сияющую под солнцем поляну.»</em><br />
+            • <strong>2. ПО ~ (×) (БЕЗ ЗАПЯТОЙ):</strong> <em>«на сияющую под солнцем великолепную поляну.»</em>
+          </TrapBox>
+        </div>
+
+        {/* 3. ЗАПЯТАЯ В СЛОЖНОСОЧИНЁННОМ ПРЕДЛОЖЕНИИ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              3. Запятая в сложносочинённом предложении (ССП, стр. 3–4)
+            </div>
+            <BadgeTag label="[ — = ], И [ — = ]" tone="blue" />
+          </div>
+
+          <div
+            className="p-2.5 rounded-xl text-[12px] leading-snug mb-2"
+            style={{ background: 'var(--ios-bg-cell-hover)' }}
+          >
+            <strong>ПРАВИЛО (ЗАПЯТАЯ СТАВИТСЯ):</strong> между простыми предложениями в составе ССП:<br />
+            <em>«В доме опять запели, и издали скрипка производила впечатление человеческого голоса.»</em>
+          </div>
+
+          <div
+            className="p-2.5 rounded-xl text-[12px] leading-snug"
+            style={{ background: 'var(--ios-red-soft)' }}
+          >
+            <div className="font-extrabold text-[12.5px] mb-1" style={{ color: 'var(--ios-red)' }}>
+              ⛔ ЗАПЯТАЯ В ССП НЕ СТАВИТСЯ:
+            </div>
+            <div className="space-y-1.5">
+              <div>
+                <strong>1. Есть ОБЩИЙ ЧЛЕН в начале предложения:</strong>
+                <ul className="list-disc list-inside ml-1 mt-0.5 space-y-0.5 opacity-90">
+                  <li><strong>Общий второстепенный член:</strong> <em>«После выслушанных новостей Николай придаёт... и у нас начинается разговор.»</em></li>
+                  <li><strong>Общее придаточное предложение:</strong> <em>«Когда Пётр ехал через рощу, гремел гром и деревья шумели.»</em></li>
+                  <li><strong>Общее вводное слово:</strong> <em>«К счастью, это забылось и осталась прелесть.»</em></li>
+                </ul>
+              </div>
+              <div>
+                <strong>2. Два вопросительных, восклицательных или побудительных предложения:</strong>
+                <ul className="list-disc list-inside ml-1 mt-0.5 space-y-0.5 opacity-90">
+                  <li><em>«[Кто виноват] и [что делать]?»</em></li>
+                  <li><em>«[Подпустить врага] и [огонь дать по команде]!»</em></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <MnemonicBox title="💡 АЛГОРИТМ № 16">
+            Всегда выделяй все грамматические основы и проверяй начало ССП на общий член!
+          </MnemonicBox>
+        </div>
+      </>
     ),
   },
   {
     task: '17',
-    title: '17 · ОБОСОБЛЕННЫЕ ЧЛЕНЫ (ПРИЧАСТНЫЕ И ДЕЕПРИЧАСТНЫЕ ОБОРОТЫ)',
-    pages: 'Пунктуация',
+    title: '17 · ПРИЧАСТНЫЕ И ДЕЕПРИЧАСТНЫЕ ОБОРОТЫ, ОПРЕДЕЛЕНИЯ, ОБСТОЯТЕЛЬСТВА И ПРИЛОЖЕНИЯ',
+    pages: 'стр. 5–7',
     accentVar: 'var(--ios-green)',
     softVar: 'var(--ios-green-soft)',
-    keywords: 'причастный деепричастный оборот определяемое слово личное местоимение фразеологизм сломя голову',
+    keywords:
+      'причастие деепричастие причастный оборот деепричастный оборот определяемое слово личное местоимение фразеологизм сломя голову засучив рукава приложение ленский онегин падающими в море оставляющими яркие следы полные мрака вспотевший и задыхающийся согретый песком и солнцем иван филиппов эльяшев',
     content: (
-      <div className="cheat-subbox text-[12px] leading-snug">
-        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
-          Правила обособления определений и обстоятельств (№ 17)
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
-            <strong>• Причастный оборот:</strong><br />
-            • ПОСЛЕ определяемого слова — всегда обособляется.<br />
-            • ПЕРЕД определяемым существительным — НЕ обособляется (кроме случая с личным местоимением <em>он, она, я, мы</em> или причинным значением).
+      <>
+        {/* БАЗОВЫЕ ПОНЯТИЯ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              Базовые понятия и синтаксическая роль (стр. 5)
+            </div>
+            <BadgeTag label="ПО И ДО" tone="blue" />
           </div>
-          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
-            <strong>• Деепричастный оборот:</strong><br />
-            • Всегда обособляется независимо от места в предложении.<br />
-            • <strong>Исключения:</strong> фразеологизмы (<em>сломя голову, затаив дыхание, спустя рукава</em>) и одиночные наречия (<em>стоя, сидя, молча, нехотя</em>).
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px] leading-snug">
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              • <strong>Причастие</strong> — признак предмета по действию (действит.: <em>прочитавший, читающий</em>; страдат.: <em>прочитанный, читаемый</em>).<br />
+              • <strong>Причастный оборот (ПО)</strong> — причастие с зависимыми словами. Определяемое слово (×) — сущ. или мест. Роль — <strong>определение</strong>:<br />
+              <em>Неподготовленная речь (×)</em> (одиночное) vs <em>Не подготовленная мною речь (×)</em> (ПО).
+            </div>
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              • <strong>Деепричастие</strong> — добавочное действие к глаголу-сказуемому (что делая? что сделав?: <em>склеивая, играя, выгружая</em>).<br />
+              • <strong>Деепричастный оборот (ДО)</strong> — деепричастие с зависимыми словами. Определяемое слово — <strong>глагол</strong>. Роль — <strong>обособленное обстоятельство</strong>:<br />
+              <em>Не смотря по сторонам, я гулял по парку.</em>
+            </div>
+          </div>
+
+          <TrapBox title="❗ ВАЖНЫЙ МОМЕНТ ДЛЯ ЗАДАНИЯ 17">
+            Если ПО или ДО соединены одиночным союзом <strong>И</strong>, то они могут быть <strong>однородными</strong> — запятая перед «И» и после него НЕ ставится!
+          </TrapBox>
+        </div>
+
+        {/* 1. ОБОСОБЛЕНИЕ ОПРЕДЕЛЕНИЙ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              1. Обособление определений (Пункты 1–5, стр. 6–7)
+            </div>
+            <BadgeTag label="[ × ], | ПО |" tone="purple" />
+          </div>
+
+          <div className="space-y-1.5 text-[12px] leading-snug">
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <strong>1. ПО ПОСЛЕ определяемого слова (×) → СТАВИТСЯ:</strong><br />
+              <em>«Ленский (×), |недавно прибывший из Петербурга|, сближается с Онегиным.»</em>
+            </div>
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <strong>1. ПО ДО определяемого слова (×) → НЕ СТАВИТСЯ:</strong><br />
+              <em>«|Недавно прибывший из Петербурга| Ленский (×) сближается с Онегиным.»</em>
+            </div>
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-green-soft)' }}>
+              <strong>2. Однородные ПО (между ними НЕ ставится запятая при союзе И!):</strong><br />
+              <em>«Мы наблюдали за звёздами (×), (1) |падающими в море| (2) и (3) |оставляющими яркие следы|.»</em> (запятая только на месте 1).
+            </div>
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              • <strong>3. Прилагательное с зависимыми словами после (×):</strong> <em>«Недвижны стояли леса (×), |полные мрака|.»</em><br />
+              • <strong>4. Два и более одиночных определения после (×):</strong> <em>«И кто-то (×), вспотевший и задыхающийся, бегает из магазина в магазин.»</em>
+            </div>
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-orange-soft)' }}>
+              <strong>5. Определение относится к личному местоимению (я, ты, он, она, оно, мы, вы, они) — ВСЕГДА ОБОСОБЛЯЕТСЯ:</strong><br />
+              <em>«|Согретый песком и солнцем|, он (×) дремлет.»</em> (даже если стоит ПЕРЕД местоимением!).
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* 2. ОБОСОБЛЕНИЕ ОБСТОЯТЕЛЬСТВ И 3. ПРИЛОЖЕНИЙ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              2. Обособление обстоятельств (ДО) и 3. Приложений (стр. 7)
+            </div>
+            <BadgeTag label="ДО = ВСЕГДА!" tone="green" />
+          </div>
+
+          <div className="space-y-1.5 text-[12px] leading-snug">
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              • <strong>1. Одиночные деепричастия и ДО обособляются ВСЕГДА:</strong><br />
+              <em>«Красавица наша задумалась (×), |глядя на роскошь вида, о минувших днях|.»</em><br />
+              <em>«|Оглянувшись|, она увидела (×) толпу людей.»</em>
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-red-soft)' }}>
+              • <strong>2. НЕ обособляются фразеологизмы:</strong><br />
+              <em>сломя голову, засучив рукава, бежать не разбирая дороги, затаив дыхание, спустя рукава</em>.
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-green-soft)' }}>
+              • <strong>3. Между однородными ДО НЕ ставится запятая при союзе И:</strong><br />
+              <em>«|Идя по шумному, весёлому проспекту| (1) и (2) |чувствуя себя вместе с толпою жизнерадостным|, (3) он испытывал (×) счастливое удовольствие.»</em> (запятая только на месте 3!).
+            </div>
+
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              • <strong>3. Приложение — элемент предложения с добавочной информацией (= сущ.):</strong><br />
+              1) <em>«Иван Филиппов, основатель булочной, был разборчив и не всяким случаем пользовался, где можно деньги нажить.»</em><br />
+              2) <em>«Это был старый переплётчик Эльяшев, родом из Николаева, виртуозный переплётчик и футлярщик.»</em>
+            </div>
+          </div>
+
+          <MnemonicBox title="💡 ЧЕК-ЛИСТ № 17">
+            ПО после (×) или к личному местоимению → обособляй! ДО → всегда обособляй (кроме фразеологизмов и союза И между однородными)!
+          </MnemonicBox>
+        </div>
+      </>
     ),
   },
   {
     task: '18',
     title: '18 · ВВОДНЫЕ СЛОВА И ОБРАЩЕНИЯ',
-    pages: 'Пунктуация',
+    pages: 'стр. 8–9',
     accentVar: 'var(--ios-green)',
     softVar: 'var(--ios-green-soft)',
-    keywords: 'вводные слова обращения будто вряд ли едва ли даже именно как будто почти вдруг ведь однако',
+    keywords:
+      'вводные слова обращения уверенность неуверенность чувства источник порядок мыслей оформление мыслей привлечение внимания степень обычности конечно разумеется кажется вероятно к счастью по-моему во-первых итак словом пожалуйста бывало как будто словно будто в конечном счете вроде бы вряд ли даже к тому же между тем на редкость тем не менее авось большей частью буквально вдобавок все-таки как бы лишь наверняка непременно отчасти пусть по-прежнему поэтому просто исключительно о сподвижники именительный падеж',
     content: (
-      <div className="cheat-subbox text-[12px] leading-snug">
-        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
-          Вводные конструкции vs лжевводные частицы (№ 18)
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
-            <strong>• Всегда вводные (выделяются запятыми):</strong><br />
-            <em>конечно, разумеется, несомненно, безусловно, кажется, вероятно, возможно, во-первых, итак, следовательно, по-моему, к счастью, к сожалению</em>.
+      <>
+        {/* 1. ОСНОВНЫЕ РАЗРЯДЫ ВВОДНЫХ СЛОВ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              1. Основные разряды вводных слов и сочетаний (стр. 8–9)
+            </div>
+            <BadgeTag label="ВСЕГДА ВЫДЕЛЯЮТСЯ" tone="green" />
           </div>
-          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-red-soft)' }}>
-            <strong style={{ color: 'var(--ios-red)' }}>• НИКОГДА не бывают вводными (БЕЗ запятых):</strong><br />
-            <em>будто, как будто, вряд ли, едва ли, почти, именно, исключительно, вдруг, ведь, вот, всё-таки, даже, однажды, словно, якобы</em>.
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px] leading-snug">
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--ios-green)' }}>
+                1 Уверенность:
+              </div>
+              <em>Конечно, разумеется, несомненно, право, безусловно, бесспорно, естественно, действительно, как правило, без сомнения, очевидно.</em>
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--ios-green)' }}>
+                2 Неуверенность:
+              </div>
+              <em>Наверное, наверно, вероятно, кажется, видно, видимо, по-видимому, возможно, пожалуй, по всей вероятности, может быть, быть может, должно быть.</em>
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--ios-green)' }}>
+                3 Чувства:
+              </div>
+              <em>К счастью, по счастью, к несчастью, к сожалению, к удивлению, чего доброго, на беду, в самом деле.</em>
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--ios-green)' }}>
+                4 Источник сообщения:
+              </div>
+              <em>По-моему, как известно, по правде, по-твоему, говорят, по сообщению кого-либо, по мнению кого-либо, по словам кого-либо, по слухам, помнится, мол.</em>
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--ios-green)' }}>
+                5 Порядок мыслей:
+              </div>
+              <em>Во-первых, во-вторых, в-третьих, значит, так, итак, следовательно, таким образом, кстати, наоборот, в частности, напротив, например, к примеру, впрочем, стало быть, между прочим, подчёркиваю, повторяю, наконец, с одной стороны, с другой стороны, кроме того.</em>
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--ios-green)' }}>
+                6 Оформление мыслей:
+              </div>
+              <em>Иными словами, короче говоря, так сказать, словом, одним словом, по правде говоря, признаться, прямо скажем, иначе говоря, лучше сказать + <strong>однако</strong> (в середине/конце предл., если не = но).</em>
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--ios-green)' }}>
+                7 Привлечение внимания:
+              </div>
+              <em>Пожалуйста, послушайте, будьте добры, поверьте, видите ли, знаете, понимаете, допустим, скажем.</em>
+            </div>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold text-[11px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--ios-green)' }}>
+                8 Степень обычности:
+              </div>
+              <em>Бывало, по обыкновению, как правило.</em>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* 2. ЛОВУШКА: НЕ ЯВЛЯЮТСЯ ВВОДНЫМИ */}
+        <TrapBox title="❗ НЕ ЯВЛЯЮТСЯ ВВОДНЫМИ (НИКОГДА НЕ ВЫДЕЛЯЮТСЯ ЗАПЯТЫМИ!) • ЛОВУШКА ЕГЭ">
+          <em>Как будто, словно, будто, в конечном счёте, вроде бы, вряд ли, даже, к тому же, между тем, на редкость, тем не менее, авось, большей частью, буквально, вдобавок, всё-таки, как бы, лишь, наверняка, непременно, отчасти, пусть, по-прежнему, поэтому, просто, исключительно.</em>
+        </TrapBox>
+
+        {/* 3. ОБРАЩЕНИЯ И ЗНАКИ ПРЕПИНАНИЯ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              2. Обращения и знаки препинания при них (стр. 9)
+            </div>
+            <BadgeTag label="ИМЕНИТЕЛЬНЫЙ ПАДЕЖ!" tone="orange" />
+          </div>
+
+          <div className="space-y-2 text-[12px] leading-snug">
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <strong>1. Обращение всегда стоит в форме именительного падежа!</strong><br />
+              Оно не является членом предложения и всегда выделяется запятыми:<br />
+              <em>«Что ты, <strong>девица</strong>, грустна?»</em><br />
+              <span className="text-[11px] font-bold opacity-80" style={{ color: 'var(--ios-red)' }}>
+                ⚠️ Запомни: местоимения <strong>ты, вы</strong> — НЕ обращения, а подлежащие/дополнения (запятыми не выделяются)!
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-orange-soft)' }}>
+              <strong>2. Частица О (только О) не отделяется от обращения запятой:</strong><br />
+              <em>«<strong>О сподвижники</strong>, о вас пройдёт молва из рода в род!»</em><br />
+              (Внимание: междометия <em>ах, ох, эй, ну</em> от обращения отделяются запятой: <em>«Ах, няня,...»</em>).
+            </div>
+          </div>
+        </div>
+      </>
     ),
   },
   {
     task: '19',
     title: '19 · ЗНАКИ ПРЕПИНАНИЯ В СЛОЖНОПОДЧИНЁННОМ ПРЕДЛОЖЕНИИ (СПП)',
-    pages: 'Пунктуация',
+    pages: 'стр. 10–11',
     accentVar: 'var(--ios-green)',
     softVar: 'var(--ios-green-soft)',
-    keywords: 'спп придаточное который союзное слово однородное соподчинение',
+    keywords:
+      'спп придаточное который союзное слово однородное соподчинение изъяснительные определительные обстоятельственные присоединительные каждый из которых',
     content: (
-      <div className="cheat-subbox text-[12px] leading-snug">
-        <div className="cheat-subbox-title" style={{ color: 'var(--ios-green)' }}>
-          Границы придаточных и союзное слово «КОТОРЫЙ» (№ 19)
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
-            <strong>• Придаточное со словом «КОТОРЫЙ»:</strong><br />
-            Запятая ставится на границе главной и придаточной части (например: <em>«дом, (1) крыша (2) которого...»</em> — запятая только на месте 1, перед «которого» на месте 2 запятой нет).
+      <>
+        {/* ПОНЯТИЕ СПП И ГРАНИЦЫ ПРИДАТОЧНЫХ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              Понятие СПП и границы простых предложений (стр. 10)
+            </div>
+            <BadgeTag label="ГРАНИЦЫ СПП" tone="blue" />
           </div>
-          <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
-            <strong>• Однородные придаточные:</strong><br />
-            Если два придаточных отвечают на один вопрос от одного главного предложения и соединены союзом <strong>И / ИЛИ</strong>, запятая между ними НЕ ставится.
+
+          <div className="p-2.5 rounded-xl text-[12px] leading-snug mb-2" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+            • <strong>Сложноподчинённое предложение (СПП)</strong> — сложное предложение, в котором одно простое предложение по смыслу подчиняется другому:<br />
+            <code>1 [ Я посмотрел туда (куда?) ], 2 ( где небо сливалось с морем ).</code><br />
+            • <em>Зависимая часть — придаточное предложение. Зависимость выражается подчинительным союзом или союзным словом (всегда находится в зависимой части!).</em>
+          </div>
+
+          <div className="space-y-1.5 text-[12px] leading-snug">
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <strong>1. Запятая в СПП ставится на границах простых предложений:</strong><br />
+              • <em>«По выражению её несчастных глаз и лица, (1) <strong>которое</strong> (с.с.) вдруг стало некрасиво, (2) я видел, (3) что ей нестерпимо тяжело.»</em><br />
+              • <em>«Она ни за кого не хотела идти, чувствуя, (1) что жизнь её (2) с теми трудовыми людьми, (3) <strong>которые</strong> сватались за неё, (4) будет трудна ей.»</em>
+            </div>
+
+            <TrapBox title="⚠️ ЛОВУШКА С СОЮЗНЫМ СЛОВОМ «КОТОРЫЙ» (СТР. 10)">
+              Слово «которых» внутри придаточного (с оборотом <em>каждый из которых, часть которого</em>) — <strong>запятая ставится ДО всей конструкции</strong>, а НЕ после слова «которых»!<br />
+              <em>«Разглядывая все эти предметы, (1) <strong>каждый из которых</strong> (2) воплощал для меня продажность бедной девушки, (3) я подумал, (4) что Господь был к ней милосерден, (5) поскольку позволил умереть ей в роскоши и красоте.»</em> (запятые: 1, 3, 4, 5; на месте 2 запятой НЕТ!).
+            </TrapBox>
+
+            <div className="p-2 rounded-xl" style={{ background: 'var(--ios-green-soft)' }}>
+              <strong>2. Придаточные могут быть однородными (при одиночном союзе И запятая НЕ ставится!):</strong><br />
+              <em>«(Когда солнце уже жгло плечи) и (я с изумлением глядел на это горящее масло), [открылись «пустынные горы» Гимета].»</em>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* 2. ВИДЫ ПРИДАТОЧНЫХ ПРЕДЛОЖЕНИЙ */}
+        <div className="cheat-subbox">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="cheat-subbox-title !mb-0" style={{ color: 'var(--ios-green)' }}>
+              2. Виды придаточных предложений (Пункты 1–4, стр. 11)
+            </div>
+            <BadgeTag label="ВОПРОСЫ ОТ ГЛАВНОЙ ЧАСТИ" tone="purple" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px] leading-snug">
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold mb-1" style={{ color: 'var(--ios-green)' }}>
+                1 Придаточные изъяснительные:
+              </div>
+              Поясняют сказуемое в главной части и отвечают на вопросы косвенных падежей (<em>кого? чего? что? о чём?</em>):<br />
+              • <em>«За работой мы не замечали (чего?), как быстро прошло время.»</em><br />
+              • <em>«Даже сквозь стены слышно (что?), как гудит ветер в проводах.»</em>
+            </div>
+
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold mb-1" style={{ color: 'var(--ios-green)' }}>
+                2 Придаточные определительные:
+              </div>
+              Определяют существительное или местоимение и отвечают на вопросы <em>«Какой? Чей? Который?»</em>:<br />
+              • <em>«Я поцеловал руку (какую?), в которой она держала зонтик.»</em><br />
+              • <em>«Я правду (какую?) о тебе расскажу, что хуже всякой лжи.»</em>
+            </div>
+
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold mb-1" style={{ color: 'var(--ios-green)' }}>
+                3 Придаточные обстоятельственные:
+              </div>
+              Замещают обстоятельства (<em>времени, места, причины, следствия, цели, условия, уступки, образа действия</em>):<br />
+              • <em>«Мне нужен мир (для чего? — цель), чтобы вырасти скорее и облететь вокруг шара.»</em><br />
+              • <em>«Когда мы въехали на самую высокую точку горы, (когда? — времени) лошади вдруг остановились.»</em>
+            </div>
+
+            <div className="p-2.5 rounded-xl" style={{ background: 'var(--ios-bg-cell-hover)' }}>
+              <div className="font-extrabold mb-1" style={{ color: 'var(--ios-green)' }}>
+                4 Придаточные присоединительные:
+              </div>
+              Присоединяются не к одному слову, а ко всему главному предложению (содержат добавочное сообщение):<br />
+              • <em>«[Ребята пошли в лес], → (где они и заночевали).»</em>
+            </div>
+          </div>
+
+          <MnemonicBox title="💡 ЧЕК-ЛИСТ № 19">
+            1) Выдели все грамматические основы.<br />
+            2) Найди границы придаточных <code>[ ... , (союз/с.с. ... ), ... ]</code>.<br />
+            3) Проверь позицию «который» (слово «каждый из которых» — запятая ДО него) и нет ли союза И между однородными придаточными!
+          </MnemonicBox>
+        </div>
+      </>
     ),
   },
   {
