@@ -1677,6 +1677,64 @@ html.dark .sheet-grabber-pill {
   margin-top: 6px;
 }
 
+/* Notebook Hand-drawn and Syntactic Annotation Utilities */
+.pen-u {
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+  font-weight: 700;
+}
+.pen-oval {
+  display: inline-block;
+  border: 1px solid currentColor;
+  border-radius: 9999px;
+  padding: 0 4px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.box-tag {
+  display: inline-block;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 0 3px;
+  line-height: 1.2;
+}
+.pred-u {
+  text-decoration-line: underline;
+  text-decoration-style: double;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+  font-weight: 700;
+}
+.wave-u {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.2px;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+.dash-u {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 1.2px;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+.num-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  font-weight: 800;
+  font-size: 8.5px;
+  line-height: 1;
+  margin-right: 3px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 .cheat-badge-tip {
   background: var(--ios-green-soft);
   color: var(--ios-green);
@@ -1886,8 +1944,8 @@ button,
   }
 
   .ios-viewport-scroll {
-    padding-top: 74px;
-    padding-bottom: 94px;
+    padding-top: 88px;
+    padding-bottom: 96px;
   }
 
   /* Desktop Floating Dock Tabbar */
@@ -1987,8 +2045,8 @@ button,
 
   /* 2. Desktop Viewport Clearance & Clean Floating Header Margin */
   .ios-viewport-scroll {
-    padding-top: clamp(74px, 5.5vh, 84px);
-    padding-bottom: clamp(84px, 6.5vh, 96px);
+    padding-top: clamp(88px, 6.5vh, 104px);
+    padding-bottom: clamp(88px, 6.5vh, 104px);
   }
 
   .desktop-container {
