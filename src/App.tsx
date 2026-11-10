@@ -2970,25 +2970,26 @@ export default function App() {
                         key={`${kimVariantIdx}-${kimActiveTask}`}
                         className="ios-inset-group p-3 !mb-0 word-stage-animate"
                       >
-                        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                          <div className="min-w-0 flex-1 pr-1">
-                            <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2.5">
+                          <div className="flex items-center justify-between sm:justify-start gap-2 min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
                               <span
-                                className="text-[12.5px] font-extrabold whitespace-nowrap"
+                                className="text-[12.5px] font-extrabold truncate"
                                 style={{ color: 'var(--ios-blue)' }}
+                                title={`Задание № ${kimActiveTask} · ${TASK_META[kimActiveTask]?.title}`}
                               >
                                 Задание № {kimActiveTask} · {TASK_META[kimActiveTask]?.title}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => openRuleInspector(currentKimTaskQuestion, null)}
-                                className="liquid-pill-btn text-[10.5px] font-bold px-2 py-0.5 rounded-full cursor-pointer shrink-0"
+                                className="liquid-pill-btn text-[10.5px] font-bold px-2.5 py-0.5 rounded-full cursor-pointer shrink-0"
                               >
                                 Шпора
                               </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-0.5 sm:pt-0">
                             <span
                               className="text-[11px] font-bold whitespace-nowrap"
                               style={{ color: 'var(--ios-label-sec)' }}
