@@ -1426,13 +1426,16 @@ html.dark .choice-card-btn.bad {
    iOS 27 FROSTED LIQUID GLASS SHEET (.ios-sheet) & SWIPE-DOWN GRABBER
    ============================================================================ */
 .ios-sheet-root {
-  position: fixed;
+  position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 80;
   pointer-events: none;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  overflow: hidden;
 }
 
 .ios-sheet-root.open {

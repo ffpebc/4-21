@@ -176,7 +176,10 @@
             }
           }, { passive: true });
         }
-        window.addEventListener('focusout', function () {
+        window.addEventListener('focusout', function (e) {
+          var target = e.target;
+          var wasInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+          if (!wasInput) return;
           document.documentElement.style.removeProperty('--app-height');
           if (document.body) document.body.classList.remove('keyboard-open');
           restoreScrollPosition();

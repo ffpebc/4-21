@@ -206,7 +206,10 @@ export default function App() {
     const onLoaded = () => setBankRev((r) => r + 1);
     window.addEventListener('ege-bank-loaded', onLoaded);
 
-    const onFocusOut = () => {
+    const onFocusOut = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      const wasInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+      if (!wasInput) return;
       const resetScroll = () => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         if (document.body) document.body.scrollTop = 0;
