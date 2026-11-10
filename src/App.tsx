@@ -148,6 +148,22 @@ const createEmptyKimAnswers = (): Record<TaskId, string> => {
 export default function App() {
   const [bankRev, setBankRev] = useState(0);
   useEffect(() => {
+    const forceReflow = () => {
+      const isInput = !!(
+        document.activeElement &&
+        (document.activeElement.tagName === 'INPUT' ||
+          document.activeElement.tagName === 'TEXTAREA')
+      );
+      if (isInput) return;
+      const root = document.getElementById('root');
+      if (root) {
+        const prev = root.style.display;
+        root.style.display = 'none';
+        void root.offsetHeight;
+        root.style.display = prev;
+      }
+    };
+
     const syncAppViewport = () => {
       const isInput = !!(
         document.activeElement &&
@@ -167,17 +183,25 @@ export default function App() {
       }
     };
     syncAppViewport();
+    forceReflow();
 
     window.addEventListener('resize', syncAppViewport, { passive: true });
-    window.addEventListener('orientationchange', syncAppViewport, { passive: true });
-    window.addEventListener('pageshow', syncAppViewport, { passive: true });
+    window.addEventListener('orientationchange', () => {
+      syncAppViewport();
+      setTimeout(forceReflow, 100);
+    }, { passive: true });
+    window.addEventListener('pageshow', () => {
+      syncAppViewport();
+      forceReflow();
+      setTimeout(forceReflow, 150);
+    }, { passive: true });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', syncAppViewport, { passive: true });
       window.visualViewport.addEventListener('scroll', syncAppViewport, { passive: true });
     }
-    const t1 = window.setTimeout(syncAppViewport, 60);
-    const t2 = window.setTimeout(syncAppViewport, 250);
-    const t3 = window.setTimeout(syncAppViewport, 600);
+    const t1 = window.setTimeout(() => { syncAppViewport(); forceReflow(); }, 60);
+    const t2 = window.setTimeout(() => { syncAppViewport(); forceReflow(); }, 250);
+    const t3 = window.setTimeout(() => { syncAppViewport(); forceReflow(); }, 600);
 
     const onLoaded = () => setBankRev((r) => r + 1);
     window.addEventListener('ege-bank-loaded', onLoaded);
@@ -191,11 +215,13 @@ export default function App() {
       };
       resetScroll();
       syncAppViewport();
+      forceReflow();
       window.setTimeout(resetScroll, 50);
       window.setTimeout(resetScroll, 150);
       window.setTimeout(resetScroll, 300);
       window.setTimeout(resetScroll, 500);
       window.setTimeout(syncAppViewport, 520);
+      window.setTimeout(forceReflow, 530);
     };
     window.addEventListener('focusout', onFocusOut);
 

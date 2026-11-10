@@ -1716,14 +1716,14 @@ test('iOS PWA fullscreen layout and single-line quantity selector constraints', 
   const indexHtml = fs.readFileSync('index.html', 'utf-8');
   assert.ok(indexHtml.includes('viewport-fit=cover'), 'index.html must have viewport-fit=cover');
   assert.ok(indexHtml.includes('apple-mobile-web-app-capable'), 'index.html must enable apple-mobile-web-app-capable');
-  assert.ok(indexHtml.includes('inset: 0'), 'index.html must pin fullscreen layout via inset: 0');
+  assert.ok(indexHtml.includes('100dvh'), 'index.html must specify 100dvh');
   assert.ok(indexHtml.includes('scrollRestoration'), 'index.html must set manual scrollRestoration');
 
   const indexCss = fs.readFileSync('src/index.css', 'utf-8');
   assert.ok(!indexCss.includes('-webkit-fill-available'), 'index.css must avoid -webkit-fill-available to prevent iOS standalone clipping');
   assert.ok(indexCss.includes('border-radius: 999px'), 'ios-tabbar must have authentic rounded capsule border-radius: 999px without flat straight cut');
   assert.ok(indexCss.includes('env(safe-area-inset-bottom'), 'ios-tabbar must account for safe-area-inset-bottom');
-  assert.ok(indexCss.includes('inset: 0'), 'index.css must lock body/root via inset: 0');
+  assert.ok(indexCss.includes('100dvh'), 'index.css must specify 100dvh');
   assert.ok(!indexCss.includes('display-mode: standalone'), 'index.css must avoid standalone display-mode overrides');
   assert.ok(!indexCss.includes('is-standalone'), 'index.css must avoid is-standalone overrides');
 
