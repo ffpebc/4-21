@@ -82,6 +82,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       onClose={onClose}
       ariaLabel="Шаблоны и умный подбор занятия"
       handleAriaLabel="Потяните вниз, чтобы закрыть шаблоны занятия"
+      sheetClassName="ios-sheet-flush"
     >
       <div className="flex items-center justify-between gap-2 mb-2.5 shrink-0">
         <div className="min-w-0 flex-1 pr-2">
@@ -106,7 +107,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       </div>
 
       {/* 9 Uniform Template Tiles (Photo 5 design) */}
-      <div className="flex-1 min-h-0 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar flex flex-col gap-3 pr-0.5 pb-2">
+      <div className="flex-1 min-h-0 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar flex flex-col gap-3 pr-0.5 pb-[max(14px,calc(env(safe-area-inset-bottom,0px)-14px))] md:pb-1">
         {/* 1. Слабая тема */}
         <button
           type="button"
@@ -2781,7 +2782,7 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
 
         {/* 4. Structured 3-Step Algorithm Cards */}
         <div
-          className="ios-inset-group p-3 !mb-1 ios-stagger-card"
+          className="ios-inset-group p-3 !mb-0 ios-stagger-card"
           style={{ animationDelay: '70ms' }}
         >
           <div
@@ -3175,8 +3176,8 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
         )}
       </div>
 
-      <div className="cheat-reader flex-1 min-h-0 mb-2.5">
-        <div className="flex flex-col gap-2 pb-1">
+      <div className="cheat-reader flex-1 min-h-0 mb-2">
+        <div className="flex flex-col gap-2">
           {visibleItems.map((item, idx) => (
             <div key={idx} className="ios-inset-group ios-scroll-item p-3.5 !mb-0 shrink-0">
               <div className="flex items-center justify-between gap-2 mb-1">

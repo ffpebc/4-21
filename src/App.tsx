@@ -36,6 +36,7 @@ import {
   resolveTask15Sentence,
   formatTask14SolvedWord,
   BALANCED_30_QUANTITIES,
+  computeIOSStandaloneFullHeight,
 } from './utils/trainerLogic';
 import {
   loadInitialStateSync,
@@ -148,22 +149,6 @@ const createEmptyKimAnswers = (): Record<TaskId, string> => {
 export default function App() {
   const [bankRev, setBankRev] = useState(0);
   useEffect(() => {
-    const forceReflow = () => {
-      const isInput = !!(
-        document.activeElement &&
-        (document.activeElement.tagName === 'INPUT' ||
-          document.activeElement.tagName === 'TEXTAREA')
-      );
-      if (isInput) return;
-      const root = document.getElementById('root');
-      if (root) {
-        const prev = root.style.display;
-        root.style.display = 'none';
-        void root.offsetHeight;
-        root.style.display = prev;
-      }
-    };
-
     const syncAppViewport = () => {
       const isInput = !!(
         document.activeElement &&
@@ -172,10 +157,28 @@ export default function App() {
       );
       const vv = window.visualViewport;
       const winH = window.innerHeight || (document.documentElement ? document.documentElement.clientHeight : 0) || 0;
-      const isKeyboard = isInput && vv && vv.height < winH * 0.88;
+      const vvH = vv && vv.height ? vv.height : winH;
+      const fullH = computeIOSStandaloneFullHeight({
+        isStandalone: (window.navigator as Navigator & { standalone?: boolean }).standalone === true,
+        screenWidth: window.screen?.width || 0,
+        screenHeight: window.screen?.height || 0,
+        innerWidth: window.innerWidth || (document.documentElement ? document.documentElement.clientWidth : 0) || 0,
+        innerHeight: winH,
+        visualViewportHeight: vvH,
+        isInputActive: isInput,
+      });
 
-      if (isKeyboard && vv && vv.height > 0) {
-        document.documentElement.style.setProperty('--app-height', `${Math.round(vv.height)}px`);
+      if (fullH && fullH > 0) {
+        document.documentElement.style.setProperty('--app-full-height', `${fullH}px`);
+      } else {
+        document.documentElement.style.removeProperty('--app-full-height');
+      }
+
+      const baseH = fullH || winH;
+      const isKeyboard = isInput && baseH > 0 && vvH < baseH * 0.85;
+
+      if (isKeyboard && vvH > 0) {
+        document.documentElement.style.setProperty('--app-height', `${Math.round(vvH)}px`);
         document.body.classList.add('keyboard-open');
       } else {
         document.documentElement.style.removeProperty('--app-height');
@@ -183,25 +186,22 @@ export default function App() {
       }
     };
     syncAppViewport();
-    forceReflow();
+
+    const onDelayedSync = () => {
+      syncAppViewport();
+      window.setTimeout(syncAppViewport, 80);
+    };
 
     window.addEventListener('resize', syncAppViewport, { passive: true });
-    window.addEventListener('orientationchange', () => {
-      syncAppViewport();
-      setTimeout(forceReflow, 100);
-    }, { passive: true });
-    window.addEventListener('pageshow', () => {
-      syncAppViewport();
-      forceReflow();
-      setTimeout(forceReflow, 150);
-    }, { passive: true });
+    window.addEventListener('orientationchange', onDelayedSync, { passive: true });
+    window.addEventListener('pageshow', onDelayedSync, { passive: true });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', syncAppViewport, { passive: true });
       window.visualViewport.addEventListener('scroll', syncAppViewport, { passive: true });
     }
-    const t1 = window.setTimeout(() => { syncAppViewport(); forceReflow(); }, 60);
-    const t2 = window.setTimeout(() => { syncAppViewport(); forceReflow(); }, 250);
-    const t3 = window.setTimeout(() => { syncAppViewport(); forceReflow(); }, 600);
+    const t1 = window.setTimeout(syncAppViewport, 60);
+    const t2 = window.setTimeout(syncAppViewport, 250);
+    const t3 = window.setTimeout(syncAppViewport, 600);
 
     const onLoaded = () => setBankRev((r) => r + 1);
     window.addEventListener('ege-bank-loaded', onLoaded);
@@ -218,13 +218,11 @@ export default function App() {
       };
       resetScroll();
       syncAppViewport();
-      forceReflow();
       window.setTimeout(resetScroll, 50);
       window.setTimeout(resetScroll, 150);
       window.setTimeout(resetScroll, 300);
       window.setTimeout(resetScroll, 500);
       window.setTimeout(syncAppViewport, 520);
-      window.setTimeout(forceReflow, 530);
     };
     window.addEventListener('focusout', onFocusOut);
 
@@ -233,8 +231,8 @@ export default function App() {
       window.clearTimeout(t2);
       window.clearTimeout(t3);
       window.removeEventListener('resize', syncAppViewport);
-      window.removeEventListener('orientationchange', syncAppViewport);
-      window.removeEventListener('pageshow', syncAppViewport);
+      window.removeEventListener('orientationchange', onDelayedSync);
+      window.removeEventListener('pageshow', onDelayedSync);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', syncAppViewport);
         window.visualViewport.removeEventListener('scroll', syncAppViewport);

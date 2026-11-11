@@ -165,11 +165,14 @@ html,
 body {
   margin: 0;
   padding: 0;
+  position: relative;
   width: 100%;
   height: 100%;
   height: 100dvh;
+  height: var(--app-full-height, 100dvh);
   min-height: 100%;
   min-height: 100dvh;
+  min-height: var(--app-full-height, 100dvh);
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: manipulation;
@@ -193,7 +196,7 @@ textarea {
 /* Static GPU-composited Spatial Ambient Mesh (Zero background repaint cost!) */
 body::before {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
@@ -210,8 +213,10 @@ body::before {
   width: 100%;
   height: 100%;
   height: 100dvh;
+  height: var(--app-full-height, 100dvh);
   min-height: 100%;
   min-height: 100dvh;
+  min-height: var(--app-full-height, 100dvh);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -221,6 +226,7 @@ body::before {
 
 body.keyboard-open #root {
   height: var(--app-height, 100%) !important;
+  min-height: var(--app-height, 100%) !important;
 }
 
 body.keyboard-open .ios-tabbar {
@@ -300,7 +306,7 @@ body.keyboard-open .ios-tabbar {
    APPLE LIQUID GLASS CAPSULE NAVBAR (TOP FLOATING BAR)
    ============================================================================ */
 .ios-navbar {
-  position: fixed;
+  position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 6px);
   left: 50%;
   transform: translate3d(-50%, 0, 0);
@@ -352,7 +358,7 @@ body.keyboard-open .ios-tabbar {
    APPLE LIQUID GLASS FLOATING TAB BAR (5 TABS + DRAGGABLE DROPLET LENS)
    ============================================================================ */
 .ios-tabbar {
-  position: fixed;
+  position: absolute;
   bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 18px));
   left: 50%;
   transform: translate3d(-50%, 0, 0);
@@ -1464,7 +1470,7 @@ html.dark .choice-card-btn.bad {
   z-index: 1;
   width: 100%;
   max-width: 600px;
-  max-height: 90dvh;
+  max-height: calc(100% - max(44px, calc(env(safe-area-inset-top, 0px) - 6px)));
   background: var(--ios-sheet-grad);
   backdrop-filter: blur(24px) saturate(190%);
   -webkit-backdrop-filter: blur(24px) saturate(190%);
@@ -1472,7 +1478,7 @@ html.dark .choice-card-btn.bad {
   border-left: 0.5px solid var(--ios-glass-border);
   border-right: 0.5px solid var(--ios-glass-border);
   border-radius: 36px 36px 0 0;
-  padding: 6px 16px calc(env(safe-area-inset-bottom, 0px) + 18px) 16px;
+  padding: 6px 16px max(12px, calc(env(safe-area-inset-bottom, 0px) - 18px)) 16px;
   transform: translate3d(0, 104%, 0);
   transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
   display: flex;
@@ -1611,16 +1617,26 @@ html.dark .sheet-grabber-pill {
 }
 
 .ios-sheet.ios-cheatsheet-panel {
-  height: calc(100dvh - 44px) !important;
-  max-height: calc(100dvh - 44px) !important;
+  height: calc(100% - max(44px, calc(env(safe-area-inset-top, 0px) - 6px))) !important;
+  max-height: calc(100% - max(44px, calc(env(safe-area-inset-top, 0px) - 6px))) !important;
   border-radius: 36px 36px 0 0 !important;
-  padding: 6px 16px calc(env(safe-area-inset-bottom, 0px) + 20px) 16px !important;
+  padding: 6px 16px max(12px, calc(env(safe-area-inset-bottom, 0px) - 18px)) 16px !important;
 }
 
-.ios-sheet.ios-cheatsheet-panel .cheat-reader {
+@media (max-width: 767px) {
+  .ios-sheet.ios-sheet-flush {
+    padding-bottom: 0 !important;
+  }
+}
+
+.ios-sheet .cheat-reader {
   flex: 1 1 auto !important;
   min-height: 0 !important;
-  padding-bottom: 12px;
+  padding-bottom: 4px;
+}
+
+.ios-sheet.ios-sheet-flush .cheat-reader {
+  padding-bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) - 14px));
 }
 
 .cheat-card {
@@ -1630,6 +1646,10 @@ html.dark .sheet-grabber-pill {
   padding: 13px;
   margin-bottom: 12px;
   box-shadow: var(--ios-glass-inner-glow);
+}
+
+.cheat-card:last-child {
+  margin-bottom: 0;
 }
 
 .cheat-title {
@@ -1982,8 +2002,8 @@ button,
   .ios-sheet {
     border-radius: 28px !important;
     max-width: 740px;
-    max-height: 86vh;
-    padding: 20px 24px 28px 24px !important;
+    max-height: 86%;
+    padding: 20px 24px 24px 24px !important;
     box-shadow: 0 28px 72px -16px rgba(0, 0, 0, 0.45), var(--ios-glass-inner-glow) !important;
   }
 
@@ -1995,9 +2015,14 @@ button,
 
   .ios-sheet.ios-cheatsheet-panel {
     max-width: 900px;
-    height: 86vh !important;
-    max-height: 86vh !important;
+    height: 86% !important;
+    max-height: 86% !important;
     border-radius: 28px !important;
+    padding: 20px 24px 24px 24px !important;
+  }
+
+  .ios-sheet.ios-sheet-flush .cheat-reader {
+    padding-bottom: 4px;
   }
 
   .sheet-drag-handle {

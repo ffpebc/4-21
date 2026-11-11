@@ -2059,7 +2059,7 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
       onClose={onClose}
       ariaLabel="Полный конспект-шпаргалка ЕГЭ 4–22"
       handleAriaLabel="Потяните вниз, чтобы закрыть шпаргалку"
-      sheetClassName="ios-cheatsheet-panel"
+      sheetClassName="ios-cheatsheet-panel ios-sheet-flush"
       sheetStyle={{ '--cheat-font-scale': fontScale } as React.CSSProperties}
     >
       <div className="flex items-center justify-between gap-2 mb-2 shrink-0">
@@ -2169,7 +2169,6 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
                 {sec.content}
               </article>
             ))}
-            <div className="h-10 shrink-0" aria-hidden="true" />
           </>
         )}
       </div>

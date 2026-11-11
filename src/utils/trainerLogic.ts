@@ -4896,3 +4896,52 @@ export function formatTask14SolvedWord(
 function questionPrefixClean(prefix: string): string {
   return prefix.replace(/[()]/g, '');
 }
+
+export interface IOSStandaloneViewportMetrics {
+  isStandalone: boolean;
+  screenWidth: number;
+  screenHeight: number;
+  innerWidth: number;
+  innerHeight: number;
+  visualViewportHeight?: number;
+  isInputActive: boolean;
+}
+
+/**
+ * Resolves the true physical fullscreen height (in CSS px) for iOS Home Screen
+ * standalone PWAs where black-translucent WebKit intermittently truncates
+ * window.innerHeight and 100dvh by safe-area-inset-top (e.g. 793px on an 852px screen).
+ * Returns null in desktop browsers, regular tabs, iPad Split View, or while keyboard is open.
+ */
+export function computeIOSStandaloneFullHeight(
+  metrics: IOSStandaloneViewportMetrics
+): number | null {
+  if (!metrics.isStandalone) return null;
+  const sw = Number(metrics.screenWidth) || 0;
+  const sh = Number(metrics.screenHeight) || 0;
+  const iw = Number(metrics.innerWidth) || 0;
+  const ih = Number(metrics.innerHeight) || 0;
+  if (sw <= 0 || sh <= 0 || iw <= 0) return null;
+
+  const shortSide = Math.min(sw, sh);
+  const longSide = Math.max(sw, sh);
+  let expectedFullHeight: number | null = null;
+  if (Math.abs(iw - shortSide) <= 2) {
+    expectedFullHeight = longSide;
+  } else if (Math.abs(iw - longSide) <= 2) {
+    expectedFullHeight = shortSide;
+  }
+  if (!expectedFullHeight || expectedFullHeight <= 0) return null;
+
+  const vvH =
+    metrics.visualViewportHeight && metrics.visualViewportHeight > 0
+      ? metrics.visualViewportHeight
+      : ih;
+  const isKeyboardOpen = metrics.isInputActive && vvH < expectedFullHeight * 0.85;
+  if (isKeyboardOpen) return null;
+
+  const deficit = expectedFullHeight - ih;
+  if (deficit > 120 && vvH < expectedFullHeight * 0.85) return null;
+
+  return Math.round(expectedFullHeight);
+}

@@ -28,6 +28,7 @@ import {
   inferQuestionTarget,
   isTheoryOrExplanationText,
   BALANCED_30_QUANTITIES,
+  computeIOSStandaloneFullHeight,
   type TaskId,
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
@@ -1717,10 +1718,14 @@ test('iOS PWA fullscreen layout and single-line quantity selector constraints', 
   assert.ok(indexHtml.includes('viewport-fit=cover'), 'index.html must have viewport-fit=cover');
   assert.ok(indexHtml.includes('apple-mobile-web-app-capable'), 'index.html must enable apple-mobile-web-app-capable');
   assert.ok(indexHtml.includes('100dvh'), 'index.html must specify 100dvh');
+  assert.ok(indexHtml.includes('--app-full-height'), 'index.html must resolve --app-full-height for iOS standalone');
   assert.ok(indexHtml.includes('scrollRestoration'), 'index.html must set manual scrollRestoration');
 
   const indexCss = fs.readFileSync('src/index.css', 'utf-8');
   assert.ok(!indexCss.includes('-webkit-fill-available'), 'index.css must avoid -webkit-fill-available to prevent iOS standalone clipping');
+  assert.ok(!indexCss.includes('position: fixed'), 'index.css must avoid position: fixed so iOS black-translucent fixed ICB truncation never lifts bars or backdrops');
+  assert.ok(indexCss.includes('--app-full-height'), 'index.css must bind root height to --app-full-height');
+  assert.ok(indexCss.includes('.ios-sheet-flush'), 'index.css must define flush bottom sheet layout');
   assert.ok(indexCss.includes('border-radius: 999px'), 'ios-tabbar must have authentic rounded capsule border-radius: 999px without flat straight cut');
   assert.ok(indexCss.includes('env(safe-area-inset-bottom'), 'ios-tabbar must account for safe-area-inset-bottom');
   assert.ok(indexCss.includes('100dvh'), 'index.css must specify 100dvh');
@@ -2393,6 +2398,93 @@ test('Task 16 exhaustive audit: 517 prototypes, sentence integrity, canonical in
     assert.ok(!fullExp.includes('скоро появится'), `[${q.id}] explanation placeholder detected`);
   }
 });
+
+test('computeIOSStandaloneFullHeight heals 793pt WebKit truncation and guards keyboard/split-view/desktop', () => {
+  // 1. iPhone 15/16 portrait standalone with WebKit 59pt status-bar viewport cut (852 - 59 = 793)
+  assert.equal(
+    computeIOSStandaloneFullHeight({
+      isStandalone: true,
+      screenWidth: 393,
+      screenHeight: 852,
+      innerWidth: 393,
+      innerHeight: 793,
+      visualViewportHeight: 793,
+      isInputActive: false,
+    }),
+    852
+  );
+
+  // 2. Healthy iPhone 15/16 standalone launch stays locked at exact 852px
+  assert.equal(
+    computeIOSStandaloneFullHeight({
+      isStandalone: true,
+      screenWidth: 393,
+      screenHeight: 852,
+      innerWidth: 393,
+      innerHeight: 852,
+      visualViewportHeight: 852,
+      isInputActive: false,
+    }),
+    852
+  );
+
+  // 3. Landscape fullscreen in iOS standalone resolves shortSide (393)
+  assert.equal(
+    computeIOSStandaloneFullHeight({
+      isStandalone: true,
+      screenWidth: 393,
+      screenHeight: 852,
+      innerWidth: 852,
+      innerHeight: 350,
+      visualViewportHeight: 350,
+      isInputActive: false,
+    }),
+    393
+  );
+
+  // 4. Open software keyboard lets --app-height shrink #root cleanly
+  assert.equal(
+    computeIOSStandaloneFullHeight({
+      isStandalone: true,
+      screenWidth: 393,
+      screenHeight: 852,
+      innerWidth: 393,
+      innerHeight: 793,
+      visualViewportHeight: 515,
+      isInputActive: true,
+    }),
+    null
+  );
+
+  // 5. iPad Split View / Slide Over (innerWidth does not match screen portrait or landscape width)
+  assert.equal(
+    computeIOSStandaloneFullHeight({
+      isStandalone: true,
+      screenWidth: 820,
+      screenHeight: 1180,
+      innerWidth: 505,
+      innerHeight: 1180,
+      visualViewportHeight: 1180,
+      isInputActive: false,
+    }),
+    null
+  );
+
+  // 6. Regular Safari tab / Desktop / Android browser (navigator.standalone !== true) returns null
+  assert.equal(
+    computeIOSStandaloneFullHeight({
+      isStandalone: false,
+      screenWidth: 393,
+      screenHeight: 852,
+      innerWidth: 393,
+      innerHeight: 710,
+      visualViewportHeight: 710,
+      isInputActive: false,
+    }),
+    null
+  );
+});
+
 
 
 
