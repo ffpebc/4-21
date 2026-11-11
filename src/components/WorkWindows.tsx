@@ -107,7 +107,7 @@ export const PresetsModal: React.FC<PresetsModalProps> = React.memo(({
       </div>
 
       {/* 9 Uniform Template Tiles (Photo 5 design) */}
-      <div className="flex-1 min-h-0 overflow-y-auto -webkit-overflow-scrolling-touch no-scrollbar flex flex-col gap-3 pr-0.5 pb-[max(14px,calc(env(safe-area-inset-bottom,0px)-14px))] md:pb-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain -webkit-overflow-scrolling-touch no-scrollbar flex flex-col gap-3 pr-0.5 pb-[max(14px,calc(env(safe-area-inset-bottom,0px)-14px))] md:pb-1">
         {/* 1. Слабая тема */}
         <button
           type="button"
@@ -2830,7 +2830,7 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
           onClose();
           onOpenFullCheatsheet(task);
         }}
-        className="ios-btn-primary !min-h-[46px] !text-[14.5px]"
+        className="ios-btn-primary !min-h-[46px] !text-[14.5px] shrink-0"
       >
         <span>Открыть полный конспект № {task} ({meta.cheatPages})</span>
       </button>
@@ -3137,7 +3137,7 @@ export const DictionaryModal: React.FC<DictionaryModalProps> = React.memo(({
         />
       </div>
 
-      <div className="shrink-0 mb-2 flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 no-scrollbar w-full min-h-[36px]">
+      <div className="shrink-0 mb-2 flex items-center gap-1.5 overflow-x-auto overflow-y-hidden py-1 px-0.5 no-scrollbar w-full min-h-[36px]">
         <button
           type="button"
           onClick={() => setFilterTask('all')}
@@ -3271,7 +3271,7 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
       handleAriaLabel="Потяните вниз, чтобы закрыть настройки дизайна"
       sheetClassName="max-w-[460px]"
     >
-      <div className="flex items-center justify-between gap-2 mb-2.5">
+      <div className="flex items-center justify-between gap-2 mb-2.5 shrink-0">
         <div className="min-w-0 flex-1 pr-2">
           <h3 className="text-[18px] font-extrabold tracking-tight leading-tight whitespace-nowrap truncate">
             Дизайн Liquid Glass
@@ -3293,115 +3293,117 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
         </button>
       </div>
 
-      {/* Theme Mode */}
-      <div className="ios-section-header !px-1">Цветовая среда</div>
-      <div className="grid grid-cols-2 gap-2.5 mb-3">
-        <button
-          type="button"
-          id="theme-light-btn"
-          onClick={() => onToggleDarkMode(false)}
-          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
-          style={{
-            borderColor: !darkMode ? 'var(--ios-blue)' : undefined,
-            boxShadow: !darkMode ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
-          }}
-        >
-          <div className="text-[13.5px] font-extrabold mb-0.5 whitespace-nowrap">
-            Светлая (Spatial)
-          </div>
-          <div className="text-[11px] truncate" style={{ color: 'var(--ios-label-sec)' }}>
-            Оптическая линза
-          </div>
-        </button>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain no-scrollbar p-0.5 -m-0.5">
+        {/* Theme Mode */}
+        <div className="ios-section-header !px-1">Цветовая среда</div>
+        <div className="grid grid-cols-2 gap-2.5 mb-3">
+          <button
+            type="button"
+            id="theme-light-btn"
+            onClick={() => onToggleDarkMode(false)}
+            className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+            style={{
+              borderColor: !darkMode ? 'var(--ios-blue)' : undefined,
+              boxShadow: !darkMode ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
+            }}
+          >
+            <div className="text-[13.5px] font-extrabold mb-0.5 whitespace-nowrap">
+              Светлая (Spatial)
+            </div>
+            <div className="text-[11px] truncate" style={{ color: 'var(--ios-label-sec)' }}>
+              Оптическая линза
+            </div>
+          </button>
 
-        <button
-          type="button"
-          id="theme-dark-btn"
-          onClick={() => onToggleDarkMode(true)}
-          className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
-          style={{
-            borderColor: darkMode ? 'var(--ios-blue)' : undefined,
-            boxShadow: darkMode ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
-          }}
-        >
-          <div className="text-[13.5px] font-extrabold mb-0.5 whitespace-nowrap">
-            Тёмная (OLED #000)
-          </div>
-          <div className="text-[11px] truncate" style={{ color: 'var(--ios-label-sec)' }}>
-            Чистый чёрный фон
-          </div>
-        </button>
-      </div>
-
-      {/* Apple WWDC 2026 Liquid Glass Material Selector */}
-      <div className="ios-section-header !px-1">Преломление и прозрачность стекла</div>
-      <div className="grid grid-cols-2 gap-2.5 mb-3">
-        <button
-          type="button"
-          onClick={() => onChangeGlassStyle('clear')}
-          className="ios-inset-group !mb-0 p-3.5 text-left cursor-pointer"
-          style={{
-            borderColor: glassStyle === 'clear' ? 'var(--ios-blue)' : undefined,
-            boxShadow:
-              glassStyle === 'clear' ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
-          }}
-        >
-          <div className="text-[14px] font-extrabold mb-0.5">Жидкая линза</div>
-          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Глубокая рефракция и объёмный край
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onChangeGlassStyle('frosted')}
-          className="ios-inset-group !mb-0 p-3.5 text-left cursor-pointer"
-          style={{
-            borderColor: glassStyle === 'frosted' ? 'var(--ios-blue)' : undefined,
-            boxShadow:
-              glassStyle === 'frosted' ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
-          }}
-        >
-          <div className="text-[14px] font-extrabold mb-0.5">Матовый криолит</div>
-          <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Повышенная плотность для чтения
-          </div>
-        </button>
-      </div>
-
-      {/* Specular Rim Lensing Toggle */}
-      <div className="ios-inset-group p-3.5 !mb-3 flex items-center justify-between gap-3">
-        <div>
-          <div className="text-[14px] font-extrabold">Динамические блики граней</div>
-          <div className="text-[11.5px]" style={{ color: 'var(--ios-label-sec)' }}>
-            Реакция светового контура (Specular Rim) на касание и курсор
-          </div>
+          <button
+            type="button"
+            id="theme-dark-btn"
+            onClick={() => onToggleDarkMode(true)}
+            className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+            style={{
+              borderColor: darkMode ? 'var(--ios-blue)' : undefined,
+              boxShadow: darkMode ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
+            }}
+          >
+            <div className="text-[13.5px] font-extrabold mb-0.5 whitespace-nowrap">
+              Тёмная (OLED #000)
+            </div>
+            <div className="text-[11px] truncate" style={{ color: 'var(--ios-label-sec)' }}>
+              Чистый чёрный фон
+            </div>
+          </button>
         </div>
+
+        {/* Apple WWDC 2026 Liquid Glass Material Selector */}
+        <div className="ios-section-header !px-1">Преломление и прозрачность стекла</div>
+        <div className="grid grid-cols-2 gap-2.5 mb-3">
+          <button
+            type="button"
+            onClick={() => onChangeGlassStyle('clear')}
+            className="ios-inset-group !mb-0 p-3.5 text-left cursor-pointer"
+            style={{
+              borderColor: glassStyle === 'clear' ? 'var(--ios-blue)' : undefined,
+              boxShadow:
+                glassStyle === 'clear' ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
+            }}
+          >
+            <div className="text-[14px] font-extrabold mb-0.5">Жидкая линза</div>
+            <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
+              Глубокая рефракция и объёмный край
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChangeGlassStyle('frosted')}
+            className="ios-inset-group !mb-0 p-3.5 text-left cursor-pointer"
+            style={{
+              borderColor: glassStyle === 'frosted' ? 'var(--ios-blue)' : undefined,
+              boxShadow:
+                glassStyle === 'frosted' ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
+            }}
+          >
+            <div className="text-[14px] font-extrabold mb-0.5">Матовый криолит</div>
+            <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
+              Повышенная плотность для чтения
+            </div>
+          </button>
+        </div>
+
+        {/* Specular Rim Lensing Toggle */}
+        <div className="ios-inset-group p-3.5 !mb-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[14px] font-extrabold">Динамические блики граней</div>
+            <div className="text-[11.5px]" style={{ color: 'var(--ios-label-sec)' }}>
+              Реакция светового контура (Specular Rim) на касание и курсор
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onToggleSpecular(!specularEnabled)}
+            className="px-3.5 py-1.5 rounded-full text-[12px] font-extrabold cursor-pointer shrink-0"
+            style={{
+              background: specularEnabled
+                ? 'var(--ios-green-soft)'
+                : 'var(--ios-bg-tertiary)',
+              color: specularEnabled ? 'var(--ios-green)' : 'var(--ios-label-sec)',
+            }}
+          >
+            {specularEnabled ? 'Активно' : 'Выкл.'}
+          </button>
+        </div>
+
         <button
           type="button"
-          onClick={() => onToggleSpecular(!specularEnabled)}
-          className="px-3.5 py-1.5 rounded-full text-[12px] font-extrabold cursor-pointer shrink-0"
-          style={{
-            background: specularEnabled
-              ? 'var(--ios-green-soft)'
-              : 'var(--ios-bg-tertiary)',
-            color: specularEnabled ? 'var(--ios-green)' : 'var(--ios-label-sec)',
+          onClick={() => {
+            onClose();
+            onOpenSyncModal();
           }}
+          className="ios-btn-tinted w-full"
         >
-          {specularEnabled ? 'Активно' : 'Выкл.'}
+          <span>Открыть окно «Память и синхронизация»</span>
         </button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          onClose();
-          onOpenSyncModal();
-        }}
-        className="ios-btn-tinted w-full"
-      >
-        <span>Открыть окно «Память и синхронизация»</span>
-      </button>
     </SwipeableSheet>
   );
 });

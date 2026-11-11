@@ -29,6 +29,10 @@ import {
   isTheoryOrExplanationText,
   BALANCED_30_QUANTITIES,
   computeIOSStandaloneFullHeight,
+  canScrollVertically,
+  resolveSheetTouchMoveAction,
+  computeSheetDragOffset,
+  shouldDismissSheetDrag,
   type TaskId,
 } from './trainerLogic.ts';
 import { parseStructuredExplanation } from '../components/WorkWindows.tsx';
@@ -1726,6 +1730,9 @@ test('iOS PWA fullscreen layout and single-line quantity selector constraints', 
   assert.ok(!indexCss.includes('position: fixed'), 'index.css must avoid position: fixed so iOS black-translucent fixed ICB truncation never lifts bars or backdrops');
   assert.ok(indexCss.includes('--app-full-height'), 'index.css must bind root height to --app-full-height');
   assert.ok(indexCss.includes('.ios-sheet-flush'), 'index.css must define flush bottom sheet layout');
+  assert.ok(indexCss.includes('--ios-sheet-top-gap'), 'index.css must leave clear breathing gap above open sheets');
+  assert.ok(!indexCss.includes('safe-area-inset-top, 0px) - 6px'), 'index.css must not subtract 6px from safe-area-inset-top inside sheets');
+  assert.ok(indexCss.includes('overscroll-behavior: contain'), 'index.css must contain modal/backdrop scroll chaining');
   assert.ok(indexCss.includes('border-radius: 999px'), 'ios-tabbar must have authentic rounded capsule border-radius: 999px without flat straight cut');
   assert.ok(indexCss.includes('env(safe-area-inset-bottom'), 'ios-tabbar must account for safe-area-inset-bottom');
   assert.ok(indexCss.includes('100dvh'), 'index.css must specify 100dvh');
@@ -2483,6 +2490,102 @@ test('computeIOSStandaloneFullHeight heals 793pt WebKit truncation and guards ke
     }),
     null
   );
+});
+
+test('SwipeableSheet pull-down dismiss logic stops top rubber-band and preserves normal scrolling', () => {
+  // 1. Subpixel flex overflows (e.g. horizontal pill bars) must not be treated as vertical scrollers
+  assert.equal(canScrollVertically(36, 34, 'auto'), false);
+  assert.equal(canScrollVertically(400, 400, 'hidden'), false);
+  assert.equal(canScrollVertically(680, 400, 'auto'), true);
+
+  // 2. Pulling down when scrolled to top (including @3x subpixel 0.67px tolerance) intercepts sheet drag
+  assert.deepEqual(
+    resolveSheetTouchMoveAction({
+      currentMode: 'pending',
+      startedAtTop: true,
+      currentScrollTop: 0,
+      dx: 1,
+      dy: 6,
+    }),
+    { nextMode: 'sheet-drag', shouldPreventDefault: true, startDrag: true }
+  );
+  assert.deepEqual(
+    resolveSheetTouchMoveAction({
+      currentMode: 'pending',
+      startedAtTop: true,
+      currentScrollTop: 0.67,
+      dx: 0,
+      dy: 5,
+    }),
+    { nextMode: 'sheet-drag', shouldPreventDefault: true, startDrag: true }
+  );
+
+  // 3. Tiny tap jitter (<= 3px) remains pending so normal taps/clicks are never hijacked
+  assert.deepEqual(
+    resolveSheetTouchMoveAction({
+      currentMode: 'pending',
+      startedAtTop: true,
+      currentScrollTop: 0,
+      dx: 0,
+      dy: 2,
+    }),
+    { nextMode: 'pending', shouldPreventDefault: false, startDrag: false }
+  );
+
+  // 4. Dragging upward (dy < -3) to scroll down into list hands off cleanly to native compositor scroll
+  assert.deepEqual(
+    resolveSheetTouchMoveAction({
+      currentMode: 'pending',
+      startedAtTop: true,
+      currentScrollTop: 0,
+      dx: 0,
+      dy: -8,
+    }),
+    { nextMode: 'native-scroll', shouldPreventDefault: false, startDrag: false }
+  );
+
+  // 5. Horizontal swipe across filter chips hands off to native horizontal scroll
+  assert.deepEqual(
+    resolveSheetTouchMoveAction({
+      currentMode: 'pending',
+      startedAtTop: true,
+      currentScrollTop: 0,
+      dx: -14,
+      dy: 4,
+    }),
+    { nextMode: 'native-scroll', shouldPreventDefault: false, startDrag: false }
+  );
+
+  // 6. Pulling down when list is scrolled down (!startedAtTop or scrollTop > 2) scrolls list upward instead of closing
+  assert.deepEqual(
+    resolveSheetTouchMoveAction({
+      currentMode: 'pending',
+      startedAtTop: false,
+      currentScrollTop: 180,
+      dx: 0,
+      dy: 24,
+    }),
+    { nextMode: 'native-scroll', shouldPreventDefault: false, startDrag: false }
+  );
+
+  // 7. Continuing a locked sheet-drag calls preventDefault without re-firing startDrag
+  assert.deepEqual(
+    resolveSheetTouchMoveAction({
+      currentMode: 'sheet-drag',
+      startedAtTop: true,
+      currentScrollTop: 0,
+      dx: 2,
+      dy: 80,
+    }),
+    { nextMode: 'sheet-drag', shouldPreventDefault: true, startDrag: false }
+  );
+
+  // 8. Offset clamping never lifts bottom sheet upward off floor, and dismissal respects distance & flick velocity
+  assert.equal(computeSheetDragOffset(-18), 0);
+  assert.equal(computeSheetDragOffset(42), 42);
+  assert.equal(shouldDismissSheetDrag(70, 300), true);
+  assert.equal(shouldDismissSheetDrag(32, 60), true);
+  assert.equal(shouldDismissSheetDrag(32, 240), false);
 });
 
 

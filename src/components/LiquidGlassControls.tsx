@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FlashcardItem, TaskId, TASK_IDS, TASK_META } from '../utils/trainerLogic';
+import {
+  FlashcardItem,
+  TaskId,
+  TASK_IDS,
+  TASK_META,
+  SheetTouchMode,
+  canScrollVertically,
+  resolveSheetTouchMoveAction,
+  computeSheetDragOffset,
+  shouldDismissSheetDrag,
+} from '../utils/trainerLogic';
 
 /* ============================================================================
    1. DRAGGABLE APPLE LIQUID GLASS SEGMENTED CONTROL (FOR ALL 2/3/6-WAY BARS)
@@ -1236,6 +1246,10 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
   const timerRef = useRef<number | null>(null);
   const dragRafRef = useRef<number | null>(null);
   const pendingClientYRef = useRef<number | null>(null);
+  const isOpenRef = useRef<boolean>(isOpen);
+  const suppressNextClickRef = useRef<boolean>(false);
+  const suppressClickTimerRef = useRef<number | null>(null);
+  isOpenRef.current = isOpen;
 
   // Synchronously mount when opening and synchronously deactivate when closing
   // so there is zero extra render pass delay before the close animation starts!
@@ -1270,6 +1284,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
       dragOffsetYRef.current = 0;
       setIsDragging(false);
       startYRef.current = null;
+      pendingClientYRef.current = null;
 
       if (backdropRef.current) {
         backdropRef.current.style.transition = '';
@@ -1295,6 +1310,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
       setIsActive(false);
       setIsDragging(false);
       startYRef.current = null;
+      pendingClientYRef.current = null;
       if (backdropRef.current) {
         backdropRef.current.style.transition = '';
         backdropRef.current.style.opacity = '';
@@ -1312,10 +1328,25 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
     }
   }, [isOpen]);
 
+  const applyDragTransform = (clientY: number) => {
+    if (startYRef.current === null || !sheetRef.current) return;
+    const rawDelta = clientY - startYRef.current;
+    const nextOffset = computeSheetDragOffset(rawDelta);
+    dragOffsetYRef.current = nextOffset;
+    // Direct hardware-accelerated 120 FPS compositor transform with 0 React re-renders
+    sheetRef.current.style.transform = `translate3d(0, ${nextOffset.toFixed(1)}px, 0)`;
+    if (backdropRef.current) {
+      const sheetHeight = sheetRef.current.offsetHeight || 520;
+      const progress = Math.min(1, Math.max(0, nextOffset / sheetHeight));
+      backdropRef.current.style.opacity = (1 - progress * 0.88).toFixed(3);
+    }
+  };
+
   const handleDragStart = (clientY: number) => {
     startYRef.current = clientY;
     startTimeRef.current = performance.now();
     dragOffsetYRef.current = 0;
+    pendingClientYRef.current = clientY;
     setIsDragging(true);
     if (sheetRef.current) {
       sheetRef.current.style.transition = 'none';
@@ -1331,17 +1362,8 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
     if (dragRafRef.current === null) {
       dragRafRef.current = requestAnimationFrame(() => {
         dragRafRef.current = null;
-        if (startYRef.current === null || !sheetRef.current || pendingClientYRef.current === null) return;
-        const rawDelta = pendingClientYRef.current - startYRef.current;
-        const nextOffset = rawDelta >= 0 ? rawDelta : rawDelta * 0.22;
-        dragOffsetYRef.current = nextOffset;
-        // Direct hardware-accelerated 120 FPS compositor transform with 0 React re-renders:
-        sheetRef.current.style.transform = `translate3d(0, ${nextOffset.toFixed(1)}px, 0)`;
-        if (backdropRef.current) {
-          const sheetHeight = sheetRef.current.offsetHeight || 520;
-          const progress = Math.min(1, Math.max(0, nextOffset / sheetHeight));
-          backdropRef.current.style.opacity = (1 - progress * 0.88).toFixed(3);
-        }
+        if (pendingClientYRef.current === null) return;
+        applyDragTransform(pendingClientYRef.current);
       });
     }
   };
@@ -1352,15 +1374,19 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
       dragRafRef.current = null;
     }
     if (startYRef.current === null) return;
+    // Flush any final pointer/touch coordinates synchronously so quick flicks never use stale 0ms delta
+    if (pendingClientYRef.current !== null) {
+      applyDragTransform(pendingClientYRef.current);
+    }
     const finalDelta = dragOffsetYRef.current;
     const elapsedMs = Math.max(1, performance.now() - startTimeRef.current);
-    const velocity = finalDelta / elapsedMs;
 
     startYRef.current = null;
+    pendingClientYRef.current = null;
     dragOffsetYRef.current = 0;
     setIsDragging(false);
 
-    const shouldClose = finalDelta > 65 || (finalDelta > 24 && velocity > 0.38);
+    const shouldClose = shouldDismissSheetDrag(finalDelta, elapsedMs);
 
     if (shouldClose) {
       // Continue smoothly from current finger offset down off-screen with zero snap-back
@@ -1391,6 +1417,153 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
     }
   };
 
+  const dragHandlersRef = useRef({
+    onStart: handleDragStart,
+    onMove: handleDragMove,
+    onEnd: handleDragEnd,
+  });
+  dragHandlersRef.current = {
+    onStart: handleDragStart,
+    onMove: handleDragMove,
+    onEnd: handleDragEnd,
+  };
+
+  // Attach native non-passive touch listeners so pulling down at scrollTop === 0 anywhere inside
+  // the sheet (or header/body) smoothly dismisses the sheet instead of stretching inner list bounce.
+  useEffect(() => {
+    const sheetEl = sheetRef.current;
+    if (!sheetEl || !isMounted) return;
+
+    let activeTouchId: number | null = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMode: SheetTouchMode = 'pending';
+    let scrollEl: HTMLElement | null = null;
+    let startedAtTop = true;
+
+    const findVerticalScrollable = (target: EventTarget | null): HTMLElement | null => {
+      let el =
+        target instanceof HTMLElement
+          ? target
+          : target instanceof Node
+          ? target.parentElement
+          : null;
+      while (el && el !== sheetEl) {
+        const style = window.getComputedStyle(el);
+        if (canScrollVertically(el.scrollHeight, el.clientHeight, style.overflowY)) {
+          return el;
+        }
+        el = el.parentElement;
+      }
+      return null;
+    };
+
+    const findTouchById = (touches: TouchList, id: number): Touch | null => {
+      for (let i = 0; i < touches.length; i += 1) {
+        const item = touches.item(i);
+        if (item && item.identifier === id) return item;
+      }
+      return null;
+    };
+
+    const resetTouch = () => {
+      activeTouchId = null;
+      touchMode = 'pending';
+      scrollEl = null;
+      startedAtTop = true;
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (suppressClickTimerRef.current !== null) {
+        window.clearTimeout(suppressClickTimerRef.current);
+        suppressClickTimerRef.current = null;
+      }
+      suppressNextClickRef.current = false;
+      if (!isOpenRef.current || e.touches.length !== 1) return;
+      const targetEl = e.target instanceof Element ? e.target : null;
+      if (!targetEl || targetEl.closest('.sheet-drag-handle')) return;
+      if (targetEl.closest('input[type="range"], select, option')) return;
+
+      const touch = e.touches[0];
+      activeTouchId = touch.identifier;
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      scrollEl = findVerticalScrollable(targetEl);
+      startedAtTop = !scrollEl || scrollEl.scrollTop <= 2;
+      touchMode = 'pending';
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (activeTouchId === null) return;
+      const touch = findTouchById(e.touches, activeTouchId);
+      if (!touch) return;
+
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      const decision = resolveSheetTouchMoveAction({
+        currentMode: touchMode,
+        startedAtTop,
+        currentScrollTop: scrollEl ? scrollEl.scrollTop : 0,
+        dx,
+        dy,
+      });
+
+      touchMode = decision.nextMode;
+
+      if (decision.shouldPreventDefault && e.cancelable) {
+        e.preventDefault();
+      }
+
+      if (decision.startDrag) {
+        suppressNextClickRef.current = true;
+        if (scrollEl && scrollEl.scrollTop < 0) {
+          scrollEl.scrollTop = 0;
+        }
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && sheetEl.contains(active)) {
+          active.blur();
+        }
+        dragHandlersRef.current.onStart(touch.clientY);
+      }
+
+      if (touchMode === 'sheet-drag') {
+        dragHandlersRef.current.onMove(touch.clientY);
+      }
+    };
+
+    const onTouchFinish = (e: TouchEvent) => {
+      if (activeTouchId === null) return;
+      // Ignore if our tracked finger is still touching screen (e.g., 2nd finger lifted)
+      if (findTouchById(e.touches, activeTouchId)) return;
+      const wasSheetDrag = touchMode === 'sheet-drag';
+      resetTouch();
+      if (wasSheetDrag) {
+        suppressClickTimerRef.current = window.setTimeout(() => {
+          suppressNextClickRef.current = false;
+          suppressClickTimerRef.current = null;
+        }, 120);
+        dragHandlersRef.current.onEnd();
+      }
+    };
+
+    sheetEl.addEventListener('touchstart', onTouchStart, { passive: true });
+    sheetEl.addEventListener('touchmove', onTouchMove, { passive: false });
+    sheetEl.addEventListener('touchend', onTouchFinish, { passive: true });
+    sheetEl.addEventListener('touchcancel', onTouchFinish, { passive: true });
+
+    return () => {
+      if (suppressClickTimerRef.current !== null) {
+        window.clearTimeout(suppressClickTimerRef.current);
+        suppressClickTimerRef.current = null;
+      }
+      suppressNextClickRef.current = false;
+      sheetEl.removeEventListener('touchstart', onTouchStart);
+      sheetEl.removeEventListener('touchmove', onTouchMove);
+      sheetEl.removeEventListener('touchend', onTouchFinish);
+      sheetEl.removeEventListener('touchcancel', onTouchFinish);
+    };
+  }, [isMounted]);
+
   if (!isMounted && !isOpen) return null;
 
   const isSheetVisible = isOpen && isActive;
@@ -1416,6 +1589,17 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
       <div
         id={sheetId}
         ref={sheetRef}
+        onClickCapture={(e) => {
+          if (suppressNextClickRef.current) {
+            suppressNextClickRef.current = false;
+            if (suppressClickTimerRef.current !== null) {
+              window.clearTimeout(suppressClickTimerRef.current);
+              suppressClickTimerRef.current = null;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
         className={`ios-sheet ${maxWidthClass} ${sheetClassName} ${isDragging ? 'dragging' : ''} ${
           !isSheetVisible ? 'closing' : ''
         }`}

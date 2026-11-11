@@ -2122,7 +2122,7 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = React.memo(({
         />
       </div>
 
-      <div id="cheat-pills-scroll" className="mb-2.5 shrink-0 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      <div id="cheat-pills-scroll" className="mb-2.5 shrink-0 flex items-center gap-1.5 overflow-x-auto overflow-y-hidden pb-1 no-scrollbar">
         <button
           type="button"
           onClick={() => setActiveTab('all')}

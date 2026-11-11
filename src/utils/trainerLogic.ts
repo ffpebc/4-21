@@ -4945,3 +4945,88 @@ export function computeIOSStandaloneFullHeight(
 
   return Math.round(expectedFullHeight);
 }
+
+export type SheetTouchMode = 'pending' | 'sheet-drag' | 'native-scroll';
+
+export interface SheetTouchMoveInput {
+  currentMode: SheetTouchMode;
+  startedAtTop: boolean;
+  currentScrollTop: number;
+  dx: number;
+  dy: number;
+  slopPx?: number;
+}
+
+export interface SheetTouchMoveDecision {
+  nextMode: SheetTouchMode;
+  shouldPreventDefault: boolean;
+  startDrag: boolean;
+}
+
+/**
+ * Distinguishes real vertical scroll containers inside sheets from single-line
+ * horizontal pill strips whose `overflow-x: auto` causes CSS to report `overflowY: auto`.
+ */
+export function canScrollVertically(
+  scrollHeight: number,
+  clientHeight: number,
+  overflowY?: string
+): boolean {
+  if (overflowY && overflowY !== 'auto' && overflowY !== 'scroll' && overflowY !== 'overlay') {
+    return false;
+  }
+  return scrollHeight - clientHeight > 4;
+}
+
+/**
+ * Decides whether a touch move inside a modal sheet should hand off to native
+ * scrolling or hijack downward motion at the top edge (`scrollTop <= 2`) into sheet-dismiss drag,
+ * stopping iOS WebKit elastic rubber-band gaps inside readers.
+ */
+export function resolveSheetTouchMoveAction(
+  input: SheetTouchMoveInput
+): SheetTouchMoveDecision {
+  const { currentMode, startedAtTop, currentScrollTop, dx, dy, slopPx = 3 } = input;
+
+  if (currentMode === 'sheet-drag') {
+    return { nextMode: 'sheet-drag', shouldPreventDefault: true, startDrag: false };
+  }
+  if (currentMode === 'native-scroll') {
+    return { nextMode: 'native-scroll', shouldPreventDefault: false, startDrag: false };
+  }
+
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+
+  if (absDx > slopPx && absDx > absDy * 1.15) {
+    return { nextMode: 'native-scroll', shouldPreventDefault: false, startDrag: false };
+  }
+
+  // Pull down while scrolled to top (with <= 2px tolerance for @3x Retina subpixel rounding)
+  if (startedAtTop && currentScrollTop <= 2 && dy > slopPx && dy >= absDx) {
+    return { nextMode: 'sheet-drag', shouldPreventDefault: true, startDrag: true };
+  }
+
+  if (absDy > slopPx) {
+    return { nextMode: 'native-scroll', shouldPreventDefault: false, startDrag: false };
+  }
+
+  return { nextMode: 'pending', shouldPreventDefault: false, startDrag: false };
+}
+
+/**
+ * Clamps downward sheet drag offset (>= 0) so the bottom edge never lifts off the floor
+ * and exposes an empty bottom strip during gestures.
+ */
+export function computeSheetDragOffset(rawDeltaY: number): number {
+  return rawDeltaY > 0 ? rawDeltaY : 0;
+}
+
+/**
+ * Computes distance + flick-velocity dismissal condition for modal sheets.
+ */
+export function shouldDismissSheetDrag(deltaY: number, elapsedMs: number): boolean {
+  const safeElapsed = Math.max(1, elapsedMs);
+  const velocity = deltaY / safeElapsed;
+  return deltaY > 65 || (deltaY > 24 && velocity > 0.38);
+}

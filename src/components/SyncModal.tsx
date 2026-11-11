@@ -187,7 +187,7 @@ export const SyncModal: React.FC<SyncModalProps> = React.memo(({
       ariaLabel="Память и синхронизация прогресса"
       handleAriaLabel="Потяните вниз, чтобы закрыть окно памяти"
     >
-      <div className="flex items-center justify-between gap-2 mb-2.5">
+      <div className="flex items-center justify-between gap-2 mb-2.5 shrink-0">
         <div className="min-w-0 flex-1 pr-2">
           <h3 className="text-[18px] font-extrabold tracking-tight leading-tight whitespace-nowrap truncate">
             Память и синхронизация
@@ -212,108 +212,110 @@ export const SyncModal: React.FC<SyncModalProps> = React.memo(({
         </button>
       </div>
 
-      {/* 1. Hosted Cloud Sync (Default + Multi-Device PIN) */}
-      <div className="ios-inset-group p-3.5 !mb-2.5">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <div className="text-[13px] font-bold whitespace-nowrap truncate">
-            1. Облачная память сервера
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain no-scrollbar p-0.5 -m-0.5">
+        {/* 1. Hosted Cloud Sync (Default + Multi-Device PIN) */}
+        <div className="ios-inset-group p-3.5 !mb-2.5">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="text-[13px] font-bold whitespace-nowrap truncate">
+              1. Облачная память сервера
+            </div>
+            <span
+              className="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+              style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
+            >
+              Активно
+            </span>
           </div>
-          <span
-            className="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
-            style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
-          >
-            Активно
-          </span>
+          <p className="text-[12px] mb-2" style={{ color: 'var(--ios-label-sec)' }}>
+            Прогресс автоматически синхронизируется между ПК и телефоном на лету. Введите ваш
+            общий код профиля (например, <strong>FFPEBC</strong> или <strong>ALEX77</strong>),
+            и все задания мгновенно отобразятся на обоих устройствах.
+          </p>
+          <input
+            id="profile-pin-input"
+            type="text"
+            maxLength={20}
+            value={pinInput}
+            onChange={handlePinChange}
+            onBlur={handleSavePin}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.currentTarget.blur();
+                handleSavePin();
+              }
+            }}
+            placeholder="Код профиля (напр. FFPEBC или ALEX77)"
+            aria-label="Ваш личный пин-код или ник"
+            className="w-full px-3 py-2 rounded-xl text-[16px] font-bold placeholder:font-medium outline-none mb-2"
+            style={{
+              background: 'var(--ios-bg-secondary)',
+              border: '0.5px solid var(--ios-separator)',
+              color: 'var(--ios-label)',
+            }}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              id="save-profile-pin-btn"
+              type="button"
+              onClick={handleSavePin}
+              className="ios-btn-tinted !min-h-[38px] !px-2.5 !text-[12px] w-full"
+            >
+              Сохранить на сервере
+            </button>
+            <button
+              id="load-profile-pin-btn"
+              type="button"
+              onClick={handlePullFromPin}
+              className="ios-btn-tinted !min-h-[38px] !px-2.5 !text-[12px] w-full"
+              style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
+            >
+              Загрузить с сервера
+            </button>
+          </div>
         </div>
-        <p className="text-[12px] mb-2" style={{ color: 'var(--ios-label-sec)' }}>
-          Прогресс автоматически синхронизируется между ПК и телефоном на лету. Введите ваш
-          общий код профиля (например, <strong>FFPEBC</strong> или <strong>ALEX77</strong>),
-          и все задания мгновенно отобразятся на обоих устройствах.
-        </p>
-        <input
-          id="profile-pin-input"
-          type="text"
-          maxLength={20}
-          value={pinInput}
-          onChange={handlePinChange}
-          onBlur={handleSavePin}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.currentTarget.blur();
-              handleSavePin();
-            }
-          }}
-          placeholder="Код профиля (напр. FFPEBC или ALEX77)"
-          aria-label="Ваш личный пин-код или ник"
-          className="w-full px-3 py-2 rounded-xl text-[16px] font-bold placeholder:font-medium outline-none mb-2"
-          style={{
-            background: 'var(--ios-bg-secondary)',
-            border: '0.5px solid var(--ios-separator)',
-            color: 'var(--ios-label)',
-          }}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            id="save-profile-pin-btn"
-            type="button"
-            onClick={handleSavePin}
-            className="ios-btn-tinted !min-h-[38px] !px-2.5 !text-[12px] w-full"
-          >
-            Сохранить на сервере
-          </button>
-          <button
-            id="load-profile-pin-btn"
-            type="button"
-            onClick={handlePullFromPin}
-            className="ios-btn-tinted !min-h-[38px] !px-2.5 !text-[12px] w-full"
-            style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
-          >
-            Загрузить с сервера
-          </button>
-        </div>
-      </div>
 
-      {/* 2. Instant 1-Tap Backup Code */}
-      <div className="ios-inset-group p-3.5 !mb-0">
-        <div className="text-[13px] font-bold mb-1">
-          2. Резервный код прогресса (автономная копия)
+        {/* 2. Instant 1-Tap Backup Code */}
+        <div className="ios-inset-group p-3.5 !mb-0">
+          <div className="text-[13px] font-bold mb-1">
+            2. Резервный код прогресса (автономная копия)
+          </div>
+          <p className="text-[12px] mb-2" style={{ color: 'var(--ios-label-sec)' }}>
+            Компактный код содержит всю статистику, рекорды, журнал занятий и Банк ошибок.
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <button
+              id="copy-backup-code-btn"
+              type="button"
+              onClick={handleCopyBackupCode}
+              className="ios-btn-tinted !min-h-[38px] !px-2.5 !text-[12px] w-full"
+            >
+              Скопировать код
+            </button>
+            <button
+              id="apply-backup-code-btn"
+              type="button"
+              onClick={handleApplyBackupCode}
+              className="ios-btn-tinted !min-h-[38px] !px-2.5 !text-[12px] w-full"
+              style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
+            >
+              Восстановить код
+            </button>
+          </div>
+          <input
+            id="backup-code-input"
+            type="text"
+            value={backupCodeInput}
+            onChange={(e) => setBackupCodeInput(e.target.value)}
+            placeholder="Вставьте сюда код EGE27-... для восстановления"
+            aria-label="Резервный код прогресса"
+            className="w-full px-3 py-2 rounded-xl text-[16px] font-mono outline-none"
+            style={{
+              background: 'var(--ios-bg-secondary)',
+              border: '0.5px solid var(--ios-separator)',
+              color: 'var(--ios-label)',
+            }}
+          />
         </div>
-        <p className="text-[12px] mb-2" style={{ color: 'var(--ios-label-sec)' }}>
-          Компактный код содержит всю статистику, рекорды, журнал занятий и Банк ошибок.
-        </p>
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <button
-            id="copy-backup-code-btn"
-            type="button"
-            onClick={handleCopyBackupCode}
-            className="ios-btn-tinted !min-h-[38px] !px-2.5 !text-[12px] w-full"
-          >
-            Скопировать код
-          </button>
-          <button
-            id="apply-backup-code-btn"
-            type="button"
-            onClick={handleApplyBackupCode}
-            className="ios-btn-tinted !min-h-[38px] !px-2.5 !text-[12px] w-full"
-            style={{ background: 'var(--ios-green-soft)', color: 'var(--ios-green)' }}
-          >
-            Восстановить код
-          </button>
-        </div>
-        <input
-          id="backup-code-input"
-          type="text"
-          value={backupCodeInput}
-          onChange={(e) => setBackupCodeInput(e.target.value)}
-          placeholder="Вставьте сюда код EGE27-... для восстановления"
-          aria-label="Резервный код прогресса"
-          className="w-full px-3 py-2 rounded-xl text-[16px] font-mono outline-none"
-          style={{
-            background: 'var(--ios-bg-secondary)',
-            border: '0.5px solid var(--ios-separator)',
-            color: 'var(--ios-label)',
-          }}
-        />
       </div>
     </SwipeableSheet>
   );
