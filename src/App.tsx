@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+import { haptics } from './utils/haptics';
 import {
   TaskId,
   TaskBlockId,
@@ -103,24 +104,28 @@ const STAT_MODE_ORDER: Record<StatSubMode, number> = {
 
 const iosScreenSlideVariants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? 84 : direction < 0 ? -84 : 0,
+    x: direction > 0 ? 56 : direction < 0 ? -56 : 0,
     opacity: 0,
+    scale: 0.992,
   }),
   center: {
     x: 0,
     opacity: 1,
+    scale: 1,
     transition: {
-      x: { type: 'spring' as const, stiffness: 290, damping: 30, mass: 0.8 },
-      opacity: { duration: 0.22, ease: [0.25, 0.1, 0.25, 1] as const },
+      x: { type: 'spring' as const, stiffness: 320, damping: 32, mass: 0.72 },
+      scale: { type: 'spring' as const, stiffness: 340, damping: 30, mass: 0.7 },
+      opacity: { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const },
     },
   },
   exit: (direction: number) => ({
-    x: direction > 0 ? -48 : direction < 0 ? 48 : 0,
+    x: direction > 0 ? -36 : direction < 0 ? 36 : 0,
     opacity: 0,
+    scale: 0.994,
     pointerEvents: 'none' as const,
     transition: {
-      x: { duration: 0.22, ease: [0.32, 0.72, 0, 1] as const },
-      opacity: { duration: 0.16, ease: 'easeOut' as const },
+      x: { duration: 0.2, ease: [0.32, 0.72, 0, 1] as const },
+      opacity: { duration: 0.14, ease: 'easeOut' as const },
     },
   }),
 };
@@ -721,6 +726,7 @@ export default function App() {
   };
 
   const handleStepTask = (task: TaskId, delta: number) => {
+    haptics.selection();
     setState((prev) => {
       const nextQty = stepTaskQty(prev.quantities[task] || 0, delta);
       return {
@@ -739,6 +745,7 @@ export default function App() {
   };
 
   const handleApplyPreset = (qtyEach: number) => {
+    haptics.tap();
     const clamped = clampTaskQty(qtyEach);
     setState((prev) => {
       const nextEnabled = {} as Record<TaskId, boolean>;
@@ -775,6 +782,7 @@ export default function App() {
 
   const startSessionWithQueue = (queue: TrainerQuestion[]) => {
     if (queue.length === 0) return;
+    haptics.medium();
     const initialTallies = createEmptyTaskTallies();
     setSessionQueue(queue);
     setSessionIndex(0);
@@ -980,6 +988,11 @@ export default function App() {
       });
     } else {
       const total = sessionCorrect + sessionWrong;
+      if (total > 0 && sessionCorrect / total >= 0.8) {
+        haptics.streak();
+      } else {
+        haptics.success();
+      }
       recordJournalEntry(
         `Занятие (${sessionQueue.length} зад.)`,
         total,
@@ -1359,7 +1372,7 @@ export default function App() {
   ]);
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       {/* SVG Sprite for crisp iOS SF Symbols & Optical Filters */}
       <svg style={{ display: 'none' }} xmlns="http://www.w3.org/2000/svg">
         <symbol id="sf-play-circle-fill" viewBox="0 0 24 24" fill="currentColor">
@@ -1456,10 +1469,11 @@ export default function App() {
               id="nav-rules-btn"
               type="button"
               onClick={() => {
+                haptics.tap();
                 setRulesInitialSection('all');
                 setIsRulesOpen(true);
               }}
-              className="flex items-center gap-1 text-[12px] font-bold whitespace-nowrap shrink-0 cursor-pointer py-2 px-3 min-h-[36px] rounded-full active:scale-95 transition-transform"
+              className="flex items-center gap-1 text-[12px] font-bold whitespace-nowrap shrink-0 cursor-pointer py-2 px-3 min-h-[36px] rounded-full active:scale-[0.96] transition-transform"
               style={{
                 background: 'var(--ios-blue-soft)',
                 color: 'var(--ios-blue)',
@@ -1474,8 +1488,11 @@ export default function App() {
             <button
               id="nav-dict-btn"
               type="button"
-              onClick={() => setIsDictionaryOpen(true)}
-              className="flex items-center gap-1 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
+              onClick={() => {
+                haptics.tap();
+                setIsDictionaryOpen(true);
+              }}
+              className="flex items-center gap-1 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.96] transition-transform"
               style={{
                 background: 'var(--ios-purple-soft)',
                 color: 'var(--ios-purple)',
@@ -1490,8 +1507,11 @@ export default function App() {
             <button
               id="nav-sync-btn"
               type="button"
-              onClick={() => setIsSyncOpen(true)}
-              className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
+              onClick={() => {
+                haptics.tap();
+                setIsSyncOpen(true);
+              }}
+              className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 min-h-[36px] rounded-full whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.96] transition-transform"
               style={{
                 background: 'var(--ios-blue-soft)',
                 color: 'var(--ios-blue)',
@@ -1519,8 +1539,11 @@ export default function App() {
             <button
               id="nav-appearance-btn"
               type="button"
-              onClick={() => setIsAppearanceOpen(true)}
-              className="flex items-center justify-center w-9 h-9 min-w-[36px] min-h-[36px] rounded-full shrink-0 cursor-pointer active:scale-95 transition-transform"
+              onClick={() => {
+                haptics.tap();
+                setIsAppearanceOpen(true);
+              }}
+              className="flex items-center justify-center w-9 h-9 min-w-[36px] min-h-[36px] rounded-full shrink-0 cursor-pointer active:scale-[0.96] transition-transform"
               style={{ background: 'var(--ios-bg-tertiary)', color: 'var(--ios-blue)' }}
               aria-label="Настройки Liquid Glass и темы"
             >
@@ -4079,6 +4102,6 @@ export default function App() {
           </button>
         </div>
       </SwipeableSheet>
-    </>
+    </MotionConfig>
   );
 }

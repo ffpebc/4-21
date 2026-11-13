@@ -11,6 +11,7 @@ import {
   computeSheetDragOffset,
   shouldDismissSheetDrag,
 } from '../utils/trainerLogic';
+import { haptics } from '../utils/haptics';
 
 /* ============================================================================
    1. DRAGGABLE APPLE LIQUID GLASS SEGMENTED CONTROL (FOR ALL 2/3/6-WAY BARS)
@@ -50,6 +51,12 @@ function LiquidGlassSegmentedInner<T extends string>({
   const lastXRef = useRef<number | null>(null);
   const decayTimerRef = useRef<number | null>(null);
   const flowTimerRef = useRef<number | null>(null);
+  const lastDetentIdxRef = useRef<number>(
+    Math.max(
+      0,
+      options.findIndex((o) => o.key === value)
+    )
+  );
   const prevIdxRef = useRef<number>(
     Math.max(
       0,
@@ -136,7 +143,13 @@ function LiquidGlassSegmentedInner<T extends string>({
     if (rafRef.current === null) {
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
-        setDragRatio(computeRatioFromClientX(clientX));
+        const nextRatio = computeRatioFromClientX(clientX);
+        const detent = Math.min(count - 1, Math.max(0, Math.round(nextRatio)));
+        if (detent !== lastDetentIdxRef.current) {
+          lastDetentIdxRef.current = detent;
+          haptics.selection();
+        }
+        setDragRatio(nextRatio);
       });
     }
   };
@@ -167,6 +180,8 @@ function LiquidGlassSegmentedInner<T extends string>({
 
   const handleSelectOption = (targetKey: T, targetIdx: number) => {
     if (targetKey === value) return;
+    haptics.selection();
+    lastDetentIdxRef.current = targetIdx;
     prevIdxRef.current = targetIdx;
     startLiquidFlow(activeIdx, targetIdx);
     onChange(targetKey);
@@ -288,6 +303,12 @@ function LiquidGlassTabBarInner<T extends string>({
   const lastXRef = useRef<number | null>(null);
   const decayTimerRef = useRef<number | null>(null);
   const flowTimerRef = useRef<number | null>(null);
+  const lastDetentIdxRef = useRef<number>(
+    Math.max(
+      0,
+      items.findIndex((t) => t.key === activeTab)
+    )
+  );
   const prevIdxRef = useRef<number>(
     Math.max(
       0,
@@ -374,7 +395,13 @@ function LiquidGlassTabBarInner<T extends string>({
     if (rafRef.current === null) {
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
-        setDragRatio(computeRatioFromClientX(clientX));
+        const nextRatio = computeRatioFromClientX(clientX);
+        const detent = Math.min(count - 1, Math.max(0, Math.round(nextRatio)));
+        if (detent !== lastDetentIdxRef.current) {
+          lastDetentIdxRef.current = detent;
+          haptics.selection();
+        }
+        setDragRatio(nextRatio);
       });
     }
   };
@@ -405,6 +432,8 @@ function LiquidGlassTabBarInner<T extends string>({
 
   const handleSelectTabImmediate = (targetKey: T, targetIdx: number) => {
     if (targetKey === activeTab) return;
+    haptics.selection();
+    lastDetentIdxRef.current = targetIdx;
     prevIdxRef.current = targetIdx;
     startLiquidFlow(activeIdx, targetIdx);
     onSelectTab(targetKey);
@@ -688,6 +717,11 @@ export const QuizletFlashcardDeck: React.FC<QuizletFlashcardDeckProps> = ({
   const triggerSwipeComplete = (dir: 'left' | 'right') => {
     if (!currentCard || flyOutDir) return;
     setFlyOutDir(dir);
+    if (dir === 'right') {
+      haptics.success();
+    } else {
+      haptics.medium();
+    }
 
     if (dir === 'right') {
       setKnownIds((prev) => {
@@ -800,6 +834,7 @@ export const QuizletFlashcardDeck: React.FC<QuizletFlashcardDeckProps> = ({
 
     // Quick tap (< 10px movement) -> flip 3D card!
     if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 450) {
+      haptics.tap();
       setDragOffset({ x: 0, y: 0 });
       setIsFlipped((f) => !f);
       return;
@@ -1243,6 +1278,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
   const startYRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const dragOffsetYRef = useRef<number>(0);
+  const crossedDismissRef = useRef<boolean>(false);
   const timerRef = useRef<number | null>(null);
   const dragRafRef = useRef<number | null>(null);
   const pendingClientYRef = useRef<number | null>(null);
@@ -1333,6 +1369,12 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
     const rawDelta = clientY - startYRef.current;
     const nextOffset = computeSheetDragOffset(rawDelta);
     dragOffsetYRef.current = nextOffset;
+    if (!crossedDismissRef.current && nextOffset >= 72) {
+      crossedDismissRef.current = true;
+      haptics.selection();
+    } else if (crossedDismissRef.current && nextOffset < 52) {
+      crossedDismissRef.current = false;
+    }
     // Direct hardware-accelerated 120 FPS compositor transform with 0 React re-renders
     sheetRef.current.style.transform = `translate3d(0, ${nextOffset.toFixed(1)}px, 0)`;
     if (backdropRef.current) {
@@ -1346,6 +1388,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
     startYRef.current = clientY;
     startTimeRef.current = performance.now();
     dragOffsetYRef.current = 0;
+    crossedDismissRef.current = false;
     pendingClientYRef.current = clientY;
     setIsDragging(true);
     if (sheetRef.current) {
@@ -1389,6 +1432,7 @@ export const SwipeableSheet: React.FC<SwipeableSheetProps> = React.memo(({
     const shouldClose = shouldDismissSheetDrag(finalDelta, elapsedMs);
 
     if (shouldClose) {
+      haptics.tap();
       // Continue smoothly from current finger offset down off-screen with zero snap-back
       if (sheetRef.current) {
         sheetRef.current.style.transition =

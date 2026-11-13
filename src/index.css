@@ -813,7 +813,7 @@ html.dark .ios-seg-indicator.liquid-droplet-active {
   font-weight: 600;
   cursor: pointer;
   position: relative;
-  transition: background-color 0.12s ease, transform 0.1s ease;
+  transition: background-color 0.14s ease, transform 0.18s var(--spring-snappy);
 }
 
 .ios-stepper-btn::after {
@@ -827,7 +827,7 @@ html.dark .ios-seg-indicator.liquid-droplet-active {
 
 .ios-stepper-btn:active:not(:disabled) {
   background: var(--ios-bg-cell-hover);
-  transform: scale(0.91);
+  transform: scale(0.94);
 }
 
 .ios-stepper-btn:disabled {
@@ -1029,8 +1029,8 @@ html.dark .ios-seg-indicator.liquid-droplet-active {
   white-space: nowrap;
 }
 
-.ios-btn-tinted:active {
-  transform: scale(0.95);
+.ios-btn-tinted:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .liquid-pill-btn {
@@ -1045,8 +1045,8 @@ html.dark .ios-seg-indicator.liquid-droplet-active {
   flex-shrink: 0;
 }
 
-.liquid-pill-btn:active {
-  transform: scale(0.93);
+.liquid-pill-btn:active:not(:disabled) {
+  transform: scale(0.96);
   background: var(--ios-bg-cell-hover);
 }
 
@@ -2174,5 +2174,16 @@ button,
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 12px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

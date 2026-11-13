@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { haptics } from '../utils/haptics';
 import {
   buildLocalCheatsheetFallback,
   getAiAutoExplainEnabled,
@@ -152,8 +153,11 @@ export const GeminiExplainBlock: React.FC<GeminiExplainBlockProps> = ({
           {onOpenCheatsheet && (
             <button
               type="button"
-              onClick={() => onOpenCheatsheet(payload.task)}
-              className="px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-opacity hover:opacity-80"
+              onClick={() => {
+                haptics.tap();
+                onOpenCheatsheet(payload.task);
+              }}
+              className="px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-transform active:scale-[0.96]"
               style={{
                 background: 'var(--ios-blue-soft)',
                 color: 'var(--ios-blue)',
@@ -165,8 +169,11 @@ export const GeminiExplainBlock: React.FC<GeminiExplainBlockProps> = ({
           <button
             type="button"
             disabled={loading}
-            onClick={() => runExplain(true)}
-            className="px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50"
+            onClick={() => {
+              haptics.tap();
+              void runExplain(true);
+            }}
+            className="px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-transform active:scale-[0.96] disabled:opacity-50"
             style={{
               background: 'var(--ios-purple-soft)',
               color: 'var(--ios-purple)',

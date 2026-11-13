@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { haptics } from '../utils/haptics';
 import {
   TrainerQuestion,
   FipiQuestion,
@@ -161,6 +163,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     const shortExplanation = (question.explanation || liveMeta.rule || '').trim();
 
     const commitAnswer = (ok: boolean, opt: string) => {
+      haptics.tap();
       clearTimers();
       setIsExiting(true);
       if (onCheckAnswer) {
@@ -184,6 +187,11 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       if (isAnswered) return;
       setSelectedChoice(opt);
       const ok = opt === question.answer;
+      if (ok) {
+        haptics.success();
+      } else {
+        haptics.error();
+      }
 
       if (onCheckAnswer) {
         onCheckAnswer(ok, opt, {
@@ -481,11 +489,12 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => {
+                        haptics.tap();
                         clearTimers();
                         setIsExiting(false);
                         setShowSprintAiExplain(true);
                       }}
-                      className="px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer active:scale-95 transition-transform"
+                      className="px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer active:scale-[0.96] transition-transform"
                       style={{
                         background: 'var(--ios-purple-soft)',
                         color: 'var(--ios-purple)',
@@ -498,7 +507,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => commitAnswer(Boolean(isCorrect), selectedChoice || '')}
-                      className="shrink-0 px-2.5 py-1 rounded-full text-[11.5px] font-bold cursor-pointer active:scale-95 transition-transform"
+                      className="shrink-0 px-2.5 py-1 rounded-full text-[11.5px] font-bold cursor-pointer active:scale-[0.96] transition-transform"
                       style={{
                         background: isCorrect ? 'var(--ios-green)' : 'var(--ios-red)',
                         color: '#FFFFFF',
@@ -518,14 +527,23 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               </span>
             )}
           </div>
-          {isAnswered && showSprintAiExplain && (
-            <GeminiExplainBlock
-              compact
-              autoFetch
-              payload={buildSprintExplainPayload(question, selectedChoice || '')}
-              onOpenCheatsheet={onOpenRuleForTask}
-            />
-          )}
+          <AnimatePresence>
+            {isAnswered && showSprintAiExplain && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.985 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ type: 'spring', duration: 0.28, bounce: 0 }}
+              >
+                <GeminiExplainBlock
+                  compact
+                  autoFetch
+                  payload={buildSprintExplainPayload(question, selectedChoice || '')}
+                  onOpenCheatsheet={onOpenRuleForTask}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Answer Options */}
@@ -577,6 +595,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
   const toggleRow = (rowIdx1Based: number) => {
     if (fipiSubmitted) return;
+    haptics.selection();
     setFipiSelectedRows((prev) => {
       const next = prev.includes(rowIdx1Based)
         ? prev.filter((r) => r !== rowIdx1Based)
@@ -588,6 +607,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
 
   const assignMatchingDigit = (digit: number) => {
     if (fipiSubmitted) return;
+    haptics.selection();
     let slotCleared = false;
     let nextDigits: number[] = [];
     setFipiMatchingDigits((prev) => {
@@ -667,6 +687,11 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
   const handleCheckFipi = () => {
     if (!canSubmitFipi()) return;
     const ok = Boolean(checkResult.isCorrect);
+    if (ok) {
+      haptics.success();
+    } else {
+      haptics.error();
+    }
     const uStr = userStr || '—';
     setFipiSubmitted(true);
     setFipiResultOk(ok);
@@ -687,6 +712,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
   };
 
   const handleProceedFipi = () => {
+    haptics.tap();
     const ok = Boolean(checkResult.isCorrect);
     setIsExiting(true);
     setTimeout(() => {
@@ -1402,7 +1428,12 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
       {/* Submission & Next Action Banner */}
       <div className="mt-auto pt-1 flex flex-col gap-1.5 shrink-0">
         {fipiSubmitted ? (
-          <div className="flex flex-col gap-1.5 ios-feedback-pop">
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', duration: 0.28, bounce: 0 }}
+            className="flex flex-col gap-1.5"
+          >
             <div
               className="px-3.5 py-2 rounded-xl text-[12px] font-bold text-center"
               style={{
@@ -1437,7 +1468,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
             >
               <span>Следующее задание →</span>
             </button>
-          </div>
+          </motion.div>
         ) : (
           <button
             id="submit-fipi-btn"

@@ -26,6 +26,13 @@ import {
   setAiAutoExplainEnabled,
   setStoredGeminiApiKey,
 } from '../utils/geminiExplain';
+import {
+  haptics,
+  getHapticsEnabled,
+  setHapticsEnabled,
+  getSoundFeedbackEnabled,
+  setSoundFeedbackEnabled,
+} from '../utils/haptics';
 
 /* ============================================================================
    1. ОКНО «ШАБЛОНЫ И УМНЫЙ ПОДБОР ЗАНЯТИЯ» (PresetsModal)
@@ -3305,6 +3312,8 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
 }) => {
   const [geminiKey, setGeminiKey] = useState(() => getStoredGeminiApiKey());
   const [aiAutoExplain, setAiAutoExplain] = useState(() => getAiAutoExplainEnabled());
+  const [hapticsOn, setHapticsOn] = useState(() => getHapticsEnabled());
+  const [soundOn, setSoundOn] = useState(() => getSoundFeedbackEnabled());
   const [geminiStatus, setGeminiStatus] = useState<{
     configured: boolean;
     model: string;
@@ -3316,6 +3325,8 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
     if (!isOpen) return;
     setGeminiKey(getStoredGeminiApiKey());
     setAiAutoExplain(getAiAutoExplainEnabled());
+    setHapticsOn(getHapticsEnabled());
+    setSoundOn(getSoundFeedbackEnabled());
     checkGeminiBackendStatus().then(setGeminiStatus).catch(() => {});
   }, [isOpen]);
 
@@ -3370,8 +3381,11 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
           <button
             type="button"
             id="theme-light-btn"
-            onClick={() => onToggleDarkMode(false)}
-            className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+            onClick={() => {
+              haptics.selection();
+              onToggleDarkMode(false);
+            }}
+            className="ios-inset-group !mb-0 p-3 text-left cursor-pointer transition-transform active:scale-[0.97]"
             style={{
               borderColor: !darkMode ? 'var(--ios-blue)' : undefined,
               boxShadow: !darkMode ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
@@ -3388,8 +3402,11 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
           <button
             type="button"
             id="theme-dark-btn"
-            onClick={() => onToggleDarkMode(true)}
-            className="ios-inset-group !mb-0 p-3 text-left cursor-pointer"
+            onClick={() => {
+              haptics.selection();
+              onToggleDarkMode(true);
+            }}
+            className="ios-inset-group !mb-0 p-3 text-left cursor-pointer transition-transform active:scale-[0.97]"
             style={{
               borderColor: darkMode ? 'var(--ios-blue)' : undefined,
               boxShadow: darkMode ? '0 0 0 2px var(--ios-blue-soft)' : undefined,
@@ -3450,8 +3467,11 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
           </div>
           <button
             type="button"
-            onClick={() => onToggleSpecular(!specularEnabled)}
-            className="px-3.5 py-1.5 rounded-full text-[12px] font-extrabold cursor-pointer shrink-0"
+            onClick={() => {
+              haptics.selection();
+              onToggleSpecular(!specularEnabled);
+            }}
+            className="px-3.5 py-1.5 rounded-full text-[12px] font-extrabold cursor-pointer shrink-0 transition-transform active:scale-[0.96]"
             style={{
               background: specularEnabled
                 ? 'var(--ios-green-soft)'
@@ -3461,6 +3481,65 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
           >
             {specularEnabled ? 'Активно' : 'Выкл.'}
           </button>
+        </div>
+
+        {/* Tactile Haptics & Soft Sound Feedback */}
+        <div className="ios-section-header !px-1">Тактильный отклик</div>
+        <div className="ios-inset-group p-3.5 !mb-3 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[13.5px] font-extrabold">Вибрация (Haptics)</div>
+              <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
+                Мягкие отклики при ответах, переключении вкладок и свайпах
+              </div>
+            </div>
+            <button
+              type="button"
+              id="toggle-haptics-btn"
+              onClick={() => {
+                const next = !hapticsOn;
+                setHapticsOn(next);
+                setHapticsEnabled(next);
+                if (next) haptics.success();
+              }}
+              className="px-3.5 py-1.5 rounded-full text-[12px] font-extrabold cursor-pointer shrink-0 transition-transform active:scale-[0.96]"
+              style={{
+                background: hapticsOn ? 'var(--ios-green-soft)' : 'var(--ios-bg-tertiary)',
+                color: hapticsOn ? 'var(--ios-green)' : 'var(--ios-label-sec)',
+              }}
+            >
+              {hapticsOn ? 'Вкл.' : 'Выкл.'}
+            </button>
+          </div>
+
+          <div
+            className="pt-2 border-t flex items-center justify-between gap-2"
+            style={{ borderColor: 'var(--ios-separator)' }}
+          >
+            <div>
+              <div className="text-[13.5px] font-extrabold">Мягкий звук касаний</div>
+              <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
+                Деликатный тихий клик при нажатиях и верных ответах
+              </div>
+            </div>
+            <button
+              type="button"
+              id="toggle-tactile-sound-btn"
+              onClick={() => {
+                const next = !soundOn;
+                setSoundOn(next);
+                setSoundFeedbackEnabled(next);
+                if (next) haptics.success();
+              }}
+              className="px-3.5 py-1.5 rounded-full text-[12px] font-extrabold cursor-pointer shrink-0 transition-transform active:scale-[0.96]"
+              style={{
+                background: soundOn ? 'var(--ios-blue-soft)' : 'var(--ios-bg-tertiary)',
+                color: soundOn ? 'var(--ios-blue)' : 'var(--ios-label-sec)',
+              }}
+            >
+              {soundOn ? 'Вкл.' : 'Выкл.'}
+            </button>
+          </div>
         </div>
 
         {/* Gemini AI Cheatsheet Grounding Settings */}
