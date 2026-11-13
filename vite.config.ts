@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import fs from 'fs';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, Plugin} from 'vite';
+import {handleNodeExplainMiddleware} from './server/geminiExplainHandler';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '.data');
 const PROFILES_FILE = path.join(DATA_DIR, 'cloud-profiles.json');
@@ -51,7 +53,7 @@ function apiSyncPlugin(): Plugin {
     // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, If-Modified-Since, Cache-Control, Pragma');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, If-Modified-Since, Cache-Control, Pragma, X-Gemini-Api-Key');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     if (req.method === 'OPTIONS') {
@@ -117,13 +119,39 @@ function apiSyncPlugin(): Plugin {
     next();
   };
 
+  const handleExplain = (req: any, res: any, next: any) => {
+    const rawUrl = (req.url || '').split('?')[0];
+    if (
+      rawUrl !== '/api/explain' &&
+      rawUrl !== '/api/explain/stream' &&
+      rawUrl !== '/api/explain/status'
+    ) {
+      return next();
+    }
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, If-Modified-Since, Cache-Control, Pragma, X-Gemini-Api-Key');
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+    handleNodeExplainMiddleware(req, res).catch((err) => {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: String(err?.message || 'Internal error') }));
+    });
+  };
+
   return {
     name: 'api-cloud-sync-plugin',
     configureServer(server) {
       server.middlewares.use(handleSync);
+      server.middlewares.use(handleExplain);
     },
     configurePreviewServer(server) {
       server.middlewares.use(handleSync);
+      server.middlewares.use(handleExplain);
     },
   };
 }

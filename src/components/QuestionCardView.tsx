@@ -12,6 +12,8 @@ import { classifyWordSubtopicAndException } from '../utils/wordClassifier';
 import type { SavedQuestionAnswerState } from '../utils/storageSync';
 import { Task15SentenceView } from './Task15SentenceView';
 import { FormattedInstruction } from './FormattedInstruction';
+import { GeminiExplainBlock } from './GeminiExplainBlock';
+import { buildFipiExplainPayload, buildSprintExplainPayload } from '../utils/geminiExplain';
 
 const SHORT_MORPHEME_BY_TASK: Record<TrainerQuestion['task'], string> = {
   '4': 'Ударения',
@@ -78,6 +80,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
   const [fipiResultOk, setFipiResultOk] = useState<boolean | null>(
     savedAnswerState?.isSubmitted ? Boolean(savedAnswerState.resultOk) : null
   );
+  const [showSprintAiExplain, setShowSprintAiExplain] = useState(false);
 
   const exitTimerRef = useRef<NodeJS.Timeout | null>(null);
   const answerTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -121,6 +124,7 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
     setFipiResultOk(
       savedAnswerState?.isSubmitted ? Boolean(savedAnswerState.resultOk) : null
     );
+    setShowSprintAiExplain(false);
 
     return () => clearTimers();
   }, [question.instanceId || question.id, savedAnswerState]);
@@ -472,19 +476,38 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                   )}
                 </div>
 
-                {!isCorrect && (
-                  <button
-                    type="button"
-                    onClick={() => commitAnswer(false, selectedChoice || '')}
-                    className="shrink-0 px-2.5 py-1 rounded-full text-[11.5px] font-bold cursor-pointer active:scale-95 transition-transform"
-                    style={{
-                      background: 'var(--ios-red)',
-                      color: '#FFFFFF',
-                    }}
-                  >
-                    Дальше →
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {!showSprintAiExplain && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearTimers();
+                        setIsExiting(false);
+                        setShowSprintAiExplain(true);
+                      }}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer active:scale-95 transition-transform"
+                      style={{
+                        background: 'var(--ios-purple-soft)',
+                        color: 'var(--ios-purple)',
+                      }}
+                    >
+                      ИИ-разбор
+                    </button>
+                  )}
+                  {(!isCorrect || showSprintAiExplain) && (
+                    <button
+                      type="button"
+                      onClick={() => commitAnswer(Boolean(isCorrect), selectedChoice || '')}
+                      className="shrink-0 px-2.5 py-1 rounded-full text-[11.5px] font-bold cursor-pointer active:scale-95 transition-transform"
+                      style={{
+                        background: isCorrect ? 'var(--ios-green)' : 'var(--ios-red)',
+                        color: '#FFFFFF',
+                      }}
+                    >
+                      Дальше →
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <span
@@ -495,6 +518,14 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
               </span>
             )}
           </div>
+          {isAnswered && showSprintAiExplain && (
+            <GeminiExplainBlock
+              compact
+              autoFetch
+              payload={buildSprintExplainPayload(question, selectedChoice || '')}
+              onOpenCheatsheet={onOpenRuleForTask}
+            />
+          )}
         </div>
 
         {/* Answer Options */}
@@ -1391,6 +1422,12 @@ export const QuestionCardView: React.FC<QuestionCardViewProps> = React.memo(({
                 </span>
               )}
             </div>
+
+            <GeminiExplainBlock
+              compact
+              payload={buildFipiExplainPayload(fipiQ, userStr)}
+              onOpenCheatsheet={onOpenRuleForTask}
+            />
 
             <button
               id="next-fipi-btn"

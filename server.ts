@@ -1,7 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+import { explainWithGemini, getGeminiStatus, streamExplainResponse } from './server/geminiExplainHandler';
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = path.resolve(process.cwd(), '.data');
@@ -63,7 +65,7 @@ async function startServer() {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader(
       'Access-Control-Allow-Headers',
-      'Content-Type, If-Modified-Since, Cache-Control, Pragma'
+      'Content-Type, If-Modified-Since, Cache-Control, Pragma, X-Gemini-Api-Key'
     );
     if (req.method === 'OPTIONS') {
       res.sendStatus(204);
@@ -147,6 +149,51 @@ async function startServer() {
     profiles[pin] = record;
     writeProfiles(profiles);
     res.json({ ok: true, pin, updatedAt: record.updatedAt });
+  });
+
+  app.get('/api/explain/status', (req, res) => {
+    const headerKey =
+      typeof req.headers['x-gemini-api-key'] === 'string'
+        ? req.headers['x-gemini-api-key']
+        : undefined;
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(getGeminiStatus(headerKey));
+  });
+
+  app.post('/api/explain', async (req, res) => {
+    const headerKey =
+      typeof req.headers['x-gemini-api-key'] === 'string'
+        ? req.headers['x-gemini-api-key']
+        : undefined;
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        res.status(400).json({ error: 'Invalid JSON body' });
+        return;
+      }
+    }
+    const { status, data } = await explainWithGemini(body, headerKey);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(status).json(data);
+  });
+
+  app.post('/api/explain/stream', async (req, res) => {
+    const headerKey =
+      typeof req.headers['x-gemini-api-key'] === 'string'
+        ? req.headers['x-gemini-api-key']
+        : undefined;
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        res.status(400).json({ error: 'Invalid JSON body' });
+        return;
+      }
+    }
+    await streamExplainResponse(body, res, headerKey);
   });
 
   const distPath = path.join(process.cwd(), 'dist');

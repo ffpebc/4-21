@@ -15,6 +15,17 @@ import {
 import { SwipeableSheet, LiquidGlassSegmented } from './LiquidGlassControls';
 import { PARSED_WORDS, PARSED_WORDS_DATABASE, PARSED_SPRINT_QUESTIONS, sprintToWordEntry } from '../data/tasksBankData.ts';
 import { classifyWordSubtopicAndException } from '../utils/wordClassifier.ts';
+import { GeminiExplainBlock } from './GeminiExplainBlock';
+import {
+  buildErrorExplainPayload,
+  buildFipiExplainPayload,
+  buildSprintExplainPayload,
+  checkGeminiBackendStatus,
+  getAiAutoExplainEnabled,
+  getStoredGeminiApiKey,
+  setAiAutoExplainEnabled,
+  setStoredGeminiApiKey,
+} from '../utils/geminiExplain';
 
 /* ============================================================================
    1. ОКНО «ШАБЛОНЫ И УМНЫЙ ПОДБОР ЗАНЯТИЯ» (PresetsModal)
@@ -998,7 +1009,7 @@ export function cleanDisplayText(text: string): string {
     .replace(/&(?:mdash|ndash);/gi, '—')
     .replace(/&(?:laquo|raquo);/gi, '«')
     .replace(/&[a-zA-Z0-9#]+;/g, '');
-  s = s.replace(/<[^>]+>/g, '');
+  s = s.replace(/<\/?[a-zA-Z!][^>]*>/g, '');
   s = s.replace(/=>/g, '→');
   s = s.replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '');
   s = s.replace(/^[1-5Зз]\s*[\)\.\-–:]\s*/gm, '');
@@ -1207,7 +1218,7 @@ export function isolateTargetWordExplanation(
     .replace(/\\+n/g, '\n')
     .replace(/\\+r/g, '')
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '');
+    .replace(/<\/?[a-zA-Z!][^>]*>/g, '');
 
   const rawTarget = (targetWord || '').replace(/\(.*?\)/g, '').trim();
   const normTarget = normalizeWordForMatch(rawTarget);
@@ -2194,6 +2205,27 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
       ? activeQuestion.answer
       : activeQuestion?.correctIndices?.join(''));
 
+  const geminiPayload = useMemo(() => {
+    if (activeQuestion?.kind === 'sprint') {
+      return buildSprintExplainPayload(activeQuestion, userChoice);
+    }
+    if (activeQuestion?.kind === 'fipi') {
+      return buildFipiExplainPayload(activeQuestion, userChoice);
+    }
+    return buildErrorExplainPayload({
+      task,
+      questionId: activeError?.questionId,
+      wordDisplay: activeError?.wordDisplay,
+      correctWord: activeError?.correctWord,
+      correctChoice: activeError?.correctChoice || correctChoice,
+      userChoice,
+      context: activeError?.context,
+      topic: activeError?.topic,
+      rule: activeError?.rule,
+      explanation: activeError?.explanation,
+    });
+  }, [activeQuestion, activeError, task, userChoice, correctChoice]);
+
   const solvedWordPreview =
     activeError?.correctWord && !activeError.correctWord.startsWith('Задание №')
       ? activeError.correctWord
@@ -2455,6 +2487,16 @@ export const RuleInspectorModal: React.FC<RuleInspectorModalProps> = React.memo(
               style={{ color: 'var(--ios-label-sec)' }}
             >
               {contextText}
+            </div>
+          )}
+
+          {isOpen && (activeQuestion || activeError) && (
+            <div className="mt-2 mb-2">
+              <GeminiExplainBlock
+                payload={geminiPayload}
+                autoFetch={isOpen}
+                onOpenCheatsheet={onOpenFullCheatsheet}
+              />
             </div>
           )}
 
@@ -3261,6 +3303,34 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
   onToggleSpecular,
   onOpenSyncModal,
 }) => {
+  const [geminiKey, setGeminiKey] = useState(() => getStoredGeminiApiKey());
+  const [aiAutoExplain, setAiAutoExplain] = useState(() => getAiAutoExplainEnabled());
+  const [geminiStatus, setGeminiStatus] = useState<{
+    configured: boolean;
+    model: string;
+    source: 'env' | 'client' | 'none';
+  } | null>(null);
+  const [geminiSavedNote, setGeminiSavedNote] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setGeminiKey(getStoredGeminiApiKey());
+    setAiAutoExplain(getAiAutoExplainEnabled());
+    checkGeminiBackendStatus().then(setGeminiStatus).catch(() => {});
+  }, [isOpen]);
+
+  const handleSaveGeminiKey = async () => {
+    setStoredGeminiApiKey(geminiKey);
+    const status = await checkGeminiBackendStatus();
+    setGeminiStatus(status);
+    setGeminiSavedNote(
+      geminiKey.trim()
+        ? 'Ключ сохранён локально в браузере'
+        : 'Локальный ключ очищен',
+    );
+    setTimeout(() => setGeminiSavedNote(''), 2500);
+  };
+
   return (
     <SwipeableSheet
       id="appearance-modal"
@@ -3391,6 +3461,82 @@ export const AppearanceModal: React.FC<AppearanceModalProps> = React.memo(({
           >
             {specularEnabled ? 'Активно' : 'Выкл.'}
           </button>
+        </div>
+
+        {/* Gemini AI Cheatsheet Grounding Settings */}
+        <div className="ios-section-header !px-1">ИИ-объяснения Gemini (по шпаргалке)</div>
+        <div className="ios-inset-group p-3.5 !mb-3 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[13.5px] font-extrabold">Авторазбор после ответа</div>
+              <div className="text-[11px]" style={{ color: 'var(--ios-label-sec)' }}>
+                Объяснение опирается строго на раздел шпаргалки №4–22
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !aiAutoExplain;
+                setAiAutoExplain(next);
+                setAiAutoExplainEnabled(next);
+              }}
+              className="px-3.5 py-1.5 rounded-full text-[12px] font-extrabold cursor-pointer shrink-0"
+              style={{
+                background: aiAutoExplain ? 'var(--ios-purple-soft)' : 'var(--ios-bg-tertiary)',
+                color: aiAutoExplain ? 'var(--ios-purple)' : 'var(--ios-label-sec)',
+              }}
+            >
+              {aiAutoExplain ? 'Авто' : 'По кнопке'}
+            </button>
+          </div>
+
+          <div className="pt-2 border-t" style={{ borderColor: 'var(--ios-separator)' }}>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <span className="text-[12px] font-bold">API-ключ Gemini</span>
+              <span
+                className="text-[10.5px] font-extrabold px-2 py-0.5 rounded-full"
+                style={{
+                  background: geminiStatus?.configured ? 'var(--ios-green-soft)' : 'var(--ios-orange-soft)',
+                  color: geminiStatus?.configured ? 'var(--ios-green)' : 'var(--ios-orange)',
+                }}
+              >
+                {geminiStatus?.source === 'env'
+                  ? `Сервер (${geminiStatus.model})`
+                  : geminiStatus?.source === 'client'
+                    ? `Свой ключ (${geminiStatus.model})`
+                    : 'Ключ не задан'}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                id="gemini-api-key-input"
+                type="password"
+                value={geminiKey}
+                onChange={(e) => setGeminiKey(e.target.value)}
+                placeholder="AIza... (опционально, если нет в .env)"
+                className="flex-1 px-3 py-1.5 rounded-xl text-[12.5px] outline-none"
+                style={{
+                  background: 'var(--ios-bg-secondary)',
+                  color: 'var(--ios-label)',
+                  border: '0.5px solid var(--ios-separator)',
+                }}
+              />
+              <button
+                type="button"
+                id="save-gemini-api-key-btn"
+                onClick={handleSaveGeminiKey}
+                className="px-3 py-1.5 rounded-xl text-[12px] font-bold text-white cursor-pointer shrink-0"
+                style={{ background: 'var(--ios-purple)' }}
+              >
+                Сохранить
+              </button>
+            </div>
+            {geminiSavedNote && (
+              <div className="text-[11px] font-bold mt-1" style={{ color: 'var(--ios-green)' }}>
+                {geminiSavedNote}
+              </div>
+            )}
+          </div>
         </div>
 
         <button

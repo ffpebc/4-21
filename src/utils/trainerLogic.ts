@@ -3088,7 +3088,7 @@ export function cleanExplanation(str: string | undefined): string {
     .replace(/«\.\.\./g, '')
     .replace(/\.\.\.»/g, '')
     .replace(/[\u200b\u200c\u200d\u200e\u200f\ufeff\xad]/g, '')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<\/?[a-zA-Z!][^>]*>/g, '')
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
